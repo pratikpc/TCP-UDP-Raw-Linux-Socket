@@ -94,7 +94,6 @@ namespace pc
          int connect() const
          {
             int socketFd = socket();
-            std::cout << "socket " << socketFd << " : addrlen " << ip->ai_addrlen << "\n";
             if (::connect(socketFd, ip->ai_addr, ip->ai_addrlen) == -1)
             {
                throw std::invalid_argument("Unable to connect to socket");

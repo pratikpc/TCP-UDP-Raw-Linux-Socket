@@ -81,7 +81,7 @@ namespace pc
 
          ~TCP()
          {
-            std::cout << "Close socket " << socket << "\n";
+            // Do not close if socket in invalid state
             if (socket != -1)
                close(socket);
          }
