@@ -12,6 +12,13 @@ namespace pc
          int socket;
 
          TCP(int socket) : socket(socket) {}
+         TCP(TCP&& left) : socket(left.socket)
+         {
+            left.socket = -1;
+         };
+
+         // Copy disabled
+         TCP(TCP&) = delete;
 
          bool invalid()
          {
@@ -74,8 +81,9 @@ namespace pc
 
          ~TCP()
          {
-            std::cout << "Close socket " << socket;
-            close(socket);
+            std::cout << "Close socket " << socket << "\n";
+            if (socket != -1)
+               close(socket);
          }
       };
    } // namespace network
