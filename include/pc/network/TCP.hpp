@@ -1,31 +1,14 @@
 #pragma once
 
 #include <sys/socket.h>
+#include <pc/network/Socket.hpp>
 
 namespace pc
 {
    namespace network
    {
-      class TCP
+      class TCP: public Socket
       {
-       public:
-         int socket;
-
-         TCP(int socket) : socket(socket) {}
-         TCP(TCP&& left) : socket(left.socket)
-         {
-            // Leave socket in invalid state
-            left.socket = -1;
-         };
-
-         // Copy disabled
-         TCP(TCP&) = delete;
-
-         bool invalid()
-         {
-            return socket == -1;
-         }
-
          void listen(int backlog = 5)
          {
             if (::listen(socket, backlog) == -1)
