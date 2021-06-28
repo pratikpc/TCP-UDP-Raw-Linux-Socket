@@ -12,8 +12,7 @@ int main()
    ip.load("", "9900");
 
    std::string ipstr = ip;
-   std::cout << "Hey "
-             << " IP = " << ipstr;
+   std::cout << "IP = " << ipstr;
    std::cout << "\n Hostname = " << ip.hostName();
    pc::network::TCP tcp{ip.bind()};
    tcp.setReusable();
@@ -26,17 +25,31 @@ int main()
          break;
       std::cout << "Child socket " << child.socket << "\n";
       std::thread(
-          [child=std::move(child)]()
+          [child = std::move(child)]()
           {
              std::cout << "Accepted\n";
-             std::string sendStr("Hiii brother");
-
-             //  std::this_thread::sleep_for(std::chrono::seconds(10));
-             std::cout << "Sent\n";
-             std::cout << "Bytes sent : "
-                       << child.send((void*)sendStr.data(), sendStr.size());
-             std::cout << " \nSupposed to send " << sendStr.size() << "\n";
-             std::cout << "Recv Child socket " << child.socket << "\n";
+             for (int i = 0;; ++i)
+             {
+                {
+                   std::string message;
+                   if (std::getline(std::cin, message))
+                   {
+                      child.send((const void*)message.data(), message.size());
+                      std::cout << "Message sent\n";
+                   }
+                   else
+                   {
+                      continue;
+                   }
+                }
+                {
+                   char* output = (char*)child.recv(1000);
+                   if (output == nullptr)
+                      break;
+                   output[1000 - 1] = '\0';
+                   std::cout << "Client said : " << output << "\n";
+                }
+             }
           })
           .detach();
    }

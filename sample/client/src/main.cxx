@@ -11,23 +11,24 @@ int main()
    ip.load("127.0.0.1", "9900");
 
    std::string ipstr = ip;
-   std::cout << "Hey "
-             << " IP = " << ipstr;
-   std::cout << "\n Hostname = " << ip.hostName();
+   std::cout << "IP = " << ipstr;
+   std::cout << "\nHostname = " << pc::network::IP::hostName();
    pc::network::TCP tcp{ip.connect()};
-
-   // while (true)
-   // {
-   char* output = (char*)tcp.recv(1000);
-   // if (output == nullptr)
-   // {
-   //    std::this_thread::sleep_for(std::chrono::seconds(1));
-   //    continue;
-   // }
-   if (output != nullptr)
-      output[1000 - 1] = '\0';
-   std::cout << "\n" << output << "recv";
-   // break;
-   // }
+   while (true)
+   {
+      {
+         char* output = (char*)tcp.recv(1000);
+         if (output == nullptr)
+            break;
+         output[1000 - 1] = '\0';
+         std::cout << "Server said : " << output << "\n";
+      }
+      std::string message;
+      if (std::getline(std::cin, message))
+      {
+         tcp.send((const void*)message.data(), message.size());
+         std::cout << "Message sent\n";
+      }
+   }
    return EXIT_SUCCESS;
 }
