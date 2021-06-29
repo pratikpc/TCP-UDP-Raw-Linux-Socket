@@ -8,6 +8,8 @@
 
 #include <pc/network/Thread.hpp>
 
+#include <sys/sysinfo.h>
+
 void pollCallback(pollfd const& poll)
 {
    //   std::cout << "Poll called type"
@@ -30,14 +32,14 @@ void pollCallback(pollfd const& poll)
          return;
       }
       std::cout << "\nReceived data " << data.get();
-      std::string message = "Server says hi to " + poll.fd;
+      std::string message = "Server says hi to ";
       pc::network::TCP::sendRaw(poll.fd, (const char*)message.data(), message.size());
    }
 }
 
 void* execTcp(void* arg)
 {
-   pc::network::TCPPoll* poll = ((pc::network::TCPPoll*)arg);
+   pc::network::TCPPoll<>* poll = ((pc::network::TCPPoll<>*)arg);
    while (true)
    {
       std::cout << "\nExec poll start";
@@ -59,19 +61,25 @@ int main()
    pc::network::TCP tcp(ip.bind());
    tcp.setReusable();
    tcp.listen();
-   pc::network::TCPPoll poll;
+   std::vector<pc::network::TCPPoll<> /* */> polls;
+   polls.resize(get_nprocs());
 
-   pc::network::Thread thread(&execTcp, &poll);
-   thread.detach();
+   for (std::vector<pc::network::TCPPoll<> /* */>::iterator it = polls.begin();
+        it != polls.end();
+        ++it)
+      pc::network::Thread(&execTcp, &(*it)).detach();
 
+   int threadCurrentAlloc = 0;
    while (true)
    {
       pc::network::TCP child(tcp.accept());
       if (child.invalid())
          continue;
-
-      poll.PollThis(child.socket, pollCallback);
-      std::cout << "Connected to " << child.socket << "\n";
+      polls[threadCurrentAlloc].PollThis(child.socket, pollCallback);
+      std::cout << "Connected to " << child.socket << " on " << threadCurrentAlloc
+                << " thread"
+                << "\n";
+      threadCurrentAlloc = (threadCurrentAlloc + 1) % polls.size();
       child.invalidate();
    }
    return EXIT_SUCCESS;
