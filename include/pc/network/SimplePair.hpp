@@ -7,6 +7,10 @@ namespace pc
       {
          T1 first;
          T2 second;
+
+#if __cplusplus <= 199711L
+         SimplePair(T1 const& first, T2 const& second) : first(first), second(second) {}
       };
+#endif
    } // namespace network
 } // namespace pc
