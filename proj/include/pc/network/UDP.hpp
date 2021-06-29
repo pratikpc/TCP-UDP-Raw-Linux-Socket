@@ -5,8 +5,6 @@
 #include <pc/network/ip.hpp>
 #include <sys/socket.h>
 
-#include <pc/network/unique_ptr.hpp>
-
 namespace pc
 {
    namespace network

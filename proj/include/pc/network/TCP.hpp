@@ -1,7 +1,6 @@
 #pragma once
 
 #include <pc/network/Socket.hpp>
-#include <pc/network/unique_ptr.hpp>
 #include <sys/socket.h>
 
 #include <memory>
