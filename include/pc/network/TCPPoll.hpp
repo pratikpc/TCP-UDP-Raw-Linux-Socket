@@ -11,21 +11,56 @@
 
 #include <pc/network/MutexGuard.hpp>
 
+#include <tr1/array>
+#include <tr1/unordered_map>
+
 namespace pc
 {
    namespace network
    {
+      namespace
+      {
+         template <bool B, class T, class F>
+         struct conditional
+         {
+            typedef T type;
+         };
+
+         template <class T, class F>
+         struct conditional<false, T, F>
+         {
+            typedef F type;
+         };
+         template <bool B, class T = void>
+         struct enable_if
+         {
+         };
+
+         template <class T>
+         struct enable_if<true, T>
+         {
+            typedef T type;
+         };
+      } // namespace
+
+      template <bool Scale = true>
       class TCPPoll
       {
          typedef std::vector<pollfd> pollarr;
 
          typedef void (*Callback)(pollfd const&);
-         typedef std::map<int /*socket*/, Callback> Callbacks;
+         typedef typename conditional<Scale,
+                                      std::tr1::array<Callback, 100>,
+                                      std::tr1::unordered_map<int /*socket*/, Callback> /* */>::type
+             Callbacks;
 
          pollarr   polls;
          Callbacks callbacks;
 
          pthread_mutex_t pollsMutex;
+
+       public:
+         TCPPoll() {}
 
          int pollRaw(std::size_t timeout)
          {
@@ -66,7 +101,8 @@ namespace pc
                if (it->revents & POLLHUP || it->revents & POLLNVAL)
                {
                   // Erase on Holdup
-                  callbacks.erase(it->fd);
+                  // if (Scale)
+                  //    callbacks.erase(it->fd);
                   close(it->fd);
                   // Delete current element
                   it = polls.erase(it);
