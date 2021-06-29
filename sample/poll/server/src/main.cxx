@@ -6,6 +6,30 @@
 
 #include <thread>
 
+void pollCallback(pollfd const& poll)
+{
+   //   std::cout << "Poll called type"
+   //             << " revents: " << poll.revents << "\n"
+   //             << ((poll.revents & POLLIN) ? "POLLIN\n" : "")
+   //             << ((poll.revents & POLLPRI) ? "POLLPRI\n" : "")
+   //             << ((poll.revents & POLLHUP) ? "POLLHUP\n" : "")
+   //             << ((poll.revents & POLLERR) ? "POLLERR\n" : "")
+   //             << ((poll.revents & POLLNVAL) ? "POLLNVAL\n" : "");
+
+   std::cout << "Poll called " << poll.fd << "\n";
+   if (poll.revents & POLLIN)
+   {
+      auto data = pc::network::TCP::recvRaw(poll.fd, 1000);
+      if (!data)
+      {
+         std::cout << "Data not found\n";
+         close(poll.fd);
+         return;
+      }
+      std::cout << "Received data " << (const char*)data.get() << "\n";
+   }
+}
+
 int main()
 {
    pc::network::IP ip(SOCK_STREAM);
@@ -37,31 +61,7 @@ int main()
       pc::network::TCP child = tcp.accept();
       if (child.invalid())
          continue;
-      poll.PollThis(child.socket,
-                    [](pollfd const& poll)
-                    {
-                       //   std::cout << "Poll called type"
-                       //             << " revents: " << poll.revents << "\n"
-                       //             << ((poll.revents & POLLIN) ? "POLLIN\n" : "")
-                       //             << ((poll.revents & POLLPRI) ? "POLLPRI\n" : "")
-                       //             << ((poll.revents & POLLHUP) ? "POLLHUP\n" : "")
-                       //             << ((poll.revents & POLLERR) ? "POLLERR\n" : "")
-                       //             << ((poll.revents & POLLNVAL) ? "POLLNVAL\n" : "");
-
-                       std::cout << "Poll called " << poll.fd << "\n";
-                       if (poll.revents & POLLIN)
-                       {
-                          auto data = pc::network::TCP::recvRaw(poll.fd, 1000);
-                          if (!data)
-                          {
-                             std::cout << "Data not found\n";
-                             close(poll.fd);
-                             return;
-                          }
-                          std::cout << "Received data " << (const char*)data.get()
-                                    << "\n";
-                       }
-                    });
+      poll.PollThis(child.socket, pollCallback);
       std::cout << "Connected to " << child.socket << "\n";
       child.invalidate();
    }
