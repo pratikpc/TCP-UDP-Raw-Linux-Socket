@@ -47,8 +47,19 @@ namespace pc
          {
             return *((T*)recv(sizeof(T), flags).get());
          }
-
          std::size_t send(const void* msg, size_t const len, int flags = 0) const
+         {
+            std::size_t total = 0;
+            // Send might not send all values
+            while (total < len)
+            {
+               std::size_t const sent = sendSingle(msg + total, len - total, flags);
+               total += sent;
+            }
+            return total;
+         }
+
+         std::size_t sendSingle(const void* msg, size_t const len, int flags = 0) const
          {
             std::size_t const sent = ::send(socket, msg, len, flags);
             if (sent == -1)
