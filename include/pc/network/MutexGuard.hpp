@@ -1,6 +1,7 @@
 #pragma once
 
 #include <pthread.h>
+#include <pc/network/Mutex.hpp>
 
 namespace pc
 {
@@ -11,7 +12,7 @@ namespace pc
          pthread_mutex_t& mutex;
 
        public:
-         MutexGuard(pthread_mutex_t& mutex) : mutex(mutex)
+         MutexGuard(Mutex& p_mutex) : mutex(p_mutex.mutex)
          {
             pthread_mutex_lock(&mutex);
          }

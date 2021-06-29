@@ -10,6 +10,7 @@
 #include <pthread.h>
 
 #include <pc/network/MutexGuard.hpp>
+#include <pc/network/Mutex.hpp>
 
 #include <tr1/array>
 #include <tr1/unordered_map>
@@ -57,7 +58,7 @@ namespace pc
          pollarr   polls;
          Callbacks callbacks;
 
-         pthread_mutex_t pollsMutex;
+         Mutex pollsMutex;
 
        public:
          TCPPoll() {}
