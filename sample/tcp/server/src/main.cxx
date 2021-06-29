@@ -22,25 +22,25 @@ int main()
       std::cout << "Waiting for next value\n";
       pc::network::TCP child = tcp.accept();
       if (child.invalid())
-         break;
-      std::cout << "Child socket " << child.socket << "\n";
+         continue;
       std::thread(
           [child = std::move(child)]()
           {
-             std::cout << "Accepted\n";
+             std::cout << "Accepted " << child.socket << "\n";
              while (true)
              {
                 {
                    std::cout << "\nMessage: ";
-                   std::string message;
-                   if (std::getline(std::cin, message))
-                   {
-                      child.send((const void*)message.data(), message.size());
-                   }
-                   else
-                   {
-                      continue;
-                   }
+                   std::string message = "nokia tyre " + std::to_string(child.socket);
+                   //  if (std::getline(std::cin, message))
+                   //  {
+                   std::this_thread::sleep_for(std::chrono::seconds(5));
+                   child.send((const void*)message.data(), message.size());
+                   //  }
+                   //     else
+                   //     {
+                   //        continue;
+                   //     }
                 }
                 {
                    auto recv = child.recv(1000);
@@ -50,7 +50,7 @@ int main()
                    std::cout << "Client said : " << recv.get() << "\n";
                 }
              }
-             std::cout << "Server disconnected\n";
+             std::cout << "Server disconnected : " << child.socket << "\n";
           })
           .detach();
    }
