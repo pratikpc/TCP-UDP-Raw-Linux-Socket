@@ -28,7 +28,7 @@ int main()
       std::string message;
       if (std::getline(std::cin, message))
       {
-         tcp.send((const void*)message.data(), message.size());
+         tcp.send((const std::uint8_t*)message.data(), message.size());
          std::cout << "\nMessage sent";
       }
    }

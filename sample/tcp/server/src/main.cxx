@@ -35,7 +35,7 @@ int main()
                    //  if (std::getline(std::cin, message))
                    //  {
                    std::this_thread::sleep_for(std::chrono::seconds(5));
-                   child.send((const void*)message.data(), message.size());
+                   child.send((const std::uint8_t*)message.data(), message.size());
                    //  }
                    //     else
                    //     {
