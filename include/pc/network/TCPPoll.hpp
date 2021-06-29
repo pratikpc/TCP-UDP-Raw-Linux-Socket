@@ -2,16 +2,13 @@
 
 #include <sys/socket.h>
 
-#include <memory>
 #include <mutex>
 #include <vector>
 
-#include <poll.h>
-
 #include <chrono>
-#include <functional>
 #include <map>
 
+#include <poll.h>
 #include <unistd.h>
 
 namespace pc
@@ -22,7 +19,7 @@ namespace pc
       {
          typedef std::vector<pollfd> pollarr;
 
-         typedef std::function<void(pollfd const&)> Callback;
+         typedef void (*Callback)(pollfd const&);
          typedef std::map<int /*socket*/, Callback> Callbacks;
 
          pollarr    polls;
