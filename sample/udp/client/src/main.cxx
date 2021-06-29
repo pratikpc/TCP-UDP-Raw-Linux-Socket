@@ -3,7 +3,7 @@
 #include <pc/network/UDP.hpp>
 #include <pc/network/ip.hpp>
 
-#include <thread>
+#include <cstdlib>
 
 int main()
 {
@@ -13,7 +13,7 @@ int main()
    std::string ipstr = ip;
    std::cout << "IP = " << ipstr;
    std::cout << "\nHostname = " << pc::network::IP::hostName();
-   pc::network::UDP udp{ip.connect()};
+   pc::network::UDP udp(ip.connect());
    while (true)
    {
       std::string message;

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <pc/network/Socket.hpp>
+#include <pc/network/unique_ptr.hpp>
 #include <sys/socket.h>
 
 #include <memory>
@@ -11,8 +12,11 @@ namespace pc
    {
       struct TCP : public Socket
       {
-         using Socket::Socket;
-         TCP(TCP&& o) : Socket(std::move(o)) {}
+         TCP(int const socket) : Socket(socket) {}
+         TCP(TCP& o) : Socket(o.socket)
+         {
+            o.socket = -1;
+         }
 
          void listen(int backlog = 5)
          {
@@ -27,9 +31,10 @@ namespace pc
             socket = -1;
          }
 
-         TCP accept()
+         int accept() const
          {
-            return TCP(::accept(socket, nullptr, nullptr));
+            int const socketFd = ::accept(socket, NULL, NULL);
+            return socketFd;
          }
          void setReusable()
          {
@@ -37,32 +42,30 @@ namespace pc
             if (setsockopt(socket, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1)
                throw std::runtime_error("Unable to set reusable");
          }
-         static std::unique_ptr<std::uint8_t[]>
-             recvRaw(int socket, std::size_t size, int flags = 0)
+         static void recvRaw(int socket, char* output, std::size_t size, int flags = 0)
          {
-            auto output = std::make_unique<std::uint8_t[]>(size);
-            int  opt;
-            if ((opt = ::recv(socket, output.get(), size, flags)) == -1)
+            int opt;
+
+            if ((opt = ::recv(socket, (void*)output, size, flags)) == -1)
                throw std::runtime_error("Unable to read data");
             if (opt == 0)
-               return nullptr;
-            return output;
+               output = NULL;
          }
-         std::unique_ptr<std::uint8_t[]> recv(std::size_t size, int flags = 0) const
+         void recv(std::size_t size, char* output, int flags = 0) const
          {
-            return TCP::recvRaw(socket, size, flags);
+            return TCP::recvRaw(socket, output, size, flags);
          }
-         template <typename T>
-         T recv(int flags = 0) const
-         {
-            return *((T*)recv(sizeof(T), flags).get());
-         }
-         std::size_t send(const std::uint8_t* msg, size_t const len, int flags = 0) const
+         // template <typename T>
+         // T recv(int flags = 0) const
+         // {
+         //    return *((T*)recv(sizeof(T), flags));
+         // }
+         std::size_t send(const char* msg, size_t const len, int flags = 0) const
          {
             return TCP::sendRaw(socket, msg, len, flags);
          }
          static std::size_t
-             sendRaw(int socket, const std::uint8_t* msg, size_t const len, int flags = 0)
+             sendRaw(int socket, const char* msg, size_t const len, int flags = 0)
          {
             std::size_t total = 0;
             // Send might not send all values
@@ -75,10 +78,8 @@ namespace pc
             return total;
          }
 
-         static std::size_t sendSingle(int                 socket,
-                                       const std::uint8_t* msg,
-                                       size_t const        len,
-                                       int                 flags = 0)
+         static std::size_t
+             sendSingle(int socket, const char* msg, size_t const len, int flags = 0)
          {
             std::size_t const sent = ::send(socket, msg, len, flags);
             if (sent == -1)
@@ -88,7 +89,7 @@ namespace pc
          template <typename T>
          std::size_t send(T& msg, int flags = 0) const
          {
-            return send((const std::uint8_t*)(&msg), sizeof(msg), flags);
+            return send((const char*)(&msg), sizeof(msg), flags);
          }
       };
    } // namespace network

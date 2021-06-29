@@ -1,37 +1,38 @@
 #pragma once
 
-#include <sys/socket.h>
-
-#include <mutex>
-#include <vector>
-
-#include <chrono>
 #include <map>
+#include <sys/socket.h>
+#include <vector>
 
 #include <poll.h>
 #include <unistd.h>
+
+#include <pthread.h>
+
+#include <pc/network/MutexGuard.hpp>
 
 namespace pc
 {
    namespace network
    {
-      struct TCPPoll
+      class TCPPoll
       {
          typedef std::vector<pollfd> pollarr;
 
          typedef void (*Callback)(pollfd const&);
          typedef std::map<int /*socket*/, Callback> Callbacks;
 
-         pollarr    polls;
-         Callbacks  callbacks;
-         std::mutex pollsMutex;
+         pollarr   polls;
+         Callbacks callbacks;
 
-         int pollRaw(std::chrono::milliseconds timeout)
+         pthread_mutex_t pollsMutex;
+
+         int pollRaw(std::size_t timeout)
          {
-            std::lock_guard<std::mutex> lock{pollsMutex};
-            return ::poll(polls.data(), polls.size(), timeout.count());
+            MutexGuard lock(pollsMutex);
+            return ::poll(polls.data(), polls.size(), timeout);
          }
-         int poll(std::chrono::milliseconds timeout)
+         int poll(std::size_t timeout)
          {
             int const rv = pollRaw(timeout);
             if (rv == -1)
@@ -39,24 +40,27 @@ namespace pc
             return rv;
          }
 
-         void PollThis(int const socket, Callback&& callback)
+       public:
+         void PollThis(int const socket, Callback callback)
          {
             pollfd poll;
             poll.fd     = socket;
             poll.events = POLLIN;
             // Protect this during multithreaded access
-            std::lock_guard<std::mutex> lock{pollsMutex};
-            polls.push_back(poll);
-            callbacks[socket] = callback;
+            {
+               MutexGuard lock(pollsMutex);
+               polls.push_back(poll);
+               callbacks[socket] = callback;
+            }
          }
 
-         void exec(std::chrono::milliseconds timeout)
+         void exec(std::size_t timeout)
          {
-            int const rv = poll(timeout);
+            int const rv = poll(timeout * 1000);
             if (rv == 0)
                // Timeout
                return;
-            std::lock_guard<std::mutex> guard{pollsMutex};
+            MutexGuard guard(pollsMutex);
             for (pollarr::iterator it = polls.begin(); it != polls.end();)
             {
                if (it->revents & POLLHUP || it->revents & POLLNVAL)

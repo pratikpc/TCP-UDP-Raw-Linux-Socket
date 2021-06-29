@@ -14,14 +14,11 @@ namespace pc
          int socket;
 
          Socket(int socket) : socket(socket) {}
-         Socket(Socket&& left) : socket(left.socket)
+         Socket(Socket& left) : socket(left.socket)
          {
             // Leave socket in invalid state
             left.socket = -1;
          };
-
-         // Copy disabled
-         Socket(Socket&) = delete;
 
          bool invalid()
          {

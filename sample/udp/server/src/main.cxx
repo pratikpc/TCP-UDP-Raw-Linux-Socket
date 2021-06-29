@@ -3,7 +3,7 @@
 #include <pc/network/UDP.hpp>
 #include <pc/network/ip.hpp>
 
-#include <thread>
+#include <cstdlib>
 
 int main()
 {
@@ -14,17 +14,16 @@ int main()
    std::string ipstr = ip;
    std::cout << "IP = " << ipstr;
    std::cout << "\n Hostname = " << ip.hostName();
-   pc::network::UDP udp{ip.bind()};
+   pc::network::UDP udp(ip.bind());
 
    while (1)
    {
-      auto  outputPtr = udp.recv(1000).first;
-
-      char* output    = (char*)outputPtr.get();
-      if (output == nullptr)
+      pc::network::memory::unique_arr<char> recv;
+      udp.recv(recv.size, recv.get());
+      if (!recv)
          break;
-      output[1000 - 1] = '\0';
-      std::cout << "Client said : " << output << "\n";
+      recv.get()[1000 - 1] = '\0';
+      std::cout << "Client said : " << recv.get() << "\n";
    }
    return EXIT_SUCCESS;
 }

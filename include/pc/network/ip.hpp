@@ -17,7 +17,7 @@ namespace pc
       {
        public:
          addrinfo  hints;
-         addrinfo* ip = nullptr;
+         addrinfo* ip = NULL;
 
        public:
          IP(int const socketType = SOCK_STREAM)

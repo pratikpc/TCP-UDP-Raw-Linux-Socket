@@ -5,7 +5,7 @@
 #include <pc/network/ip.hpp>
 #include <sys/socket.h>
 
-#include <memory>
+#include <pc/network/unique_ptr.hpp>
 
 namespace pc
 {
@@ -13,35 +13,32 @@ namespace pc
    {
       struct UDP : public Socket
       {
-         using Socket::Socket;
-         UDP(UDP&& o) : Socket(std::move(o)) {}
+         UDP(int socket) : Socket(socket) {}
 
-         SimplePair<std::unique_ptr<char[]>, sockaddr_storage> recv(std::size_t size,
-                                                                    int flags = 0) const
+         UDP(UDP& o) : Socket(o.socket)
          {
-            auto output = std::make_unique<char[]>(size);
+            o.socket = -1;
+         }
 
+         void recv(std::size_t size, char* output, int flags = 0) const
+         {
             int opt;
 
             sockaddr_storage their_addr;
             socklen_t        addr_len = sizeof(their_addr);
 
-            if ((opt = ::recvfrom(socket,
-                                  output.get(),
-                                  size,
-                                  flags,
-                                  (sockaddr*)&their_addr,
-                                  &addr_len)) == -1)
+            if ((opt = ::recvfrom(
+                     socket, output, size, flags, (sockaddr*)&their_addr, &addr_len)) ==
+                -1)
                throw std::runtime_error("Unable to read data");
             if (opt == 0)
-               return {nullptr, {}};
-            return {std::move(output), their_addr};
+               output = NULL;
          }
-         template <typename T>
-         T recv(int flags = 0) const
-         {
-            return *((T*)recv(sizeof(T), flags).first);
-         }
+         // template <typename T>
+         // T recv(int flags = 0)
+         // {
+         //    return *((T*)recv(sizeof(T), flags));
+         // }
 
          std::size_t
              send(const void* msg, size_t const len, IP const& ip, int flags = 0) const
