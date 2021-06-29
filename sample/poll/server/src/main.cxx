@@ -27,6 +27,9 @@ void pollCallback(pollfd const& poll)
          return;
       }
       std::cout << "Received data " << (const char*)data.get() << "\n";
+      std::string message = "Server says hi to " + std::to_string(poll.fd);
+      pc::network::TCP::sendRaw(
+          poll.fd, (const std::uint8_t*)message.data(), message.size());
    }
 }
 

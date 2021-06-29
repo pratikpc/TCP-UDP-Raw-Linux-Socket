@@ -30,7 +30,16 @@ int main()
       // {
       tcp.send((const std::uint8_t*)message.data(), message.size());
       std::cout << "\nMessage sent";
+      auto data = tcp.recv(1000);
+      if (!data)
+      {
+         std::cout << "\nData not found";
+         break;
+      }
+      std::cout << "\nServer says: " << (const char*)data.get();
+
       std::this_thread::sleep_for(std::chrono::seconds(3));
+
       // }
    }
    return EXIT_SUCCESS;
