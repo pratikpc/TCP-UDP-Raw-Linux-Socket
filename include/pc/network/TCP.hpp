@@ -59,18 +59,26 @@ namespace pc
          }
          std::size_t send(const std::uint8_t* msg, size_t const len, int flags = 0) const
          {
+            return TCP::sendRaw(socket, msg, len, flags);
+         }
+         static std::size_t
+             sendRaw(int socket, const std::uint8_t* msg, size_t const len, int flags = 0)
+         {
             std::size_t total = 0;
             // Send might not send all values
             while (total < len)
             {
-               std::size_t const sent = sendSingle(msg + total, len - total, flags);
+               std::size_t const sent =
+                   TCP::sendSingle(socket, msg + total, len - total, flags);
                total += sent;
             }
             return total;
          }
 
-         std::size_t
-             sendSingle(const std::uint8_t* msg, size_t const len, int flags = 0) const
+         static std::size_t sendSingle(int                 socket,
+                                       const std::uint8_t* msg,
+                                       size_t const        len,
+                                       int                 flags = 0)
          {
             std::size_t const sent = ::send(socket, msg, len, flags);
             if (sent == -1)
