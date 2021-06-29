@@ -4,6 +4,8 @@
 #include <pc/network/TCP.hpp>
 #include <pc/network/ip.hpp>
 
+#include <pc/memory/unique_ptr.hpp>
+
 #include <pc/thread/Thread.hpp>
 
 void* childSocketExec(void* arg)
@@ -26,7 +28,7 @@ void* childSocketExec(void* arg)
          //     }
       }
       {
-         pc::network::memory::unique_arr<char> recv;
+         pc::memory::unique_arr<char> recv;
          child->recv(recv.size, recv.get());
          if (!recv)
             break;

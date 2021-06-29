@@ -23,5 +23,6 @@ target_compile_features(${PROJECT_NAME} INTERFACE cxx_std_98)
 target_link_libraries(${PROJECT_NAME}
 INTERFACE
 pc::threads
+pc::memory
 )
 

@@ -3,6 +3,8 @@
 #include <pc/network/TCP.hpp>
 #include <pc/network/ip.hpp>
 
+#include <pc/memory/unique_ptr.hpp>
+
 #include <cstdlib>
 
 int main()
@@ -17,7 +19,7 @@ int main()
    while (true)
    {
       {
-         pc::network::memory::unique_arr<char> recv(1000);
+         pc::memory::unique_arr<char> recv(1000);
          tcp.recv(recv.size, recv.get());
          if (!recv)
             // Gracefull disconnection

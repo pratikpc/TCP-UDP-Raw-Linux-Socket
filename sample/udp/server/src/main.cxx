@@ -3,6 +3,8 @@
 #include <pc/network/UDP.hpp>
 #include <pc/network/ip.hpp>
 
+#include <pc/memory/unique_ptr.hpp>
+
 #include <cstdlib>
 
 int main()
@@ -18,7 +20,7 @@ int main()
 
    while (1)
    {
-      pc::network::memory::unique_arr<char> recv;
+      pc::memory::unique_arr<char> recv;
       udp.recv(recv.size, recv.get());
       if (!recv)
          break;

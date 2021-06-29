@@ -3,6 +3,8 @@
 #include <pc/network/TCP.hpp>
 #include <pc/network/ip.hpp>
 
+#include <pc/memory/unique_ptr.hpp>
+
 #include <cstdlib>
 
 int main()
@@ -17,7 +19,7 @@ int main()
    for (std::size_t i = 0; true; i++)
    {
       // {
-      //    pc::network::memory::unique_arr<char> recv = tcp.recv(1000);
+      //    pc::memory::unique_arr<char> recv = tcp.recv(1000);
       //    if (!recv)
       //       // Gracefull disconnection
       //       break;
@@ -31,7 +33,7 @@ int main()
       tcp.send((const char*)message.data(), message.size());
       std::cout << "\nMessage sent";
       // sleep(3);
-      pc::network::memory::unique_arr<char> recv(1000);
+      pc::memory::unique_arr<char> recv(1000);
       tcp.recv(recv.size, recv.get());
       if (!recv)
       {
