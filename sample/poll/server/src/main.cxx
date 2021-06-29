@@ -6,7 +6,7 @@
 
 #include <cstdlib>
 
-#include <pc/network/Thread.hpp>
+#include <pc/thread/Thread.hpp>
 
 #include <sys/sysinfo.h>
 
@@ -67,7 +67,7 @@ int main()
    for (std::vector<pc::network::TCPPoll<> /* */>::iterator it = polls.begin();
         it != polls.end();
         ++it)
-      pc::network::Thread(&execTcp, &(*it)).detach();
+      pc::threads::Thread(&execTcp, &(*it)).detach();
 
    int threadCurrentAlloc = 0;
    while (true)

@@ -4,7 +4,7 @@
 #include <pc/network/TCP.hpp>
 #include <pc/network/ip.hpp>
 
-#include <pc/network/Thread.hpp>
+#include <pc/thread/Thread.hpp>
 
 void* childSocketExec(void* arg)
 {
@@ -58,7 +58,7 @@ int main()
       pc::network::TCP* child = new pc::network::TCP(tcp.accept());
       if (child->invalid())
          continue;
-      pc::network::Thread(&childSocketExec, child).detach();
+      pc::threads::Thread(&childSocketExec, child).detach();
    }
    return EXIT_SUCCESS;
 }
