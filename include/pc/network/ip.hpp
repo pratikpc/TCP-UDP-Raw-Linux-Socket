@@ -16,7 +16,7 @@ namespace pc
       class IP
       {
        public:
-         addrinfo hints;
+         addrinfo  hints;
          addrinfo* ip = nullptr;
 
        public:
@@ -84,6 +84,9 @@ namespace pc
          int bind() const
          {
             int socketFd = socket();
+            int yes;
+            if (::setsockopt(socketFd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1)
+               throw std::runtime_error("Unable to set reusable");
             if (::bind(socketFd, ip->ai_addr, ip->ai_addrlen) == -1)
             {
                throw std::invalid_argument("Unable to bind to socket");
