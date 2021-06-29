@@ -30,16 +30,15 @@ int main()
       // {
       tcp.send((const char*)message.data(), message.size());
       std::cout << "\nMessage sent";
-      sleep(3);
-         // pc::network::memory::unique_arr<char> recv(1000);
-         // tcp.recv(recv.size, recv.get());
-      // if (!recv)
-      // {
-      //    std::cout << "\nData not found";
-      //    break;
-      // }
-      // std::cout << "\nServer says: " << (const char*)recv.get();
-      // }
+      // sleep(3);
+      pc::network::memory::unique_arr<char> recv(1000);
+      tcp.recv(recv.size, recv.get());
+      if (!recv)
+      {
+         std::cout << "\nData not found";
+         break;
+      }
+      std::cout << "\nServer says: " << (const char*)recv.get();
    }
    return EXIT_SUCCESS;
 }
