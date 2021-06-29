@@ -1,7 +1,7 @@
 #include <iostream>
 
-#include <pc/network/ip.hpp>
 #include <pc/network/TCP.hpp>
+#include <pc/network/ip.hpp>
 
 #include <thread>
 
@@ -18,17 +18,18 @@ int main()
    {
       {
          auto recv = tcp.recv(1000);
-         char* output = (char*)recv.get();
-         if (output == nullptr)
+         if (!recv)
+            // Gracefull disconnection
             break;
-         output[1000 - 1] = '\0';
-         std::cout << "Server said : " << output << "\n";
+         recv[1000 - 1] = '\0';
+         std::cout << "\nServer said : " << recv.get();
       }
+      std::cout << "\nSay: ";
       std::string message;
       if (std::getline(std::cin, message))
       {
          tcp.send((const void*)message.data(), message.size());
-         std::cout << "Message sent\n";
+         std::cout << "\nMessage sent";
       }
    }
    return EXIT_SUCCESS;

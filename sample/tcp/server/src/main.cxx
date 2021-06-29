@@ -17,7 +17,7 @@ int main()
    pc::network::TCP tcp{ip.bind()};
    tcp.setReusable();
    tcp.listen();
-   while (1)
+   while (true)
    {
       std::cout << "Waiting for next value\n";
       pc::network::TCP child = tcp.accept();
@@ -28,14 +28,14 @@ int main()
           [child = std::move(child)]()
           {
              std::cout << "Accepted\n";
-             for (int i = 0;; ++i)
+             while (true)
              {
                 {
+                   std::cout << "\nMessage: ";
                    std::string message;
                    if (std::getline(std::cin, message))
                    {
                       child.send((const void*)message.data(), message.size());
-                      std::cout << "Message sent\n";
                    }
                    else
                    {
@@ -43,14 +43,14 @@ int main()
                    }
                 }
                 {
-                   auto  recv   = child.recv(1000);
-                   char* output = (char*)recv.get();
-                   if (output == nullptr)
+                   auto recv = child.recv(1000);
+                   if (!recv)
                       break;
-                   output[1000 - 1] = '\0';
-                   std::cout << "Client said : " << output << "\n";
+                   recv[1000 - 1] = '\0';
+                   std::cout << "Client said : " << recv.get() << "\n";
                 }
              }
+             std::cout << "Server disconnected\n";
           })
           .detach();
    }
