@@ -1,14 +1,19 @@
 #pragma once
 
-#include <sys/socket.h>
 #include <pc/network/Socket.hpp>
+#include <sys/socket.h>
+
+#include <memory>
 
 namespace pc
 {
    namespace network
    {
-      class TCP: public Socket
+      struct TCP : public Socket
       {
+         using Socket::Socket;
+         TCP(TCP&& o) : Socket(std::move(o)) {}
+
          void listen(int backlog = 5)
          {
             if (::listen(socket, backlog) == -1)
@@ -27,11 +32,11 @@ namespace pc
             if (setsockopt(socket, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1)
                throw std::runtime_error("Unable to set reusable");
          }
-         void* recv(std::size_t size, int flags = 0) const
+         std::unique_ptr<char[]> recv(std::size_t size, int flags = 0) const
          {
-            char* output = new char[size];
-            int   opt;
-            if ((opt = ::recv(socket, output, size, flags)) == -1)
+            auto output = std::make_unique<char[]>(size);
+            int  opt;
+            if ((opt = ::recv(socket, output.get(), size, flags)) == -1)
                throw std::runtime_error("Unable to read data");
             if (opt == 0)
                return nullptr;
@@ -40,7 +45,7 @@ namespace pc
          template <typename T>
          T recv(int flags = 0) const
          {
-            return *((T*)recv(sizeof(T), flags));
+            return *((T*)recv(sizeof(T), flags).get());
          }
 
          std::size_t send(const void* msg, size_t const len, int flags = 0) const
@@ -54,13 +59,6 @@ namespace pc
          std::size_t send(T& msg, int flags = 0) const
          {
             return send((const void*)(&msg), sizeof(msg), flags);
-         }
-
-         ~TCP()
-         {
-            // Do not close if socket in invalid state
-            if (socket != -1)
-               close(socket);
          }
       };
    } // namespace network

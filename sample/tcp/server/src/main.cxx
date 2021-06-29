@@ -1,7 +1,7 @@
 #include <iostream>
 
+#include <pc/network/TCP.hpp>
 #include <pc/network/ip.hpp>
-#include <pc/network/tcp/TCP.hpp>
 
 #include <thread>
 
@@ -43,7 +43,8 @@ int main()
                    }
                 }
                 {
-                   char* output = (char*)child.recv(1000);
+                   auto  recv   = child.recv(1000);
+                   char* output = (char*)recv.get();
                    if (output == nullptr)
                       break;
                    output[1000 - 1] = '\0';

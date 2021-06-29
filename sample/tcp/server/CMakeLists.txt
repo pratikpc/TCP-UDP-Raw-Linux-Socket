@@ -1,4 +1,4 @@
-project(sample-tcp-udp-client)
+project(sample-tcp-server)
 
 set(CMAKE_CXX_STANDARD 98)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -18,4 +18,5 @@ ${LIBRARY_HXX_SOURCES}
 target_link_libraries(${PROJECT_NAME}
 PRIVATE
 	pc::tcp-udp-server
+	pthread
 )
