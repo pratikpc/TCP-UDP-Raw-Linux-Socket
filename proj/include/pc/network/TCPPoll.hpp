@@ -7,10 +7,8 @@
 #include <poll.h>
 #include <unistd.h>
 
-#include <pthread.h>
-
-#include <pc/network/MutexGuard.hpp>
-#include <pc/network/Mutex.hpp>
+#include <pc/thread/Mutex.hpp>
+#include <pc/thread/MutexGuard.hpp>
 
 #include <tr1/array>
 #include <tr1/unordered_map>
@@ -50,22 +48,22 @@ namespace pc
          typedef std::vector<pollfd> pollarr;
 
          typedef void (*Callback)(pollfd const&);
-         typedef typename conditional<Scale,
-                                      std::tr1::array<Callback, 100>,
-                                      std::tr1::unordered_map<int /*socket*/, Callback> /* */>::type
-             Callbacks;
+         typedef typename conditional<
+             Scale,
+             std::tr1::array<Callback, 100>,
+             std::tr1::unordered_map<int /*socket*/, Callback> /* */>::type Callbacks;
 
          pollarr   polls;
          Callbacks callbacks;
 
-         Mutex pollsMutex;
+         pc::threads::Mutex pollsMutex;
 
        public:
          TCPPoll() {}
 
          int pollRaw(std::size_t timeout)
          {
-            MutexGuard lock(pollsMutex);
+            pc::threads::MutexGuard lock(pollsMutex);
             return ::poll(polls.data(), polls.size(), timeout);
          }
          int poll(std::size_t timeout)
@@ -84,7 +82,7 @@ namespace pc
             poll.events = POLLIN;
             // Protect this during multithreaded access
             {
-               MutexGuard lock(pollsMutex);
+               pc::threads::MutexGuard lock(pollsMutex);
                polls.push_back(poll);
                callbacks[socket] = callback;
             }
@@ -96,7 +94,7 @@ namespace pc
             if (rv == 0)
                // Timeout
                return;
-            MutexGuard guard(pollsMutex);
+            pc::threads::MutexGuard guard(pollsMutex);
             for (pollarr::iterator it = polls.begin(); it != polls.end();)
             {
                if (it->revents & POLLHUP || it->revents & POLLNVAL)
