@@ -14,9 +14,8 @@ ${LIBRARY_CXX_SOURCES}
 ${LIBRARY_HXX_SOURCES}
 )
 
-
 target_link_libraries(${PROJECT_NAME}
 PRIVATE
-	pc::tcp-udp-server
-	pthread
+pc::tcp-udp-server
+pc::loadbalancer
 )

@@ -8,6 +8,8 @@
 
 #include <pc/thread/Thread.hpp>
 
+#include <pc/balancer/priority_queue.hpp>
+
 #include <cstdlib>
 
 #include <sys/sysinfo.h>
@@ -22,33 +24,32 @@ void pollCallback(pollfd const& poll)
    //             << ((poll.revents & POLLERR) ? "POLLERR\n" : "")
    //             << ((poll.revents & POLLNVAL) ? "POLLNVAL\n" : "");
 
-   std::cout << "Poll called " << poll.fd << "\n";
+   // std::cout << "Poll called " << poll.fd << "\n";
    if (poll.revents & POLLIN)
    {
       pc::memory::unique_arr<char> data(1000);
       pc::network::TCP::recvRaw(poll.fd, data.get(), data.size);
-      if (!data)
-      {
-         std::cout << "Data not found\n";
-         close(poll.fd);
-         return;
-      }
-      std::cout << "\nReceived data " << data.get();
-      std::string message = "Server says hi to ";
+      // std::cout << "\nReceived data " << data.get();
+      std::string message = "Server says hi ";
       pc::network::TCP::sendRaw(poll.fd, (const char*)message.data(), message.size());
    }
 }
 
 void* execTcp(void* arg)
 {
-   pc::network::TCPPoll<>* poll = ((pc::network::TCPPoll<>*)arg);
+   pc::network::TCPPoll<>& poll = *((pc::network::TCPPoll<>*)arg);
    while (true)
    {
-      std::cout << "\nExec poll start";
-      poll->exec(5);
-      std::cout << "\nExec poll end";
+      poll.exec(10);
    }
    return NULL;
+}
+
+void downCallback(void* balence, std::size_t const idx)
+{
+   pc::balancer::priority_queue& balencer = *(pc::balancer::priority_queue*)balence;
+   balencer.decPriority(idx);
+   std::cout << std::endl << "One client went down";
 }
 
 int main()
@@ -63,25 +64,32 @@ int main()
    pc::network::TCP tcp(ip.bind());
    tcp.setReusable();
    tcp.listen();
-   std::vector<pc::network::TCPPoll<> /* */> polls;
-   polls.resize(get_nprocs());
+   std::vector<pc::network::TCPPoll<> /* */> polls(get_nprocs());
+
+   pc::balancer::priority_queue balancer(polls.size());
 
    for (std::vector<pc::network::TCPPoll<> /* */>::iterator it = polls.begin();
         it != polls.end();
         ++it)
+   {
+      it->downCallbackIndex = (it - polls.begin());
+      it->downCallback      = &downCallback;
+      it->callBackParam     = &balancer;
       pc::threads::Thread(&execTcp, &(*it)).detach();
+   }
 
-   int threadCurrentAlloc = 0;
    while (true)
    {
+      std::cout << std::endl << "Try to connect";
       pc::network::TCP child(tcp.accept());
       if (child.invalid())
          continue;
-      polls[threadCurrentAlloc].PollThis(child.socket, pollCallback);
-      std::cout << "Connected to " << child.socket << " on " << threadCurrentAlloc
-                << " thread"
-                << "\n";
-      threadCurrentAlloc = (threadCurrentAlloc + 1) % polls.size();
+      std::size_t currentBalance = *balancer;
+      ++balancer;
+      polls[currentBalance].PollThis(child.socket, pollCallback);
+      std::cout << std::endl
+                << "Connected to " << child.socket << " on " << currentBalance
+                << " thread : Balancer" << balancer;
       child.invalidate();
    }
    return EXIT_SUCCESS;
