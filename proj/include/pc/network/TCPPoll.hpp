@@ -8,6 +8,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#include <pc/balancer/priority_queue.hpp>
 #include <pc/deadline.hpp>
 #include <pc/thread/Mutex.hpp>
 #include <pc/thread/MutexGuard.hpp>
@@ -49,7 +50,7 @@ namespace pc
       {
          typedef std::vector<pollfd> pollVectorFd;
 
-         typedef void(DownCallback)(void*, std::size_t const);
+         typedef void(DownCallback)(pc::balancer::priority_queue&, std::size_t const);
 
          typedef void (*Callback)(pollfd const&);
          typedef std::tr1::unordered_map<int /*socket*/, Callback> Callbacks;
@@ -92,8 +93,8 @@ namespace pc
        public:
          DownCallback* downCallback;
 
-         void*       callBackParam;
-         std::size_t downCallbackIndex;
+         std::size_t                   balancerIndex;
+         pc::balancer::priority_queue* balancer;
 
          void PollThis(int const socket, Callback callback)
          {
@@ -141,7 +142,8 @@ namespace pc
                   }
                   ++noOfDeleted;
                   // Notify user when a File Descriptor goes down
-                  downCallback(callBackParam, downCallbackIndex);
+                  balancer->decPriority(balancerIndex);
+                  downCallback(*balancer, balancerIndex);
                   continue;
                }
                if (it->revents & POLLIN)
@@ -150,6 +152,7 @@ namespace pc
                   if (ioctl(it->fd, FIONREAD, &bytes) != -1)
                   {
                      ++deadlines[it->fd];
+                     balancer->incPriority(balancerIndex, bytes);
                      if (bytes == 0)
                      {
                         close(it->fd);
@@ -164,7 +167,8 @@ namespace pc
                         }
                         ++noOfDeleted;
                         // Notify user when a File Descriptor goes down
-                        downCallback(callBackParam, downCallbackIndex);
+                        balancer->decPriority(balancerIndex);
+                        downCallback(*balancer, balancerIndex);
                         continue;
                      }
                   }

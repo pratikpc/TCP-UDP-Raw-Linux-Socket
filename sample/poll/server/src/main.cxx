@@ -45,9 +45,8 @@ void* execTcp(void* arg)
    return NULL;
 }
 
-void downCallback(void* balence, std::size_t const idx)
+void downCallback(pc::balancer::priority_queue& balencer, std::size_t const idx)
 {
-   pc::balancer::priority_queue& balencer = *(pc::balancer::priority_queue*)balence;
    balencer.decPriority(idx);
    std::cout << std::endl << "One client went down";
 }
@@ -72,9 +71,9 @@ int main()
         it != polls.end();
         ++it)
    {
-      it->downCallbackIndex = (it - polls.begin());
-      it->downCallback      = &downCallback;
-      it->callBackParam     = &balancer;
+      it->balancerIndex = (it - polls.begin());
+      it->downCallback  = &downCallback;
+      it->balancer      = &balancer;
       pc::threads::Thread(&execTcp, &(*it)).detach();
    }
 
