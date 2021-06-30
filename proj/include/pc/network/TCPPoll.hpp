@@ -1,10 +1,11 @@
 #pragma once
 
 #include <map>
-#include <sys/socket.h>
 #include <vector>
 
 #include <poll.h>
+#include <sys/ioctl.h>
+#include <sys/socket.h>
 #include <unistd.h>
 
 #include <pc/thread/Mutex.hpp>
@@ -42,10 +43,12 @@ namespace pc
          };
       } // namespace
 
-      template <bool Scale = true>
+      template <bool Scale = false>
       class TCPPoll
       {
-         typedef std::vector<pollfd> pollarr;
+         typedef std::vector<pollfd> pollVectorFd;
+
+         typedef void(DownCallback)(void*, std::size_t const);
 
          typedef void (*Callback)(pollfd const&);
          typedef typename conditional<
@@ -53,59 +56,111 @@ namespace pc
              std::tr1::array<Callback, 100>,
              std::tr1::unordered_map<int /*socket*/, Callback> /* */>::type Callbacks;
 
-         pollarr   polls;
-         Callbacks callbacks;
+         pollVectorFd pollsIn;
+         pollVectorFd pollsOut;
+         Callbacks    callbacks;
 
          pc::threads::Mutex pollsMutex;
 
-         int pollRaw(std::size_t timeout)
+         bool updateIssued;
+         
+         void pollUpdate()
          {
             pc::threads::MutexGuard lock(pollsMutex);
-            return ::poll(polls.data(), polls.size(), timeout);
+            if (updateIssued)
+            {
+               pollsOut     = pollsIn;
+               updateIssued = false;
+            }
          }
+
          int poll(std::size_t timeout)
          {
-            int const rv = pollRaw(timeout);
+            pollUpdate();
+            if (pollsOut.size() == 0)
+            {
+               sleep(timeout / 1000);
+               return 0; // Timeout
+            }
+            int const rv = ::poll(pollsOut.data(), pollsOut.size(), timeout);
             if (rv == -1)
                throw std::runtime_error("Poll failed");
             return rv;
          }
 
        public:
+         DownCallback* downCallback;
+
+         void*       callBackParam;
+         std::size_t downCallbackIndex;
+
          void PollThis(int const socket, Callback callback)
          {
             pollfd poll;
             poll.fd     = socket;
             poll.events = POLLIN;
+
             // Protect this during multithreaded access
             {
                pc::threads::MutexGuard lock(pollsMutex);
-               polls.push_back(poll);
+               pollsIn.push_back(poll);
                callbacks[socket] = callback;
+               updateIssued      = true;
             }
          }
-
+         std::size_t size() const
+         {
+            return pollsIn.size();
+         }
          void exec(std::size_t timeout)
          {
             int const rv = poll(timeout * 1000);
             if (rv == 0)
                // Timeout
                return;
-            pc::threads::MutexGuard guard(pollsMutex);
-            for (pollarr::iterator it = polls.begin(); it != polls.end();)
+            std::size_t noOfDeleted = 0;
+            for (pollVectorFd::iterator it = pollsOut.begin(); it != pollsOut.end(); ++it)
             {
                if (it->revents & POLLHUP || it->revents & POLLNVAL)
                {
-                  // Erase on Holdup
-                  // if (Scale)
-                  //    callbacks.erase(it->fd);
                   close(it->fd);
-                  // Delete current element
-                  it = polls.erase(it);
+                  std::size_t indexErase = it - pollsOut.begin() - noOfDeleted;
+                  {
+                     pc::threads::MutexGuard guard(pollsMutex);
+                     callbacks.erase(it->fd);
+                     // Delete current element
+                     pollsIn.erase(pollsIn.begin() + indexErase);
+                     updateIssued = true;
+                  }
+                  ++noOfDeleted;
+                  // Notify user when a File Descriptor goes down
+                  downCallback(callBackParam, downCallbackIndex);
                   continue;
                }
+               if (it->revents & POLLIN)
+               {
+                  std::size_t bytes;
+                  if (ioctl(it->fd, FIONREAD, &bytes) != -1)
+                  {
+                     if (bytes == 0)
+                     {
+                        close(it->fd);
+                        std::size_t indexErase = it - pollsOut.begin() - noOfDeleted;
+                        {
+                           pc::threads::MutexGuard guard(pollsMutex);
+                           callbacks.erase(it->fd);
+                           // Delete current element
+                           pollsIn.erase(pollsIn.begin() + indexErase);
+                           updateIssued = true;
+                        }
+                        ++noOfDeleted;
+                        // Notify user when a File Descriptor goes down
+                        downCallback(callBackParam, downCallbackIndex);
+                        continue;
+                     }
+                  }
+               }
                callbacks[it->fd](*it);
-               ++it;
             }
          }
       };
