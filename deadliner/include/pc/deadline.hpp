@@ -35,7 +35,7 @@ namespace pc
       {
          clock_gettime(CLOCK_MONOTONIC, &specTime);
          return (std::ptrdiff_t)(((long long)specTime.tv_sec * 1000) +
-                              specTime.tv_nsec / 1.0e6);
+                                 specTime.tv_nsec / 1.0e6);
       }
 
       Deadline& operator++()
@@ -44,9 +44,36 @@ namespace pc
          if ((front == 0 && rear == maxCount - 1) || (front == rear + 1))
          {
             if ((curTime - queue[front]) <= maxTime)
+            {
                kill = true;
-            else
-               front = (front + 1) % maxCount;
+               return *this;
+            }
+            // Optimize
+            // Ignore the very large differences
+            // Move ahead of differences we may
+            // not be interested in
+            while (true)
+            {
+               if (front == -1)
+                  return *this;
+               if (front == rear)
+               {
+                  front = -1;
+                  rear  = -1;
+                  return *this;
+               }
+               // If greater, we can ignore this value
+               // And move ahead
+               if ((curTime - queue[(front + 1) % maxCount]) > maxTime)
+               {
+                  front = (front + 1) % maxCount;
+                  std::cout << std::endl
+                            << " In loop " << front << " f : r " << rear << " : "
+                            << (curTime - queue[front] - maxTime);
+               }
+               else
+                  break;
+            }
          }
          if (front == -1)
             front = 0;
