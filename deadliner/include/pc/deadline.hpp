@@ -7,12 +7,10 @@ namespace pc
 {
    class Deadline
    {
-      std::size_t    maxCount;
+      std::ptrdiff_t maxCount;
       std::ptrdiff_t maxTime;
 
-      std::size_t curSize;
-      std::time_t timeInSeconds;
-      bool        kill;
+      bool kill;
 
       std::vector<std::ptrdiff_t> queue;
 
@@ -22,8 +20,8 @@ namespace pc
 
     public:
       Deadline(std::size_t maxCount = 25, std::ptrdiff_t maxTime = 10 * 1000) :
-          maxCount(maxCount), maxTime(maxTime), curSize(0), kill(false), queue(maxCount),
-          front(-1), rear(-1)
+          maxCount(maxCount), maxTime(maxTime), kill(false), queue(maxCount), front(-1),
+          rear(-1)
       {
       }
 
@@ -34,7 +32,7 @@ namespace pc
       std::ptrdiff_t getCurrentTimeMs()
       {
          clock_gettime(CLOCK_MONOTONIC, &specTime);
-         return (std::ptrdiff_t)(((long long)specTime.tv_sec * 1000) +
+         return (std::ptrdiff_t)(((std::ptrdiff_t)specTime.tv_sec * 1000) +
                                  specTime.tv_nsec / 1.0e6);
       }
 
@@ -43,7 +41,7 @@ namespace pc
          if (deadline.front == -1)
             return os;
          // Function to display status of Circular Queue
-         std::size_t i = 0;
+         std::ptrdiff_t i = 0;
          for (i = deadline.front; i != deadline.rear; i = (i + 1) % deadline.maxCount)
             os << (deadline.queue[i] - deadline.queue[deadline.front]) << ", ";
          os << (deadline.queue[i] - deadline.queue[deadline.front]);
@@ -78,7 +76,7 @@ namespace pc
                break;
          }
       }
-      Deadline& increment(std::size_t count)
+      Deadline& increment()
       {
          std::ptrdiff_t curTime = getCurrentTimeMs();
 #ifdef DEBUG
@@ -104,7 +102,7 @@ namespace pc
       }
       Deadline& operator++()
       {
-         return increment(1);
+         return increment();
       }
 
       Deadline& MaxCount(std::size_t MaxCount)

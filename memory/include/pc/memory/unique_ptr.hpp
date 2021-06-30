@@ -10,8 +10,9 @@ namespace pc
       class unique_arr
       {
        public:
-         T*          data;
          std::size_t size;
+         T*          data;
+
          unique_arr(std::size_t size) : size(size), data(new T[size]) {}
          unique_arr() : size(0), data(NULL) {}
          unique_arr(unique_arr& other) : size(other.size), data(other.data)

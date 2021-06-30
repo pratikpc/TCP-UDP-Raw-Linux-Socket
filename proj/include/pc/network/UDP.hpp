@@ -38,17 +38,17 @@ namespace pc
          //    return *((T*)recv(sizeof(T), flags));
          // }
 
-         std::size_t
+         std::ptrdiff_t
              send(const void* msg, size_t const len, IP const& ip, int flags = 0) const
          {
-            std::size_t const sent =
+            std::ptrdiff_t const sent =
                 ::sendto(socket, msg, len, flags, ip.ip->ai_addr, ip.ip->ai_addrlen);
             if (sent == -1)
                throw std::invalid_argument("Unable to send");
             return sent;
          }
          template <typename T>
-         std::size_t send(T& msg, IP const& ip, int flags = 0) const
+         std::ptrdiff_t send(T& msg, IP const& ip, int flags = 0) const
          {
             return send((const void*)(&msg), sizeof(msg), ip, flags);
          }

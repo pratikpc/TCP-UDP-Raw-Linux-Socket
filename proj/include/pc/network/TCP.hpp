@@ -77,16 +77,16 @@ namespace pc
             return total;
          }
 
-         static std::size_t
+         static std::ptrdiff_t
              sendSingle(int socket, const char* msg, size_t const len, int flags = 0)
          {
-            std::size_t const sent = ::send(socket, msg, len, flags);
+            std::ptrdiff_t const sent = ::send(socket, msg, len, flags);
             if (sent == -1)
                throw std::invalid_argument("Unable to send");
             return sent;
          }
          template <typename T>
-         std::size_t send(T& msg, int flags = 0) const
+         std::ptrdiff_t send(T& msg, int flags = 0) const
          {
             return send((const char*)(&msg), sizeof(msg), flags);
          }
