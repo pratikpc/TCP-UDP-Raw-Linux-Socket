@@ -58,9 +58,6 @@ namespace pc
 
          pc::threads::Mutex pollsMutex;
 
-       public:
-         TCPPoll() {}
-
          int pollRaw(std::size_t timeout)
          {
             pc::threads::MutexGuard lock(pollsMutex);
