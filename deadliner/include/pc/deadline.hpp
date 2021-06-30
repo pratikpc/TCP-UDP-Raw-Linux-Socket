@@ -8,12 +8,23 @@ namespace pc
    class Deadline
    {
       std::size_t maxCount;
+      std::time_t maxTime;
+
       std::size_t curSize;
       std::time_t timeInSeconds;
       bool        kill;
 
+      std::vector<time_t> queue;
+
+      std::ptrdiff_t front;
+      std::ptrdiff_t rear;
+
     public:
-      Deadline(std::size_t maxCount = 20) : maxCount(maxCount), curSize(0), kill(false) {}
+      Deadline(std::size_t maxCount = 25, std::size_t maxTime = 13) :
+          maxCount(maxCount), maxTime(maxTime), curSize(0), kill(false), queue(maxCount),
+          front(-1), rear(-1)
+      {
+      }
 
       operator bool() const
       {
@@ -26,19 +37,21 @@ namespace pc
 
       Deadline& operator++()
       {
-         ++curSize;
          time_t curTime = getCurrentTime();
-         if (curTime == timeInSeconds)
+         if ((front == 0 && rear == maxCount - 1) || (front == rear + 1))
          {
-            kill = (curSize >= maxCount);
+            if ((curTime - queue[front]) <= maxTime)
+               kill = true;
+            else
+               front = (front + 1) % maxCount;
          }
-         else
-         {
-            curSize       = 0;
-            timeInSeconds = curTime;
-         }
+         if (front == -1)
+            front = 0;
+         rear        = (rear + 1) % maxCount;
+         queue[rear] = curTime;
          return *this;
       }
+
       Deadline& MaxCount(std::size_t MaxCount)
       {
          maxCount = MaxCount;
