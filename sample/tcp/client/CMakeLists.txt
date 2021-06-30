@@ -14,6 +14,12 @@ ${LIBRARY_CXX_SOURCES}
 ${LIBRARY_HXX_SOURCES}
 )
 
+target_compile_options(${PROJECT_NAME}
+ PRIVATE
+  -Wall
+  -Wextra
+  -Wpedantic
+)
 
 target_link_libraries(${PROJECT_NAME}
 PRIVATE

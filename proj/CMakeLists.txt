@@ -19,6 +19,12 @@ target_include_directories(
 			$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 
 target_compile_features(${PROJECT_NAME} INTERFACE cxx_std_98)
+target_compile_options(${PROJECT_NAME}
+  INTERFACE
+  -Wall
+  -Wextra
+  -Wpedantic
+)
 
 target_link_libraries(${PROJECT_NAME}
 INTERFACE

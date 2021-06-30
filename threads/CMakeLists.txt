@@ -13,6 +13,12 @@ $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
 # A Private Header File cannot be accessed by
 # Any packages that uses it
 )
+target_compile_options(${PROJECT_NAME}
+ INTERFACE
+  -Wall
+  -Wextra
+  -Wpedantic
+)
 
 target_link_libraries(${PROJECT_NAME}
 INTERFACE
