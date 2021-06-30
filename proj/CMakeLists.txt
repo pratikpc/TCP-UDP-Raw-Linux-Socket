@@ -24,5 +24,6 @@ target_link_libraries(${PROJECT_NAME}
 INTERFACE
 pc::threads
 pc::memory
+pc::deadliner
 )
 

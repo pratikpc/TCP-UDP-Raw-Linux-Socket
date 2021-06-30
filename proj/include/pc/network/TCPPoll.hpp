@@ -8,6 +8,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#include <pc/deadline.hpp>
 #include <pc/thread/Mutex.hpp>
 #include <pc/thread/MutexGuard.hpp>
 
@@ -51,10 +52,8 @@ namespace pc
          typedef void(DownCallback)(void*, std::size_t const);
 
          typedef void (*Callback)(pollfd const&);
-         typedef typename conditional<
-             Scale,
-             std::tr1::array<Callback, 100>,
-             std::tr1::unordered_map<int /*socket*/, Callback> /* */>::type Callbacks;
+         typedef std::tr1::unordered_map<int /*socket*/, Callback> Callbacks;
+         typedef std::tr1::unordered_map<int /*Socket*/, Deadline> Deadlines;
 
          pollVectorFd pollsIn;
          pollVectorFd pollsOut;
@@ -62,8 +61,10 @@ namespace pc
 
          pc::threads::Mutex pollsMutex;
 
+         Deadlines deadlines;
+
          bool updateIssued;
-         
+
          void pollUpdate()
          {
             pc::threads::MutexGuard lock(pollsMutex);
@@ -105,6 +106,7 @@ namespace pc
                pc::threads::MutexGuard lock(pollsMutex);
                pollsIn.push_back(poll);
                callbacks[socket] = callback;
+               deadlines[socket] = pc::Deadline();
                updateIssued      = true;
             }
          }
@@ -121,13 +123,18 @@ namespace pc
             std::size_t noOfDeleted = 0;
             for (pollVectorFd::iterator it = pollsOut.begin(); it != pollsOut.end(); ++it)
             {
-               if (it->revents & POLLHUP || it->revents & POLLNVAL)
+               if (it->revents & POLLHUP ||
+                   it->revents & POLLNVAL
+                   // Check deadline breach
+                   // Disconnect if too many messages received
+                   || deadlines[it->fd])
                {
                   close(it->fd);
                   std::size_t indexErase = it - pollsOut.begin() - noOfDeleted;
                   {
                      pc::threads::MutexGuard guard(pollsMutex);
                      callbacks.erase(it->fd);
+                     deadlines.erase(it->fd);
                      // Delete current element
                      pollsIn.erase(pollsIn.begin() + indexErase);
                      updateIssued = true;
@@ -142,6 +149,7 @@ namespace pc
                   std::size_t bytes;
                   if (ioctl(it->fd, FIONREAD, &bytes) != -1)
                   {
+                     ++deadlines[it->fd];
                      if (bytes == 0)
                      {
                         close(it->fd);
@@ -149,6 +157,7 @@ namespace pc
                         {
                            pc::threads::MutexGuard guard(pollsMutex);
                            callbacks.erase(it->fd);
+                           deadlines.erase(it->fd);
                            // Delete current element
                            pollsIn.erase(pollsIn.begin() + indexErase);
                            updateIssued = true;
