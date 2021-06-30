@@ -39,12 +39,26 @@ namespace pc
             }
             return *this;
          }
-         void decPriority(std::size_t index)
+         void incPriority(std::size_t index, std::size_t by = 1)
          {
             pc::threads::MutexGuard guard(mutex);
-
-            if (sizes[index] != 0)
-               --sizes[index];
+            sizes[index] += by;
+            lowestSizeIndex = MinIdx(lowestSizeIndex);
+         }
+         void decPriority(std::size_t index, std::size_t by = 1)
+         {
+            pc::threads::MutexGuard guard(mutex);
+            if (sizes[index] >= by)
+            {
+               sizes[index] -= by;
+               lowestSizeIndex = MinIdx(lowestSizeIndex);
+            }
+         }
+         void setPriority(std::size_t index, std::size_t value)
+         {
+            pc::threads::MutexGuard guard(mutex);
+            sizes[index]    = value;
+            lowestSizeIndex = MinIdx(lowestSizeIndex);
          }
          priority_queue& MaxCount(std::size_t MaxCount)
          {
@@ -67,7 +81,7 @@ namespace pc
                if (sizes[i] == 0)
                   return i;
                if (sizes[i] < sizes[minIdx])
-                  return i;
+                  minIdx = i;
             }
             return minIdx;
          }
