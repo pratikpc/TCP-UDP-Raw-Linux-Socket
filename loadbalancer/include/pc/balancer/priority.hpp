@@ -8,7 +8,7 @@ namespace pc
 {
    namespace balancer
    {
-      class priority_queue
+      class priority
       {
          std::vector<std::size_t> sizes;
 
@@ -16,21 +16,21 @@ namespace pc
          std::size_t        lowestSizeIndex;
 
        public:
-         friend std::ostream& operator<<(std::ostream& os, priority_queue& queue)
+         friend std::ostream& operator<<(std::ostream& os, priority& queue)
          {
             pc::threads::MutexGuard guard(queue.mutex);
             for (std::size_t i = 0; i < queue.sizes.size(); ++i)
                os << queue.sizes[i] << " : ";
             return os;
          }
-         priority_queue(std::size_t maxSize) : sizes(maxSize), lowestSizeIndex(0) {}
+         priority(std::size_t maxSize) : sizes(maxSize), lowestSizeIndex(0) {}
 
          std::size_t operator*()
          {
             pc::threads::MutexGuard guard(mutex);
             return lowestSizeIndex;
          }
-         priority_queue& operator++()
+         priority& operator++()
          {
             {
                pc::threads::MutexGuard guard(mutex);
@@ -60,7 +60,7 @@ namespace pc
             sizes[index]    = value;
             lowestSizeIndex = MinIdx(lowestSizeIndex);
          }
-         priority_queue& MaxCount(std::size_t MaxCount)
+         priority& MaxCount(std::size_t MaxCount)
          {
             pc::threads::MutexGuard guard(mutex);
 

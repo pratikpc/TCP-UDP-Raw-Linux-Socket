@@ -8,7 +8,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-#include <pc/balancer/priority_queue.hpp>
+#include <pc/balancer/priority.hpp>
 #include <pc/deadline.hpp>
 #include <pc/thread/Mutex.hpp>
 #include <pc/thread/MutexGuard.hpp>
@@ -50,7 +50,7 @@ namespace pc
       {
          typedef std::vector<pollfd> pollVectorFd;
 
-         typedef void(DownCallback)(pc::balancer::priority_queue&, std::size_t const);
+         typedef void(DownCallback)(pc::balancer::priority&, std::size_t const);
 
          typedef void (*Callback)(pollfd const&);
          typedef std::tr1::unordered_map<int /*socket*/, Callback> Callbacks;
@@ -94,7 +94,7 @@ namespace pc
          DownCallback* downCallback;
 
          std::size_t                   balancerIndex;
-         pc::balancer::priority_queue* balancer;
+         pc::balancer::priority* balancer;
 
          void PollThis(int const socket, Callback callback)
          {

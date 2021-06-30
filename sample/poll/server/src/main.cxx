@@ -8,7 +8,7 @@
 
 #include <pc/thread/Thread.hpp>
 
-#include <pc/balancer/priority_queue.hpp>
+#include <pc/balancer/priority.hpp>
 
 #include <cstdlib>
 
@@ -45,7 +45,7 @@ void* execTcp(void* arg)
    return NULL;
 }
 
-void downCallback(pc::balancer::priority_queue& balencer, std::size_t const idx)
+void downCallback(pc::balancer::priority& balencer, std::size_t const idx)
 {
    balencer.decPriority(idx);
    std::cout << std::endl << "One client went down";
@@ -65,7 +65,7 @@ int main()
    tcp.listen();
    std::vector<pc::network::TCPPoll<> /* */> polls(get_nprocs());
 
-   pc::balancer::priority_queue balancer(polls.size());
+   pc::balancer::priority balancer(polls.size());
 
    for (std::vector<pc::network::TCPPoll<> /* */>::iterator it = polls.begin();
         it != polls.end();
