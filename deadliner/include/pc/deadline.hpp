@@ -52,6 +52,9 @@ namespace pc
             // Ignore the very large differences
             // Move ahead of differences we may
             // not be interested in
+            // If the deadline is greater now
+            // The deadline would certainly be greater later
+            // So these parts can be easily ignored
             while (true)
             {
                if (front == -1)
