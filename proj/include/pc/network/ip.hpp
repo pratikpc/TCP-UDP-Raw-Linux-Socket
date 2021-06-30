@@ -17,10 +17,10 @@ namespace pc
       {
        public:
          addrinfo  hints;
-         addrinfo* ip = NULL;
+         addrinfo* ip;
 
        public:
-         IP(int const socketType = SOCK_STREAM)
+         IP(int const socketType = SOCK_STREAM) : ip(NULL)
          {
             // See also https://stackoverflow.com/questions/9820281/confused-about-memset
             memset(&hints, 0, sizeof hints);

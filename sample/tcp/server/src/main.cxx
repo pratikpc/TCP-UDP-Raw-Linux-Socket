@@ -16,7 +16,7 @@ void* childSocketExec(void* arg)
    {
       {
          std::cout << "\nMessage: ";
-         std::string message = "nokia tyre " + child->socket;
+         std::string message = "nokia tyre ";
          //  if (std::getline(std::cin, message))
          //  {
          sleep(3);
