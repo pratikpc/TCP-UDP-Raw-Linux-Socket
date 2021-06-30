@@ -7,21 +7,21 @@ namespace pc
 {
    class Deadline
    {
-      std::size_t maxCount;
-      std::size_t maxTime;
+      std::size_t    maxCount;
+      std::ptrdiff_t maxTime;
 
       std::size_t curSize;
       std::time_t timeInSeconds;
       bool        kill;
 
-      std::vector<std::size_t> queue;
+      std::vector<std::ptrdiff_t> queue;
 
       std::ptrdiff_t front;
       std::ptrdiff_t rear;
       timespec       specTime;
 
     public:
-      Deadline(std::size_t maxCount = 10, std::size_t maxTime = 10 * 1000) :
+      Deadline(std::size_t maxCount = 25, std::ptrdiff_t maxTime = 10 * 1000) :
           maxCount(maxCount), maxTime(maxTime), curSize(0), kill(false), queue(maxCount),
           front(-1), rear(-1)
       {
@@ -31,15 +31,16 @@ namespace pc
       {
          return kill;
       }
-      std::size_t getCurrentTimeMs()
+      std::ptrdiff_t getCurrentTimeMs()
       {
          clock_gettime(CLOCK_MONOTONIC, &specTime);
-         return (std::size_t)(((long long)specTime.tv_sec * 1000) + specTime.tv_nsec / 1.0e6);
+         return (std::ptrdiff_t)(((long long)specTime.tv_sec * 1000) +
+                              specTime.tv_nsec / 1.0e6);
       }
 
       Deadline& operator++()
       {
-         std::size_t curTime = getCurrentTimeMs();
+         std::ptrdiff_t curTime = getCurrentTimeMs();
          if ((front == 0 && rear == maxCount - 1) || (front == rear + 1))
          {
             if ((curTime - queue[front]) <= maxTime)
