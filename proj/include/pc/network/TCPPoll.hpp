@@ -9,7 +9,7 @@
 #include <unistd.h>
 
 #include <pc/balancer/priority.hpp>
-#include <pc/deadline.hpp>
+#include <pc/network/ClientInfo.hpp>
 #include <pc/thread/Mutex.hpp>
 #include <pc/thread/MutexGuard.hpp>
 
@@ -52,17 +52,14 @@ namespace pc
 
          typedef void(DownCallback)(pc::balancer::priority&, std::size_t const);
 
-         typedef void (*Callback)(pollfd const&);
-         typedef std::tr1::unordered_map<int /*socket*/, Callback> Callbacks;
-         typedef std::tr1::unordered_map<int /*Socket*/, Deadline> Deadlines;
+         typedef std::tr1::unordered_map<int /*Socket*/, ClientInfo> ClientInfos;
 
          pollVectorFd pollsIn;
          pollVectorFd pollsOut;
-         Callbacks    callbacks;
 
          pc::threads::Mutex pollsMutex;
 
-         Deadlines deadlines;
+         ClientInfos clientInfos;
 
          bool updateIssued;
 
@@ -96,7 +93,7 @@ namespace pc
          std::size_t             balancerIndex;
          pc::balancer::priority* balancer;
 
-         void Add(int const socket, Callback callback)
+         void Add(int const socket, ClientInfo::Callback callback)
          {
             pollfd poll;
             poll.fd     = socket;
@@ -106,10 +103,12 @@ namespace pc
             {
                pc::threads::MutexGuard lock(pollsMutex);
                pollsIn.push_back(poll);
-               callbacks[socket] = callback;
-               deadlines[socket] = pc::Deadline();
-               updateIssued      = true;
-               balancer->incPriority(balancerIndex, deadlines[socket].MaxCount());
+               clientInfos[socket] = ClientInfo();
+               updateIssued        = true;
+
+               clientInfos[socket].callback = callback;
+               balancer->incPriority(balancerIndex,
+                                     clientInfos[socket].deadline.MaxCount());
             }
          }
          std::size_t size() const
@@ -126,19 +125,16 @@ namespace pc
             std::size_t noOfDeleted = 0;
             for (pollVectorFd::iterator it = pollsOut.begin(); it != pollsOut.end(); ++it)
             {
-               if (it->revents & POLLHUP ||
-                   it->revents & POLLNVAL
-                   // Check deadline breach
-                   // Disconnect if too many messages received
-                   || deadlines[it->fd])
+               if (it->revents & POLLHUP || it->revents & POLLNVAL ||
+                   clientInfos[it->fd].deadlineBreach())
                {
                   close(it->fd);
                   std::size_t indexErase = it - pollsOut.begin() - noOfDeleted;
                   {
                      pc::threads::MutexGuard guard(pollsMutex);
-                     callbacks.erase(it->fd);
-                     balancer->decPriority(balancerIndex, deadlines[it->fd].MaxCount());
-                     deadlines.erase(it->fd);
+                     balancer->decPriority(balancerIndex,
+                                           clientInfos[it->fd].deadline.MaxCount());
+                     clientInfos.erase(it->fd);
                      // Delete current element
                      pollsIn.erase(pollsIn.begin() + indexErase);
                      updateIssued = true;
@@ -159,9 +155,8 @@ namespace pc
                         {
                            pc::threads::MutexGuard guard(pollsMutex);
                            balancer->decPriority(balancerIndex,
-                                                 deadlines[it->fd].MaxCount());
-                           callbacks.erase(it->fd);
-                           deadlines.erase(it->fd);
+                                                 clientInfos[it->fd].deadline.MaxCount());
+                           clientInfos.erase(it->fd);
                            // Delete current element
                            pollsIn.erase(pollsIn.begin() + indexErase);
                            updateIssued = true;
@@ -172,13 +167,13 @@ namespace pc
                      }
                      else
                      {
-                        ++deadlines[it->fd];
-                        callbacks[it->fd](*it);
+                        ++clientInfos[it->fd].deadline;
+                        clientInfos[it->fd].callback(*it, clientInfos[it->fd]);
                      }
                   }
                }
                else
-                  callbacks[it->fd](*it);
+                  clientInfos[it->fd].callback(*it, clientInfos[it->fd]);
             }
          }
       };
