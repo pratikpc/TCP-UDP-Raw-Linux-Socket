@@ -32,7 +32,7 @@ void pollCallback(pollfd const& poll, pc::network::ClientInfo& clientInfo)
 
    if (clientInfo.hasClientId())
    {
-      if (strncmp(data.get(), "DEAD-INC", 8) != 0)
+      if (strncmp(data.get(), "DEAD-INC", 8) == 0)
          clientInfo.deadline.increment();
       // std::cout << "\nReceived data " << data.get();
       std::string message = "Server says hi ";
