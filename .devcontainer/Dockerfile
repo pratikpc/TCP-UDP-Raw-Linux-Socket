@@ -36,7 +36,7 @@ CMD [ "sleep", "infinity" ]
 
 # [Optional] Uncomment this section to install additional packages.
 RUN apt-get update --fix-missing && export DEBIAN_FRONTEND=noninteractive \
-     && apt-get -y install --no-install-recommends --fix-missing ninja-build clang-format software-properties-common
+     && apt-get -y install --no-install-recommends --fix-missing ninja-build clang-format software-properties-common libpq-dev
 
 RUN add-apt-repository ppa:git-core/ppa && apt-get update --fix-missing &&  export DEBIAN_FRONTEND=noninteractive \
      && apt-get -y install git
