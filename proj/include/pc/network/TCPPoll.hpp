@@ -96,7 +96,7 @@ namespace pc
          std::size_t             balancerIndex;
          pc::balancer::priority* balancer;
 
-         void PollThis(int const socket, Callback callback)
+         void Add(int const socket, Callback callback)
          {
             pollfd poll;
             poll.fd     = socket;
