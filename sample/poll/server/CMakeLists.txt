@@ -24,6 +24,7 @@ target_link_libraries(${PROJECT_NAME}
 PRIVATE
 pc::tcp-udp-server
 pc::loadbalancer
+pc::pqpp
 )
 
 target_compile_options(${PROJECT_NAME}

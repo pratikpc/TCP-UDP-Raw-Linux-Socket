@@ -14,7 +14,17 @@
 
 #include <sys/sysinfo.h>
 
-void pollCallback(pollfd const& poll, pc::network::ClientInfo& clientInfo)
+#include <pc/pqpp/Connection.hpp>
+
+struct Config
+{
+   pc::pqpp::Connection connection;
+   Config(std::string connectionString) : connection(connectionString) {}
+};
+
+void pollCallback(pollfd const&            poll,
+                  pc::network::ClientInfo& clientInfo,
+                  void*                    configParam)
 {
    //   std::cout << "Poll called type"
    //             << " revents: " << poll.revents << "\n"
@@ -51,6 +61,26 @@ void pollCallback(pollfd const& poll, pc::network::ClientInfo& clientInfo)
       pc::network::TCP::sendRaw(poll.fd, (const char*)message.data(), message.size());
       clientInfo.clientId = std::string(data.get());
       std::cout << "\nNew Client ID joined " << clientInfo.clientId;
+      {
+         Config* config = (Config*)configParam;
+
+         std::vector<const char*> params(2);
+         params[0] = clientInfo.clientId.c_str();
+         params[1] = "45"; // DEFAULT
+
+         pc::pqpp::IterateResult res = config->connection.iterate(
+             "SELECT coalesce(MAX(priority),$2) AS priority FROM priority_table WHERE "
+             "clientId=$1",
+             params);
+         if (!res)
+         {
+            std::cerr << "\nUnable to connect to database";
+            return;
+         }
+         std::ptrdiff_t newDeadlineMaxCount = std::atoll(res[0].c_str());
+         clientInfo.changeMaxCount(newDeadlineMaxCount);
+         std::cout << "\nNew deadlien count for "<< clientInfo.clientId << " is " << newDeadlineMaxCount;
+      }
    }
 }
 
@@ -86,13 +116,29 @@ int main()
 
    pc::balancer::priority balancer(polls.size());
 
+   Config config("postgresql://postgres@localhost:5432/");
+   {
+      pc::pqpp::Result res = config.connection.exec(
+          "CREATE TABLE IF NOT EXISTS priority_table ("
+          "clientId varchar(45) NOT NULL,"
+          "priority smallint NOT NULL,"
+          "PRIMARY KEY(clientId)) ");
+      if (!res)
+      {
+         std::cerr << "Failed to create table\n";
+         return EXIT_FAILURE;
+      }
+      std::cout << "\nTable Created";
+   }
+
    for (std::vector<pc::network::TCPPoll<> /* */>::iterator it = polls.begin();
         it != polls.end();
         ++it)
    {
-      it->balancerIndex = (it - polls.begin());
-      it->downCallback  = &downCallback;
-      it->balancer      = &balancer;
+      it->balancerIndex  = (it - polls.begin());
+      it->downCallback   = &downCallback;
+      it->balancer       = &balancer;
+      it->callbackConfig = &config;
       pc::threads::Thread(&execTcp, &(*it)).detach();
    }
 
