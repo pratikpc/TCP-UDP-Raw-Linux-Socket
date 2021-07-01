@@ -4,6 +4,9 @@
 #include <ctime>
 #include <vector>
 
+#include <pc/thread/Mutex.hpp>
+#include <pc/thread/MutexGuard.hpp>
+
 namespace pc
 {
    class Deadline
@@ -16,6 +19,8 @@ namespace pc
       std::ptrdiff_t front;
       std::ptrdiff_t rear;
 
+      mutable pc::threads::Mutex mutex;
+
     public:
       Deadline(std::size_t maxCount = 25, std::ptrdiff_t maxTime = 10 * 1000) :
           maxCount(maxCount), maxTime(maxTime), queue(maxCount), front(-1), rear(-1)
@@ -24,12 +29,13 @@ namespace pc
 
       operator bool() const
       {
-         std::ptrdiff_t curTime = getCurrentTimeMs();
+         std::ptrdiff_t          curTime = getCurrentTimeMs();
+         pc::threads::MutexGuard guard(mutex);
          if ((front == 0 && rear == maxCount - 1) || (front == rear + 1))
             return ((curTime - queue[front]) <= maxTime);
          return false;
       }
-      std::ptrdiff_t getCurrentTimeMs() const
+      static std::ptrdiff_t getCurrentTimeMs()
       {
          timespec specTime;
          clock_gettime(CLOCK_MONOTONIC, &specTime);
@@ -39,7 +45,8 @@ namespace pc
 
       Deadline& increment()
       {
-         std::ptrdiff_t curTime = getCurrentTimeMs();
+         pc::threads::MutexGuard guard(mutex);
+         std::ptrdiff_t          curTime = getCurrentTimeMs();
          // If queue is full
          if ((front == 0 && rear == maxCount - 1) || (front == rear + 1))
          {
@@ -59,6 +66,7 @@ namespace pc
 
       Deadline& MaxCount(std::ptrdiff_t newMaxCount)
       {
+         pc::threads::MutexGuard guard(mutex);
          // Check if Queue needs to be expanded
          if (maxCount < newMaxCount)
          {
@@ -80,9 +88,7 @@ namespace pc
             // If the array is not yet circular
             // Simply resize
             else
-            {
                queue.resize(newMaxCount);
-            }
          }
          maxCount = newMaxCount;
          return *this;

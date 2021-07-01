@@ -14,3 +14,7 @@ $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
 # Any packages that uses it
 )
 
+target_link_libraries(${PROJECT_NAME}
+INTERFACE
+pc::threads
+)
