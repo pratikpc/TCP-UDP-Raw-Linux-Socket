@@ -90,7 +90,9 @@ namespace pc
        public:
          DownCallback* downCallback;
 
-         std::size_t             balancerIndex;
+         std::size_t balancerIndex;
+         void*       callbackConfig;
+
          pc::balancer::priority* balancer;
 
          void Add(int const socket, ClientInfo::Callback callback)
@@ -168,7 +170,8 @@ namespace pc
                      else
                      {
                         ++clientInfos[it->fd].deadline;
-                        clientInfos[it->fd].callback(*it, clientInfos[it->fd]);
+                        clientInfos[it->fd].callback(
+                            *it, clientInfos[it->fd], callbackConfig);
                      }
                   }
                }
@@ -176,8 +179,8 @@ namespace pc
                {
                   ++clientInfos[it->fd].deadline;
                   clientInfos[it->fd].callback(*it, clientInfos[it->fd], callbackConfig);
+               }
             }
-         }
          }
       };
    } // namespace network
