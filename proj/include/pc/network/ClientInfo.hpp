@@ -10,7 +10,9 @@ namespace pc
       class ClientInfo
       {
        public:
-         typedef void (*Callback)(pollfd const&, ClientInfo&);
+         typedef void (*Callback)(pollfd const&,
+                                  ClientInfo&,
+                                  void* /*Configuration details*/);
 
          std::string  clientId;
          pc::Deadline deadline;
