@@ -5,7 +5,7 @@
 
 int main()
 {
-   pc::pqpp::Connection connection;
+   pc::pqpp::Connection connection("postgresql://postgres@localhost:5432/");
    if (!connection)
    {
       std::cerr << "Connection failure\n";

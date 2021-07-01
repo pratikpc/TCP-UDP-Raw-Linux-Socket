@@ -16,9 +16,9 @@ namespace pc
          PGconn* conn;
 
        public:
-         Connection()
+         Connection(std::string connectionString)
          {
-            conn = PQconnectdb("postgresql://postgres@localhost:5432/");
+            conn = PQconnectdb(connectionString.c_str());
          }
          ~Connection()
          {
