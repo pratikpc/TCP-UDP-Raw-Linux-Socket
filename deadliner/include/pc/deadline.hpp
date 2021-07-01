@@ -36,74 +36,26 @@ namespace pc
                                  specTime.tv_nsec / 1.0e6);
       }
 
-      friend std::ostream& operator<<(std::ostream& os, Deadline& deadline)
-      {
-         if (deadline.front == -1)
-            return os;
-         // Function to display status of Circular Queue
-         std::ptrdiff_t i = 0;
-         for (i = deadline.front; i != deadline.rear; i = (i + 1) % deadline.maxCount)
-            os << (deadline.queue[i] - deadline.queue[deadline.front]) << ", ";
-         os << (deadline.queue[i] - deadline.queue[deadline.front]);
-         return os;
-      }
-      void IgnoreLargeDifferences()
-      { // Optimize
-         // Ignore the very large differences
-         // Move ahead of differences we may
-         // not be interested in
-         // If the deadline is greater now
-         // The deadline would certainly be greater later
-         // So these parts can be easily ignored
-         while (true)
-         {
-            if (front == -1)
-               break;
-            if (front == rear)
-               break;
-            // If greater, we can ignore this value
-            // And move ahead
-            if ((queue[rear] - queue[(front + 1) % maxCount]) > maxTime)
-            {
-#ifdef DEBUG
-               std::cout << std::endl
-                         << "In loop " << front << " f : r " << rear << " : "
-                         << (queue[rear] - queue[front] - maxTime) << " : " << *this;
-#endif
-               front = (front + 1) % maxCount;
-            }
-            else
-               break;
-         }
-      }
       Deadline& increment()
       {
-         std::ptrdiff_t curTime = getCurrentTimeMs();
-#ifdef DEBUG
-         std::cout << std::endl
-                   << "operator " << front << " f : r " << rear << " : "
-                   << (curTime - queue[front] - maxTime) << " : " << *this;
 
-#endif
+         std::ptrdiff_t curTime = getCurrentTimeMs();
+         // If queue is full
          if ((front == 0 && rear == maxCount - 1) || (front == rear + 1))
          {
+            // Compare current time and time at front
             if ((curTime - queue[front]) <= maxTime)
             {
-#ifdef DEBUG
-               std::cout << std::endl
-                         << "Killed now " << front << " f : r " << rear << " : "
-                         << (curTime - queue[front] - maxTime) << " : " << *this;
-
-#endif
                kill = true;
                return *this;
             }
+            // Deque current value
+            front = (front + 1) % maxCount;
          }
          if (front == -1)
             front = 0;
          rear        = (rear + 1) % maxCount;
          queue[rear] = curTime;
-         IgnoreLargeDifferences();
          return *this;
       }
       Deadline& operator++()
