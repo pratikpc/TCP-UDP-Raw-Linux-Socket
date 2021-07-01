@@ -152,7 +152,6 @@ namespace pc
                   std::size_t bytes;
                   if (ioctl(it->fd, FIONREAD, &bytes) != -1)
                   {
-                     ++deadlines[it->fd];
                      if (bytes == 0)
                      {
                         close(it->fd);
@@ -171,12 +170,15 @@ namespace pc
                         // Notify user when a File Descriptor goes down
                         downCallback(*balancer, balancerIndex);
                      }
+                     else
+                     {
+                        ++deadlines[it->fd];
+                        callbacks[it->fd](*it);
+                     }
                   }
                }
                else
-               {
                   callbacks[it->fd](*it);
-               }
             }
          }
       };
