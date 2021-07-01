@@ -57,8 +57,23 @@ namespace pc
          return increment();
       }
 
-      Deadline& MaxCount(std::size_t MaxCount)
+      Deadline& MaxCount(std::ptrdiff_t MaxCount)
       {
+         // Check if Queue needs to be expanded
+         if (maxCount < MaxCount)
+         {
+            // Copy from start to finish to temporary
+            std::vector<std::ptrdiff_t> temp(MaxCount);
+            for (std::ptrdiff_t i = front, j = 0; i != rear; i = (i + 1) % maxCount, ++j)
+               temp[j] = queue[i];
+            // Set front and rear to 0 and new end
+            front = 0;
+            rear  = maxCount;
+            // Clear queue
+            queue.clear();
+            // Move temp to queue
+            queue = temp;
+         }
          maxCount = MaxCount;
          return *this;
       }
