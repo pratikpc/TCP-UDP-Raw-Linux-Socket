@@ -89,6 +89,12 @@ namespace pc
          {
             if ((curTime - queue[front]) <= maxTime)
             {
+#ifdef DEBUG
+               std::cout << std::endl
+                         << "Killed now " << front << " f : r " << rear << " : "
+                         << (curTime - queue[front] - maxTime) << " : " << *this;
+
+#endif
                kill = true;
                return *this;
             }
