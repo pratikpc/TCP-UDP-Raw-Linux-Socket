@@ -57,24 +57,34 @@ namespace pc
          return increment();
       }
 
-      Deadline& MaxCount(std::ptrdiff_t MaxCount)
+      Deadline& MaxCount(std::ptrdiff_t newMaxCount)
       {
          // Check if Queue needs to be expanded
-         if (maxCount < MaxCount)
+         if (maxCount < newMaxCount)
          {
-            // Copy from start to finish to temporary
-            std::vector<std::ptrdiff_t> temp(MaxCount);
-            for (std::ptrdiff_t i = front, j = 0; i != rear; i = (i + 1) % maxCount, ++j)
-               temp[j] = queue[i];
-            // Set front and rear to 0 and new end
-            front = 0;
-            rear  = maxCount;
-            // Clear queue
-            queue.clear();
-            // Move temp to queue
-            queue = temp;
+            if (front > rear)
+            {
+               // Copy from start to finish to temporary
+               std::vector<std::ptrdiff_t> temp(newMaxCount);
+               for (std::ptrdiff_t i = front, j = 0; i != rear;
+                    i = (i + 1) % maxCount, ++j)
+                  temp[j] = queue[i];
+               // Set front and rear to 0 and new end
+               front = 0;
+               rear  = maxCount;
+               // Clear queue
+               queue.clear();
+               // Move temp to queue
+               queue = temp;
+            }
+            // If the array is not yet circular
+            // Simply resize
+            else
+            {
+               queue.resize(newMaxCount);
+            }
          }
-         maxCount = MaxCount;
+         maxCount = newMaxCount;
          return *this;
       }
       std::size_t MaxCount() const
