@@ -38,14 +38,29 @@ int main()
          std::cerr << "Failed to insert data\n";
          return EXIT_FAILURE;
       }
+   }
+   {
+      std::vector<const char*> params(2);
+      params[0]            = "CLIENT-2";
+      params[1]            = "98";
+      pc::pqpp::Result res = connection.exec(
+          "INSERT INTO priority_table(clientId, priority) VALUES($1,$2) ON "
+          "CONFLICT (clientId) DO UPDATE "
+          "SET priority = cast($2 as SMALLINT);",
+          params);
+      if (!res)
+      {
+         std::cerr << "Failed to insert data\n";
+         return EXIT_FAILURE;
+      }
       std::cout << "Data inserted\n";
    }
    {
       pc::pqpp::IterateResult res =
           connection.iterate("SELECT clientId, priority FROM priority_table");
+      std::cout << "Processing table\n";
       while (res)
       {
-         std::cout << "Processing table\n";
          std::cout << "Client ID = " << res[0] << " : "
                    << "priority = " << res[1] << "\n";
          ++res;
