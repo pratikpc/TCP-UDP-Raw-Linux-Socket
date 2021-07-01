@@ -173,8 +173,11 @@ namespace pc
                   }
                }
                else
-                  clientInfos[it->fd].callback(*it, clientInfos[it->fd]);
+               {
+                  ++clientInfos[it->fd].deadline;
+                  clientInfos[it->fd].callback(*it, clientInfos[it->fd], callbackConfig);
             }
+         }
          }
       };
    } // namespace network
