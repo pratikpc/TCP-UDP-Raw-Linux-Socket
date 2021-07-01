@@ -84,7 +84,6 @@ int main()
       if (child.invalid())
          continue;
       std::size_t currentBalance = *balancer;
-      ++balancer;
       polls[currentBalance].PollThis(child.socket, pollCallback);
       std::cout << std::endl
                 << "Connected to " << child.socket << " on " << currentBalance
