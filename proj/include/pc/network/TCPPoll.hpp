@@ -93,7 +93,7 @@ namespace pc
        public:
          DownCallback* downCallback;
 
-         std::size_t                   balancerIndex;
+         std::size_t             balancerIndex;
          pc::balancer::priority* balancer;
 
          void PollThis(int const socket, Callback callback)
@@ -144,9 +144,8 @@ namespace pc
                   // Notify user when a File Descriptor goes down
                   balancer->decPriority(balancerIndex);
                   downCallback(*balancer, balancerIndex);
-                  continue;
                }
-               if (it->revents & POLLIN)
+               else if (it->revents & POLLIN)
                {
                   std::size_t bytes;
                   if (ioctl(it->fd, FIONREAD, &bytes) != -1)
@@ -169,12 +168,14 @@ namespace pc
                         // Notify user when a File Descriptor goes down
                         balancer->decPriority(balancerIndex);
                         downCallback(*balancer, balancerIndex);
-                        continue;
                      }
                   }
                }
+               else
+               {
                callbacks[it->fd](*it);
             }
+         }
          }
       };
    } // namespace network
