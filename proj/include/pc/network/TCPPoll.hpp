@@ -109,21 +109,14 @@ namespace pc
                callbacks[socket] = callback;
                deadlines[socket] = pc::Deadline();
                updateIssued      = true;
+               balancer->decPriority(balancerIndex, deadlines[socket].MaxCount());
             }
          }
          std::size_t size() const
          {
             return pollsIn.size();
          }
-         std::size_t GetTotalDeadlineMaxCountLimit()
-         {
-            std::size_t limit = 0;
-            for (Deadlines::iterator it = deadlines.begin(); it != deadlines.end(); ++it)
-            {
-               limit += it->second.MaxCount();
-            }
-            return limit;
-         }
+
          void exec(std::size_t timeout)
          {
             int const rv = poll(timeout * 1000);
@@ -144,13 +137,13 @@ namespace pc
                   {
                      pc::threads::MutexGuard guard(pollsMutex);
                      callbacks.erase(it->fd);
+                     balancer->decPriority(balancerIndex, deadlines[it->fd].MaxCount());
                      deadlines.erase(it->fd);
                      // Delete current element
                      pollsIn.erase(pollsIn.begin() + indexErase);
                      updateIssued = true;
                   }
                   ++noOfDeleted;
-                  balancer->setPriority(balancerIndex, GetTotalDeadlineMaxCountLimit());
                   // Notify user when a File Descriptor goes down
                   downCallback(*balancer, balancerIndex);
                }
@@ -160,14 +153,14 @@ namespace pc
                   if (ioctl(it->fd, FIONREAD, &bytes) != -1)
                   {
                      ++deadlines[it->fd];
-                     balancer->setPriority(balancerIndex,
-                                           GetTotalDeadlineMaxCountLimit());
                      if (bytes == 0)
                      {
                         close(it->fd);
                         std::size_t indexErase = it - pollsOut.begin() - noOfDeleted;
                         {
                            pc::threads::MutexGuard guard(pollsMutex);
+                           balancer->decPriority(balancerIndex,
+                                                 deadlines[it->fd].MaxCount());
                            callbacks.erase(it->fd);
                            deadlines.erase(it->fd);
                            // Delete current element
@@ -175,8 +168,6 @@ namespace pc
                            updateIssued = true;
                         }
                         ++noOfDeleted;
-                        balancer->setPriority(balancerIndex,
-                                              GetTotalDeadlineMaxCountLimit());
                         // Notify user when a File Descriptor goes down
                         downCallback(*balancer, balancerIndex);
                      }
