@@ -109,7 +109,7 @@ namespace pc
                callbacks[socket] = callback;
                deadlines[socket] = pc::Deadline();
                updateIssued      = true;
-               balancer->decPriority(balancerIndex, deadlines[socket].MaxCount());
+               balancer->incPriority(balancerIndex, deadlines[socket].MaxCount());
             }
          }
          std::size_t size() const
