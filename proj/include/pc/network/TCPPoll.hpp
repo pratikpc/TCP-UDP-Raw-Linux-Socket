@@ -115,6 +115,15 @@ namespace pc
          {
             return pollsIn.size();
          }
+         std::size_t GetTotalDeadlineMaxCountLimit()
+         {
+            std::size_t limit = 0;
+            for (Deadlines::iterator it = deadlines.begin(); it != deadlines.end(); ++it)
+            {
+               limit += it->second.MaxCount();
+            }
+            return limit;
+         }
          void exec(std::size_t timeout)
          {
             int const rv = poll(timeout * 1000);
@@ -141,8 +150,8 @@ namespace pc
                      updateIssued = true;
                   }
                   ++noOfDeleted;
+                  balancer->setPriority(balancerIndex, GetTotalDeadlineMaxCountLimit());
                   // Notify user when a File Descriptor goes down
-                  balancer->decPriority(balancerIndex);
                   downCallback(*balancer, balancerIndex);
                }
                else if (it->revents & POLLIN)
@@ -151,7 +160,8 @@ namespace pc
                   if (ioctl(it->fd, FIONREAD, &bytes) != -1)
                   {
                      ++deadlines[it->fd];
-                     balancer->incPriority(balancerIndex, bytes);
+                     balancer->setPriority(balancerIndex,
+                                           GetTotalDeadlineMaxCountLimit());
                      if (bytes == 0)
                      {
                         close(it->fd);
@@ -165,17 +175,18 @@ namespace pc
                            updateIssued = true;
                         }
                         ++noOfDeleted;
+                        balancer->setPriority(balancerIndex,
+                                              GetTotalDeadlineMaxCountLimit());
                         // Notify user when a File Descriptor goes down
-                        balancer->decPriority(balancerIndex);
                         downCallback(*balancer, balancerIndex);
                      }
                   }
                }
                else
                {
-               callbacks[it->fd](*it);
+                  callbacks[it->fd](*it);
+               }
             }
-         }
          }
       };
    } // namespace network
