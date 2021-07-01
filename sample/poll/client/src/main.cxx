@@ -3,9 +3,12 @@
 #include <pc/network/TCP.hpp>
 #include <pc/network/ip.hpp>
 
+#include <pc/deadline.hpp>
+
 #include <pc/memory/unique_ptr.hpp>
 
 #include <cstdlib>
+#include <ctime>
 
 int main()
 {
@@ -14,33 +17,49 @@ int main()
 
    std::string ipstr = ip;
    std::cout << "IP = " << ipstr;
-   std::cout << "\nHostname = " << pc::network::IP::hostName();
    pc::network::TCP tcp(ip.connect());
-   for (std::size_t i = 0; true; i++)
+   std::cout << "\nHostname = " << pc::network::IP::hostName();
+
+   pc::Deadline deadline(25 - 1);
+   try
    {
-      // {
-      //    pc::memory::unique_arr<char> recv = tcp.recv(1000);
-      //    if (!recv)
-      //       // Gracefull disconnection
-      //       break;
-      //    recv.get()[1000 - 1] = '\0';
-      //    std::cout << "\nServer said : " << (const char*) recv.get();
-      // }
-      // std::cout << "\nSay: ";
-      std::string message = "Message ";
-      // if (std::getline(std::cin, message))
-      // {
-      tcp.send((const char*)message.data(), message.size());
-      std::cout << "\nMessage sent";
-      // sleep(3);
-      pc::memory::unique_arr<char> recv(1000);
-      tcp.recv(recv.size, recv.get());
-      if (!recv)
+      for (std::size_t i = 0; true; i++)
       {
-         std::cout << "\nData not found";
-         break;
+         // {
+         //    pc::memory::unique_arr<char> recv = tcp.recv(1000);
+         //    if (!recv)
+         //       // Gracefull disconnection
+         //       break;
+         //    recv.get()[1000 - 1] = '\0';
+         //    std::cout << "\nServer said : " << (const char*) recv.get();
+         // }
+         // std::cout << "\nSay: ";
+         std::string message = "Message ";
+         // if (std::getline(std::cin, message))
+         // {
+         std::cout << "\nMessage sending " << i;
+         if (!deadline)
+         {
+            tcp.send((const char*)message.data(), message.size());
+            ++deadline;
+            pc::memory::unique_arr<char> recv(1000);
+            tcp.recv(recv.size, recv.get());
+            if (!recv)
+            {
+               std::cout << "\nData not found";
+               break;
+            }
+            std::cout << "\nServer says: " << (const char*)recv.get();
+         }
+         else
+         {
+            std::cout << "\nMessage not sent";
+         }
+         usleep(8 * 1000 * 1000 / 25);
       }
-      std::cout << "\nServer says: " << (const char*)recv.get();
+   }
+   catch (std::exception const&)
+   {
    }
    return EXIT_SUCCESS;
 }
