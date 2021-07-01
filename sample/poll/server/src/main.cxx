@@ -14,7 +14,7 @@
 
 #include <sys/sysinfo.h>
 
-void pollCallback(pollfd const& poll)
+void pollCallback(pollfd const& poll, pc::network::ClientInfo& clientInfo)
 {
    //   std::cout << "Poll called type"
    //             << " revents: " << poll.revents << "\n"
@@ -25,13 +25,32 @@ void pollCallback(pollfd const& poll)
    //             << ((poll.revents & POLLNVAL) ? "POLLNVAL\n" : "");
 
    // std::cout << "Poll called " << poll.fd << "\n";
-   if (poll.revents & POLLIN)
+   if (!(poll.revents & POLLIN))
+      return;
+   pc::memory::unique_arr<char> data(1000);
+   pc::network::TCP::recvRaw(poll.fd, data.get(), data.size);
+
+   if (clientInfo.hasClientId())
    {
-      pc::memory::unique_arr<char> data(1000);
-      pc::network::TCP::recvRaw(poll.fd, data.get(), data.size);
+      if (strncmp(data.get(), "DEAD-INC", 8) != 0)
+         clientInfo.deadline.increment();
       // std::cout << "\nReceived data " << data.get();
       std::string message = "Server says hi ";
       pc::network::TCP::sendRaw(poll.fd, (const char*)message.data(), message.size());
+   }
+   else
+   {
+      if (strncmp(data.get(), "ACK-ACK", 7) != 0)
+      {
+         throw std::runtime_error("ACK-ACK not received. Protocol violated");
+      }
+      std::string message = "ACK-SYN";
+      pc::network::TCP::sendRaw(poll.fd, (const char*)message.data(), message.size());
+      pc::network::TCP::recvRaw(poll.fd, data.get(), data.size);
+      message = "JOIN";
+      pc::network::TCP::sendRaw(poll.fd, (const char*)message.data(), message.size());
+      clientInfo.clientId = std::string(data.get());
+      std::cout << "\nNew Client ID joined " << clientInfo.clientId;
    }
 }
 

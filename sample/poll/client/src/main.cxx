@@ -23,6 +23,23 @@ int main()
    pc::Deadline deadline(25 - 1);
    try
    {
+      std::string message = "ACK-ACK";
+      tcp.send((const char*)message.data(), message.size());
+      pc::memory::unique_arr<char> recv(1000);
+      tcp.recv(recv.size, recv.get());
+      if (strncmp(recv.get(), "ACK-SYN", 7) != 0)
+      {
+         throw std::runtime_error("ACK-SYN not received. Protocol violated");
+      }
+      message = "CLIENT-1";
+      tcp.send((const char*)message.data(), message.size());
+      tcp.recv(recv.size, recv.get());
+      if (strncmp(recv.get(), "JOIN", 4) != 0)
+      {
+         throw std::runtime_error("JOIN not received. Protocol violated");
+      }
+      std::cout << "\nJoined Server as " << message;
+
       for (std::size_t i = 0; true; i++)
       {
          // {
@@ -34,7 +51,7 @@ int main()
          //    std::cout << "\nServer said : " << (const char*) recv.get();
          // }
          // std::cout << "\nSay: ";
-         std::string message = "Message ";
+         message = "Message ";
          // if (std::getline(std::cin, message))
          // {
          std::cout << "\nMessage sending " << i;
@@ -42,7 +59,6 @@ int main()
          {
             tcp.send((const char*)message.data(), message.size());
             ++deadline;
-            pc::memory::unique_arr<char> recv(1000);
             tcp.recv(recv.size, recv.get());
             if (!recv)
             {
