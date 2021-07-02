@@ -20,31 +20,6 @@ namespace pc
 {
    namespace network
    {
-      namespace
-      {
-         template <bool B, class T, class F>
-         struct conditional
-         {
-            typedef T type;
-         };
-
-         template <class T, class F>
-         struct conditional<false, T, F>
-         {
-            typedef F type;
-         };
-         template <bool B, class T = void>
-         struct enable_if
-         {
-         };
-
-         template <class T>
-         struct enable_if<true, T>
-         {
-            typedef T type;
-         };
-      } // namespace
-
       template <bool Scale = false>
       class TCPPoll
       {
