@@ -53,17 +53,16 @@ namespace pc
    class Deadline
    {
     protected:
-      pc::queue<timespec> queue;
-
-      std::ptrdiff_t maxTime;
-      std::ptrdiff_t maxHealthCheckTime;
-
+      pc::queue<timespec>        queue;
       mutable pc::threads::Mutex mutex;
 
     public:
+      std::ptrdiff_t maxTime;
+      std::ptrdiff_t maxHealthCheckTime;
+
       Deadline(std::size_t    maxCount           = 25,
                std::ptrdiff_t maxTime            = 10 * 1.e9,
-               std::ptrdiff_t maxHealthCheckTime = 100 * 1.e9) :
+               std::ptrdiff_t maxHealthCheckTime = 30 * 1.e9) :
           queue(maxCount),
           maxTime(maxTime), maxHealthCheckTime(maxHealthCheckTime)
       {
@@ -74,12 +73,8 @@ namespace pc
          timespec curTime = getCurrentTime();
 
          pc::threads::MutexGuard guard(mutex);
-         if (queue.front != -1)
-         {
-            assert(curTime > queue.Last());
-            return ((curTime - queue.Last()) > maxTime);
-         }
-         return false;
+         assert(curTime > queue.Last());
+         return ((curTime - queue.Last()) > maxHealthCheckTime);
       }
 
       operator bool() const
