@@ -41,22 +41,18 @@ namespace pc
             if (setsockopt(socket, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1)
                throw std::runtime_error("Unable to set reusable");
          }
-         static int recvRaw(int socket, char* output, std::size_t size, int flags = 0)
+         static std::vector<char> recvRaw(int socket, std::size_t size, int flags = 0)
          {
             int opt;
 
-            if ((opt = ::recv(socket, (void*)output, size, flags)) == -1)
+            std::vector<char> output(size);
+            if ((opt = ::recv(socket, output.data(), size, flags)) == -1)
                throw std::runtime_error("Unable to read data");
-            return opt;
+            return output;
          }
          std::vector<char> recv(std::size_t size, int flags = 0)
          {
-            std::vector<char> output(size);
-            if (TCP::recvRaw(socket, output.data(), size, flags) == 0)
-            {
-               return std::vector<char>();
-            }
-            return output;
+            return TCP::recvRaw(socket, size, flags);
          }
          // template <typename T>
          // T recv(int flags = 0) const

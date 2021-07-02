@@ -37,15 +37,15 @@ void pollCallback(pollfd const&            poll,
    // std::cout << "Poll called " << poll.fd << "\n";
    if (!(poll.revents & POLLIN))
       return;
-   pc::memory::unique_arr<char> data(1000);
-   if (pc::network::TCP::recvRaw(poll.fd, data.get(), data.size) < 1)
+   std::vector<char> data = pc::network::TCP::recvRaw(poll.fd, 1000);
+   if (data.empty())
    {
       return;
    }
 
    if (clientInfo.hasClientId())
    {
-      if (strncmp(data.get(), "DEAD-INC", 8) == 0)
+      if (strncmp(data.data(), "DEAD-INC", 8) == 0)
          clientInfo.deadline.incrementMaxCount();
       // std::cout << "\nReceived data " << data.get();
       std::string message = "Server says hi ";
@@ -53,16 +53,17 @@ void pollCallback(pollfd const&            poll,
    }
    else
    {
-      if (strncmp(data.get(), "ACK-ACK", 7) != 0)
+      if (strncmp(data.data(), "ACK-ACK", 7) != 0)
       {
          throw std::runtime_error("ACK-ACK not received. Protocol violated");
       }
       std::string message = "ACK-SYN";
       pc::network::TCP::sendRaw(poll.fd, (const char*)message.data(), message.size());
-      pc::network::TCP::recvRaw(poll.fd, data.get(), data.size);
+      data = pc::network::TCP::recvRaw(poll.fd, 1000);
+
       message = "JOIN";
       pc::network::TCP::sendRaw(poll.fd, (const char*)message.data(), message.size());
-      clientInfo.clientId = std::string(data.get());
+      clientInfo.clientId = std::string(data.data());
       std::cout << "\nNew Client ID joined " << clientInfo.clientId;
       {
          Config* config = (Config*)configParam;
@@ -106,7 +107,6 @@ void downCallback(std::size_t const idx)
 
 void HealthCheck(pc::network::ClientInfo& clientInfo)
 {
-   pc::memory::unique_arr<char> data(1000);
    std::string                  message = "DOWN-CHCK";
    pc::network::TCP::sendRaw(
        clientInfo.socket, (const char*)message.data(), message.size());
@@ -119,8 +119,8 @@ void HealthCheck(pc::network::ClientInfo& clientInfo)
       throw std::runtime_error("Poll failed.");
    if (polls[0].revents & POLLIN)
    {
-      pc::network::TCP::recvRaw(clientInfo.socket, data.get(), data.size);
-      if (strncmp(data.get(), "ALIVE-ALIVE", 11) != 0)
+      std::vector<char> data = pc::network::TCP::recvRaw(clientInfo.socket, 1000);
+      if (strncmp(data.data(), "ALIVE-ALIVE", 11) != 0)
          throw std::runtime_error("ALIVE-ALIVE not received. Protocol violated");
    }
    else
