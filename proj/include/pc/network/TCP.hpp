@@ -3,7 +3,7 @@
 #include <pc/network/Socket.hpp>
 #include <sys/socket.h>
 
-#include <memory>
+#include <vector>
 
 namespace pc
 {
@@ -41,18 +41,22 @@ namespace pc
             if (setsockopt(socket, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1)
                throw std::runtime_error("Unable to set reusable");
          }
-         static void recvRaw(int socket, char* output, std::size_t size, int flags = 0)
+         static int recvRaw(int socket, char* output, std::size_t size, int flags = 0)
          {
             int opt;
 
             if ((opt = ::recv(socket, (void*)output, size, flags)) == -1)
                throw std::runtime_error("Unable to read data");
-            if (opt == 0)
-               output = NULL;
+            return opt;
          }
-         void recv(std::size_t size, char* output, int flags = 0) const
+         std::vector<char> recv(std::size_t size, int flags = 0)
          {
-            return TCP::recvRaw(socket, output, size, flags);
+            std::vector<char> output(size);
+            if (TCP::recvRaw(socket, output.data(), size, flags) == 0)
+            {
+               return std::vector<char>();
+            }
+            return output;
          }
          // template <typename T>
          // T recv(int flags = 0) const

@@ -28,12 +28,11 @@ void* childSocketExec(void* arg)
          //     }
       }
       {
-         pc::memory::unique_arr<char> recv;
-         child->recv(recv.size, recv.get());
-         if (!recv)
+         std::vector<char> recv = child->recv(1000);
+         if (recv.empty())
             break;
-         recv.get()[1000 - 1] = '\0';
-         std::cout << "Client said : " << recv.get() << "\n";
+         recv[1000 - 1] = '\0';
+         std::cout << "Client said : " << recv.data() << "\n";
       }
    }
    std::cout << "Server disconnected : " << child->socket << "\n";

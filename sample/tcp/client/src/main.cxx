@@ -19,13 +19,12 @@ int main()
    while (true)
    {
       {
-         pc::memory::unique_arr<char> recv(1000);
-         tcp.recv(recv.size, recv.get());
-         if (!recv)
+         std::vector<char> recv = tcp.recv(1000);
+         if (recv.empty())
             // Gracefull disconnection
             break;
-         recv.get()[1000 - 1] = '\0';
-         std::cout << "\nServer said : " << recv.get();
+         recv[1000 - 1] = '\0';
+         std::cout << "\nServer said : " << recv.data();
       }
       std::cout << "\nSay: ";
       std::string message;
