@@ -51,6 +51,7 @@ namespace pc
          typedef std::vector<pollfd> pollVectorFd;
 
          typedef void(DownCallback)(std::size_t const);
+         typedef void(HealthCheckCallback)(ClientInfo&);
 
          typedef std::tr1::unordered_map<int /*Socket*/, ClientInfo> ClientInfos;
 
@@ -88,10 +89,12 @@ namespace pc
          }
 
        public:
-         DownCallback* downCallback;
+         DownCallback*        downCallback;
+         HealthCheckCallback* healthCheckCallback;
 
          std::size_t balancerIndex;
          void*       callbackConfig;
+         std::size_t timeout;
 
          pc::balancer::priority* balancer;
 
@@ -128,6 +131,35 @@ namespace pc
             // Delete current element
             pollsIn.erase(pollsIn.begin() + indexErase);
             updateIssued = true;
+         }
+
+         void healthCheck()
+         {
+            std::size_t noOfDeleted = 0;
+
+            for (pollVectorFd::iterator it = pollsOut.begin(); it != pollsOut.end(); ++it)
+            {
+               if (clientInfos[it->fd].deadline.HealthCheckNeeded())
+               {
+                  try
+                  {
+                     healthCheckCallback(clientInfos[it->fd]);
+                  }
+                  catch (std::exception& ex)
+                  {
+                     std::cerr << std::endl << " : " << ex.what();
+                     close(it->fd);
+                     std::size_t indexErase = it - pollsOut.begin() - noOfDeleted;
+                     {
+                        pc::threads::MutexGuard guard(pollsMutex);
+                        terminate(it->fd, indexErase);
+                     }
+                     ++noOfDeleted;
+                     // Notify user when a File Descriptor goes down
+                     downCallback(balancerIndex);
+                  }
+               }
+            }
          }
 
          void exec()

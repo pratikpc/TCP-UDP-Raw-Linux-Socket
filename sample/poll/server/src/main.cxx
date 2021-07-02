@@ -38,7 +38,10 @@ void pollCallback(pollfd const&            poll,
    if (!(poll.revents & POLLIN))
       return;
    pc::memory::unique_arr<char> data(1000);
-   pc::network::TCP::recvRaw(poll.fd, data.get(), data.size);
+   if (pc::network::TCP::recvRaw(poll.fd, data.get(), data.size) < 1)
+   {
+      return;
+   }
 
    if (clientInfo.hasClientId())
    {
@@ -90,7 +93,8 @@ void* execTcp(void* arg)
    pc::network::TCPPoll<>& poll = *((pc::network::TCPPoll<>*)arg);
    while (true)
    {
-      poll.exec(10);
+      poll.exec();
+      poll.healthCheck();
    }
    return NULL;
 }
@@ -98,6 +102,29 @@ void* execTcp(void* arg)
 void downCallback(std::size_t const idx)
 {
    std::cout << std::endl << "One client went down at " << idx << " balancer";
+}
+
+void HealthCheck(pc::network::ClientInfo& clientInfo)
+{
+   pc::memory::unique_arr<char> data(1000);
+   std::string                  message = "DOWN-CHCK";
+   pc::network::TCP::sendRaw(
+       clientInfo.socket, (const char*)message.data(), message.size());
+
+   pollfd polls[1];
+   polls[0].fd     = clientInfo.socket;
+   polls[0].events = POLLIN;
+
+   if (poll(polls, 1, 10 * 1000) < 1)
+      throw std::runtime_error("Poll failed.");
+   if (polls[0].revents & POLLIN)
+   {
+      pc::network::TCP::recvRaw(clientInfo.socket, data.get(), data.size);
+      if (strncmp(data.get(), "ALIVE-ALIVE", 11) != 0)
+         throw std::runtime_error("ALIVE-ALIVE not received. Protocol violated");
+   }
+   else
+      throw std::runtime_error("No input received");
 }
 
 int main()
@@ -135,10 +162,12 @@ int main()
         it != polls.end();
         ++it)
    {
-      it->balancerIndex  = (it - polls.begin());
-      it->downCallback   = &downCallback;
-      it->balancer       = &balancer;
-      it->callbackConfig = &config;
+      it->balancerIndex       = (it - polls.begin());
+      it->downCallback        = &downCallback;
+      it->balancer            = &balancer;
+      it->callbackConfig      = &config;
+      it->healthCheckCallback = &HealthCheck;
+      it->timeout             = 10;
       pc::threads::Thread(&execTcp, &(*it)).detach();
    }
 
