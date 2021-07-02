@@ -111,6 +111,7 @@ namespace pc
                clientInfos[socket].callback = callback;
                balancer->incPriority(balancerIndex,
                                      clientInfos[socket].deadline.MaxCount());
+               ++clientInfos[socket].deadline;
             }
          }
          std::size_t size() const
