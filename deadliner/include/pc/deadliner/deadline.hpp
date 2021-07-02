@@ -47,10 +47,12 @@ namespace pc
          return ((std::ptrdiff_t)ret.tv_sec) * 1.e9 + ret.tv_nsec;
       }
    } // namespace
+
    class Deadline
    {
       typedef std::vector<timespec> timeQueue;
 
+    protected:
       std::ptrdiff_t maxCount;
       std::ptrdiff_t maxTime;
       timeQueue      queue;
