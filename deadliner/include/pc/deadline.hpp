@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cassert>
 #include <cstddef>
 #include <ctime>
 #include <vector>
@@ -9,38 +10,62 @@
 
 namespace pc
 {
+   namespace
+   {
+      bool operator>(timespec const& left, timespec const& right)
+      {
+         return left.tv_sec > right.tv_sec ||
+                // If same second, left > right
+                (left.tv_sec == right.tv_sec && left.tv_nsec >= right.tv_nsec);
+      }
+      timespec operator-(timespec const& left, timespec const& right)
+      {
+         timespec ret;
+         ret.tv_sec  = left.tv_sec - right.tv_sec;
+         ret.tv_nsec = left.tv_nsec - right.tv_nsec;
+         return ret;
+      }
+      bool operator<=(timespec const& left, std::ptrdiff_t const right)
+      {
+         // Convert to nanos and compare
+         return (left.tv_sec * 1.e9 + left.tv_nsec) <= right;
+      }
+   } // namespace
    class Deadline
    {
+      typedef std::vector<timespec> timeQueue;
+
       std::ptrdiff_t maxCount;
       std::ptrdiff_t maxTime;
-
-      std::vector<std::ptrdiff_t> queue;
-
+      timeQueue      queue;
       std::ptrdiff_t front;
       std::ptrdiff_t rear;
 
       mutable pc::threads::Mutex mutex;
 
     public:
-      Deadline(std::size_t maxCount = 25, std::ptrdiff_t maxTime = 10 * 1000) :
+      Deadline(std::size_t maxCount = 25, std::ptrdiff_t maxTime = 10 * 1.e9) :
           maxCount(maxCount), maxTime(maxTime), queue(maxCount), front(-1), rear(-1)
       {
       }
 
       operator bool() const
       {
-         std::ptrdiff_t          curTime = getCurrentTimeMs();
+         timespec curTime = getCurrentTime();
+
          pc::threads::MutexGuard guard(mutex);
          if ((front == 0 && rear == maxCount - 1) || (front == rear + 1))
+         {
+            assert(curTime > queue[front]);
             return ((curTime - queue[front]) <= maxTime);
+         }
          return false;
       }
-      static std::ptrdiff_t getCurrentTimeMs()
+      static timespec getCurrentTime()
       {
          timespec specTime;
          clock_gettime(CLOCK_MONOTONIC, &specTime);
-         return (std::ptrdiff_t)(((std::ptrdiff_t)specTime.tv_sec * 1000) +
-                                 specTime.tv_nsec / 1.0e6);
+         return specTime;
       }
       Deadline& incrementMaxCount()
       {
@@ -49,7 +74,8 @@ namespace pc
       Deadline& increment()
       {
          pc::threads::MutexGuard guard(mutex);
-         std::ptrdiff_t          curTime = getCurrentTimeMs();
+
+         timespec curTime = getCurrentTime();
          // If queue is full
          if ((front == 0 && rear == maxCount - 1) || (front == rear + 1))
          {
@@ -76,7 +102,7 @@ namespace pc
             if (front > rear)
             {
                // Copy from start to finish to temporary
-               std::vector<std::ptrdiff_t> temp(newMaxCount);
+               timeQueue temp(newMaxCount);
                for (std::ptrdiff_t i = front, j = 0; i != rear;
                     i = (i + 1) % maxCount, ++j)
                   temp[j] = queue[i];
