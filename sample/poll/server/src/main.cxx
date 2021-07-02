@@ -18,6 +18,25 @@ struct Config
 {
    pc::pqpp::Connection connection;
    Config(std::string connectionString) : connection(connectionString) {}
+   std::size_t ExtractDeadlineMaxCountFromDatabase(std::string const clientId)
+   {
+      std::vector<const char*> params(2);
+      params[0] = clientId.c_str();
+      params[1] = "45"; // DEFAULT
+
+      static pc::threads::Mutex mutex;
+      pc::threads::MutexGuard   guard(mutex);
+      pc::pqpp::IterateResult   res = connection.iterate(
+          "SELECT coalesce(MAX(priority),$2) AS priority FROM priority_table WHERE "
+          "clientId=$1",
+          params);
+      if (!res)
+      {
+         throw std::runtime_error("Unable to extract deadline max count from database");
+      }
+      std::ptrdiff_t newDeadlineMaxCount = 3;
+      return newDeadlineMaxCount;
+   }
 };
 
 void pollCallback(pollfd const&            poll,
@@ -66,22 +85,9 @@ void pollCallback(pollfd const&            poll,
       clientInfo.clientId = std::string(data.data());
       std::cout << "\nNew Client ID joined " << clientInfo.clientId;
       {
-         Config* config = (Config*)configParam;
-
-         std::vector<const char*> params(2);
-         params[0] = clientInfo.clientId.c_str();
-         params[1] = "45"; // DEFAULT
-
-         pc::pqpp::IterateResult res = config->connection.iterate(
-             "SELECT coalesce(MAX(priority),$2) AS priority FROM priority_table WHERE "
-             "clientId=$1",
-             params);
-         if (!res)
-         {
-            std::cerr << "\nUnable to connect to database";
-            return;
-         }
-         std::ptrdiff_t newDeadlineMaxCount = std::atoll(res[0].c_str());
+         Config*     config = (Config*)configParam;
+         std::size_t newDeadlineMaxCount =
+             config->ExtractDeadlineMaxCountFromDatabase(clientInfo.clientId);
          balancer.setPriority(balancerIndex,
                               // Update priority for given element
                               balancer[balancerIndex] - clientInfo.deadline.MaxCount() +
