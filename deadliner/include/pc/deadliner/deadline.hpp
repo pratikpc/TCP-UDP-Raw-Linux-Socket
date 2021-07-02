@@ -73,8 +73,12 @@ namespace pc
          timespec curTime = getCurrentTime();
 
          pc::threads::MutexGuard guard(mutex);
-         assert(curTime > queue.Last());
-         return ((curTime - queue.Last()) > maxHealthCheckTime);
+         if (queue.rear != -1)
+         {
+            assert(curTime > queue.Last());
+            return ((curTime - queue.Last()) > maxHealthCheckTime);
+         }
+         return false;
       }
 
       operator bool() const
