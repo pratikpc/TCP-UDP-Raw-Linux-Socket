@@ -42,7 +42,10 @@ namespace pc
          return (std::ptrdiff_t)(((std::ptrdiff_t)specTime.tv_sec * 1000) +
                                  specTime.tv_nsec / 1.0e6);
       }
-
+      Deadline& incrementMaxCount()
+      {
+         return MaxCount(maxCount + 1);
+      }
       Deadline& increment()
       {
          pc::threads::MutexGuard guard(mutex);
