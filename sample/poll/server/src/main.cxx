@@ -175,6 +175,7 @@ int main()
       pc::network::TCP child(tcp.accept());
       if (child.invalid())
          continue;
+      child.keepAlive();
       std::size_t currentBalance = *balancer;
       polls[currentBalance].Add(child.socket, pollCallback);
       std::cout << std::endl
