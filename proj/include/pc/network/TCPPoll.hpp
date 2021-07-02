@@ -16,47 +16,45 @@
 #include <tr1/array>
 #include <tr1/unordered_map>
 
+#include <pc/dataQueue.hpp>
+
 namespace pc
 {
    namespace network
    {
-      template <bool Scale = false>
       class TCPPoll
       {
-         typedef std::vector<pollfd> pollVectorFd;
-
          typedef void(DownCallback)(std::size_t const);
          typedef void(HealthCheckCallback)(ClientInfo&);
 
+         typedef pc::DataQueue<pollfd>                               PollFdQueue;
          typedef std::tr1::unordered_map<int /*Socket*/, ClientInfo> ClientInfos;
 
-         pollVectorFd pollsIn;
-         pollVectorFd pollsOut;
-         bool         updateIssued;
-
          pc::threads::Mutex pollsMutex;
+         ClientInfos        clientInfos;
+         PollFdQueue        dataQueue;
 
-         ClientInfos clientInfos;
-
-         void pollUpdate()
+         void terminate(int socket, std::size_t indexErase)
          {
-            pc::threads::MutexGuard lock(pollsMutex);
-            if (updateIssued)
-            {
-               pollsOut     = pollsIn;
-               updateIssued = false;
-            }
+            balancer->decPriority(balancerIndex, clientInfos[socket].deadline.MaxCount());
+            clientInfos.erase(socket);
+            // Delete current element
+            dataQueue -= indexErase;
          }
-
+         void executeCallback(pollfd const& poll)
+         {
+            ++clientInfos[poll.fd].deadline;
+            clientInfos[poll.fd].callback(
+                poll, clientInfos[poll.fd], callbackConfig, *balancer, balancerIndex);
+         }
          int poll(std::size_t timeout)
          {
-            pollUpdate();
-            if (pollsOut.size() == 0)
+            if (size() == 0)
             {
                sleep(timeout / 1000);
                return 0; // Timeout
             }
-            int const rv = ::poll(pollsOut.data(), pollsOut.size(), timeout);
+            int const rv = ::poll(dataQueue.data(), dataQueue.size(), timeout);
             if (rv == -1)
                throw std::runtime_error("Poll failed");
             return rv;
@@ -79,39 +77,25 @@ namespace pc
             poll.events = POLLIN;
 
             // Protect this during multithreaded access
-            {
                pc::threads::MutexGuard lock(pollsMutex);
-               pollsIn.push_back(poll);
-               clientInfos[socket] = ClientInfo();
-               updateIssued        = true;
-
+            dataQueue += poll;
+            clientInfos[socket]          = ClientInfo();
                clientInfos[socket].callback = callback;
                clientInfos[socket].socket   = socket;
-
-               balancer->incPriority(balancerIndex,
-                                     clientInfos[socket].deadline.MaxCount());
+            balancer->incPriority(balancerIndex, clientInfos[socket].deadline.MaxCount());
                ++clientInfos[socket].deadline;
             }
-         }
+         
          std::size_t size() const
          {
-            return pollsIn.size();
-         }
-
-         void terminate(int socket, std::size_t indexErase)
-         {
-            balancer->decPriority(balancerIndex, clientInfos[socket].deadline.MaxCount());
-            clientInfos.erase(socket);
-            // Delete current element
-            pollsIn.erase(pollsIn.begin() + indexErase);
-            updateIssued = true;
+            return dataQueue.size();
          }
 
          void healthCheck()
          {
-            std::size_t noOfDeleted = 0;
-
-            for (pollVectorFd::iterator it = pollsOut.begin(); it != pollsOut.end(); ++it)
+            for (DataQueue<pollfd>::QueueVec::iterator it = dataQueue.out.begin();
+                 it != dataQueue.out.end();
+                 ++it)
             {
                if (clientInfos[it->fd].deadline.HealthCheckNeeded())
                {
@@ -121,14 +105,12 @@ namespace pc
                   }
                   catch (std::exception& ex)
                   {
-                     std::cerr << std::endl << " : " << ex.what();
                      close(it->fd);
-                     std::size_t indexErase = it - pollsOut.begin() - noOfDeleted;
+                     std::size_t indexErase = it - dataQueue.out.begin();
                      {
                         pc::threads::MutexGuard guard(pollsMutex);
                         terminate(it->fd, indexErase);
                      }
-                     ++noOfDeleted;
                      // Notify user when a File Descriptor goes down
                      downCallback(balancerIndex);
                   }
@@ -138,23 +120,27 @@ namespace pc
 
          void exec()
          {
+            {
+               pc::threads::MutexGuard lock(pollsMutex);
+               dataQueue.PerformUpdate();
+            }
             int const rv = poll(timeout * 1000);
             if (rv == 0)
                // Timeout
                return;
-            std::size_t noOfDeleted = 0;
-            for (pollVectorFd::iterator it = pollsOut.begin(); it != pollsOut.end(); ++it)
+            for (DataQueue<pollfd>::QueueVec::iterator it = dataQueue.out.begin();
+                 it != dataQueue.out.end();
+                 ++it)
             {
                if (it->revents & POLLHUP || it->revents & POLLNVAL ||
                    clientInfos[it->fd].deadlineBreach())
                {
                   close(it->fd);
-                  std::size_t indexErase = it - pollsOut.begin() - noOfDeleted;
+                  std::size_t indexErase = it - dataQueue.out.begin();
                   {
                      pc::threads::MutexGuard guard(pollsMutex);
                      terminate(it->fd, indexErase);
                   }
-                  ++noOfDeleted;
                   // Notify user when a File Descriptor goes down
                   downCallback(balancerIndex);
                }
@@ -166,29 +152,19 @@ namespace pc
                      if (bytes == 0)
                      {
                         close(it->fd);
-                        std::size_t indexErase = it - pollsOut.begin() - noOfDeleted;
-                        {
+                        std::size_t indexErase = it - dataQueue.out.begin();
+
                            pc::threads::MutexGuard guard(pollsMutex);
                            terminate(it->fd, indexErase);
-                        }
-                        ++noOfDeleted;
                         // Notify user when a File Descriptor goes down
                         downCallback(balancerIndex);
                      }
                      else
-                     {
-                        ++clientInfos[it->fd].deadline;
-                        clientInfos[it->fd].callback(
-                            *it, clientInfos[it->fd], callbackConfig, *balancer, balancerIndex);
-                     }
+                        executeCallback(*it);
                   }
                }
                else
-               {
-                  ++clientInfos[it->fd].deadline;
-                  clientInfos[it->fd].callback(
-                      *it, clientInfos[it->fd], callbackConfig, *balancer, balancerIndex);
-               }
+                  executeCallback(*it);
             }
          }
       };
