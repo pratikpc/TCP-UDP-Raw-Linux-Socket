@@ -20,12 +20,11 @@ int main()
 
    while (1)
    {
-      pc::memory::unique_arr<char> recv;
-      udp.recv(recv.size, recv.get());
-      if (!recv)
+      std::vector<char> recv = udp.recv(1000);
+      if (recv.empty())
          break;
-      recv.get()[1000 - 1] = '\0';
-      std::cout << "Client said : " << recv.get() << "\n";
+      recv[1000 - 1] = '\0';
+      std::cout << "Client said : " << recv.data() << "\n";
    }
    return EXIT_SUCCESS;
 }
