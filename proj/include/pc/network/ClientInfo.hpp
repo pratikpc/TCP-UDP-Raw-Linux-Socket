@@ -12,7 +12,9 @@ namespace pc
        public:
          typedef void (*Callback)(pollfd const&,
                                   ClientInfo&,
-                                  void* /*Configuration details*/);
+                                  void* /*Configuration details*/,
+                                  balancer::priority&,
+                                  std::size_t);
 
          std::string  clientId;
          pc::Deadline deadline;
