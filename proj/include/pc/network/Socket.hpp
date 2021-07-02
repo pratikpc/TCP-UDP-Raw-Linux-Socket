@@ -1,8 +1,8 @@
 #pragma once
 
+#include <stdexcept>
 #include <sys/socket.h>
 #include <unistd.h>
-#include <stdexcept>
 
 namespace pc
 {
@@ -23,6 +23,13 @@ namespace pc
          bool invalid()
          {
             return socket == -1;
+         }
+
+         template <typename T>
+         void flag(int level, int name, T const& val)
+         {
+            if (setsockopt(socket, level, name, &val, sizeof(val)) == -1)
+               throw std::runtime_error("Unable to set flag");
          }
 
          ~Socket()
