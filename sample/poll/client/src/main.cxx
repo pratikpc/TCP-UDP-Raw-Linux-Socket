@@ -18,7 +18,7 @@
    std::cout << "IP = " << ipstr;
    pc::network::TCP tcp(ip.connect());
    std::cout << "\nHostname = " << pc::network::IP::hostName();
-
+   tcp.keepAlive();
    pc::Deadline deadline(25 - 1);
    std::string  message = "ACK-ACK";
    tcp.send((const char*)message.data(), message.size());

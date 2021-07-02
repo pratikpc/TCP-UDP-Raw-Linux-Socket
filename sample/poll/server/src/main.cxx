@@ -3,7 +3,7 @@
 #include <sstream>
 
 #include <pc/network/TCP.hpp>
-#include <pc/network/TCPPoll.hpp>
+#include <pc/network/LearnProtocol.hpp>
 #include <pc/network/ip.hpp>
 
 #include <pc/thread/Thread.hpp>
@@ -104,11 +104,11 @@ void pollCallback(pollfd const&            poll,
 
 void* execTcp(void* arg)
 {
-   pc::network::TCPPoll<>& poll = *((pc::network::TCPPoll<>*)arg);
+   pc::network::LearnProtocol& poll = *((pc::network::LearnProtocol*)arg);
    while (true)
    {
-      poll.exec();
-      poll.healthCheck();
+      poll.pollExec();
+      poll.execHealthChecks();
    }
    return NULL;
 }
@@ -116,28 +116,6 @@ void* execTcp(void* arg)
 void downCallback(std::size_t const idx)
 {
    std::cout << std::endl << "One client went down at " << idx << " balancer";
-}
-
-void HealthCheck(pc::network::ClientInfo& clientInfo)
-{
-   std::string                  message = "DOWN-CHCK";
-   pc::network::TCP::sendRaw(
-       clientInfo.socket, (const char*)message.data(), message.size());
-
-   pollfd polls[1];
-   polls[0].fd     = clientInfo.socket;
-   polls[0].events = POLLIN;
-
-   if (poll(polls, 1, 10 * 1000) < 1)
-      throw std::runtime_error("Poll failed.");
-   if (polls[0].revents & POLLIN)
-   {
-      std::vector<char> data = pc::network::TCP::recvRaw(clientInfo.socket, 1000);
-      if (strncmp(data.data(), "ALIVE-ALIVE", 11) != 0)
-         throw std::runtime_error("ALIVE-ALIVE not received. Protocol violated");
-   }
-   else
-      throw std::runtime_error("No input received");
 }
 
 int main()
@@ -152,7 +130,7 @@ int main()
    pc::network::TCP tcp(ip.bind());
    tcp.setReusable();
    tcp.listen();
-   std::vector<pc::network::TCPPoll<> /* */> polls(get_nprocs());
+   std::vector<pc::network::LearnProtocol> polls(get_nprocs());
 
    pc::balancer::priority balancer(polls.size());
 
@@ -171,7 +149,7 @@ int main()
       std::cout << "\nTable Created";
    }
 
-   for (std::vector<pc::network::TCPPoll<> /* */>::iterator it = polls.begin();
+   for (std::vector<pc::network::LearnProtocol>::iterator it = polls.begin();
         it != polls.end();
         ++it)
    {
@@ -179,7 +157,6 @@ int main()
       it->downCallback        = &downCallback;
       it->balancer            = &balancer;
       it->callbackConfig      = &config;
-      it->healthCheckCallback = &HealthCheck;
       it->timeout             = 10;
       pc::threads::Thread(&execTcp, &(*it)).detach();
    }
