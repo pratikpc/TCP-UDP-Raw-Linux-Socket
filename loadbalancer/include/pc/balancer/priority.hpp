@@ -10,10 +10,10 @@ namespace pc
    {
       class priority
       {
-         std::vector<std::size_t> sizes;
+         std::vector<std::size_t>   sizes;
+         mutable pc::threads::Mutex mutex;
 
-         pc::threads::Mutex mutex;
-         std::size_t        lowestSizeIndex;
+         std::size_t lowestSizeIndex;
 
        public:
          friend std::ostream& operator<<(std::ostream& os, priority& queue)
@@ -25,7 +25,7 @@ namespace pc
          }
          priority(std::size_t maxSize) : sizes(maxSize), lowestSizeIndex(0) {}
 
-         std::size_t operator*()
+         std::size_t operator*() const
          {
             pc::threads::MutexGuard guard(mutex);
             return lowestSizeIndex;
@@ -67,12 +67,12 @@ namespace pc
             sizes.resize(MaxCount);
             return *this;
          }
-         std::size_t MaxCount()
+         std::size_t MaxCount() const
          {
             return sizes.size();
          }
 
-         std::size_t MinIdx(int minIdx)
+         std::size_t MinIdx(int minIdx) const
          {
             for (std::size_t i = 0; i < sizes.size(); ++i)
             {
