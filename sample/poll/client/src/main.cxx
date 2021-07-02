@@ -7,8 +7,9 @@
 
 #include <cstdlib>
 #include <ctime>
+#include <sstream>
 
-int main()
+#include <pc/lexical_cast.hpp>
 {
    pc::network::IP ip(SOCK_STREAM);
    ip.load("127.0.0.1", "9900");
@@ -26,7 +27,7 @@ int main()
    {
       throw std::runtime_error("ACK-SYN not received. Protocol violated");
    }
-   message = "CLIENT-1";
+   message = "CLIENT-" + pc::lexical_cast(i);
    tcp.send((const char*)message.data(), message.size());
    recv = tcp.recv(1000);
    if (strncmp(recv.data(), "JOIN", 4) != 0)

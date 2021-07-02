@@ -1,4 +1,6 @@
+#include <cstdlib>
 #include <iostream>
+#include <sstream>
 
 #include <pc/network/TCP.hpp>
 #include <pc/network/TCPPoll.hpp>
@@ -8,11 +10,11 @@
 
 #include <pc/balancer/priority.hpp>
 
-#include <cstdlib>
-
 #include <sys/sysinfo.h>
 
 #include <pc/pqpp/Connection.hpp>
+
+#include <pc/lexical_cast.hpp>
 
 struct Config
 {
@@ -34,7 +36,8 @@ struct Config
       {
          throw std::runtime_error("Unable to extract deadline max count from database");
       }
-      std::ptrdiff_t newDeadlineMaxCount = 3;
+      std::ptrdiff_t newDeadlineMaxCount =
+          pc::lexical_cast<std::string, std::ptrdiff_t>(res[0]);
       return newDeadlineMaxCount;
    }
 };
