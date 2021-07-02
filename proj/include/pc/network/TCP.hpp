@@ -51,9 +51,8 @@ namespace pc
          }
          void setReusable()
          {
-            int yes;
-            if (setsockopt(socket, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1)
-               throw std::runtime_error("Unable to set reusable");
+            int yes = 1;
+            flag(SOL_SOCKET, SO_REUSEADDR, yes);
          }
          static std::vector<char> recvRaw(int socket, std::size_t size, int flags = 0)
          {
