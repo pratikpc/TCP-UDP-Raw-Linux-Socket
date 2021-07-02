@@ -48,14 +48,12 @@ int main()
       //    std::cout << "\nServer said : " << (const char*) recv.get();
       // }
       // std::cout << "\nSay: ";
-      message = "Message ";
+      message = "ALIVE-ALIVE";
       // if (std::getline(std::cin, message))
       // {
       if (!deadline)
       {
          std::cout << std::endl << "Message sending " << i;
-         // tcp.send((const char*)message.data(), message.size());
-         ++deadline;
          recv = tcp.recv(1000);
          if (recv.empty())
          {
@@ -64,6 +62,8 @@ int main()
          }
          std::cout << "\nServer says: " << recv.size() << " : "
                    << (const char*)recv.data();
+         tcp.send((const char*)message.data(), message.size());
+         ++deadline;
       }
       else
       {
