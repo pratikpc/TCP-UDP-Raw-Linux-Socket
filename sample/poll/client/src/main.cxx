@@ -5,8 +5,6 @@
 
 #include <pc/deadliner/deadline.hpp>
 
-#include <pc/memory/unique_ptr.hpp>
-
 #include <cstdlib>
 #include <ctime>
 

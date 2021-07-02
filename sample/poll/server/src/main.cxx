@@ -4,8 +4,6 @@
 #include <pc/network/TCPPoll.hpp>
 #include <pc/network/ip.hpp>
 
-#include <pc/memory/unique_ptr.hpp>
-
 #include <pc/thread/Thread.hpp>
 
 #include <pc/balancer/priority.hpp>
