@@ -121,7 +121,16 @@ namespace pc
             return pollsIn.size();
          }
 
-         void exec(std::size_t timeout)
+         void terminate(int socket, std::size_t indexErase)
+         {
+            balancer->decPriority(balancerIndex, clientInfos[socket].deadline.MaxCount());
+            clientInfos.erase(socket);
+            // Delete current element
+            pollsIn.erase(pollsIn.begin() + indexErase);
+            updateIssued = true;
+         }
+
+         void exec()
          {
             int const rv = poll(timeout * 1000);
             if (rv == 0)
@@ -137,12 +146,7 @@ namespace pc
                   std::size_t indexErase = it - pollsOut.begin() - noOfDeleted;
                   {
                      pc::threads::MutexGuard guard(pollsMutex);
-                     balancer->decPriority(balancerIndex,
-                                           clientInfos[it->fd].deadline.MaxCount());
-                     clientInfos.erase(it->fd);
-                     // Delete current element
-                     pollsIn.erase(pollsIn.begin() + indexErase);
-                     updateIssued = true;
+                     terminate(it->fd, indexErase);
                   }
                   ++noOfDeleted;
                   // Notify user when a File Descriptor goes down
@@ -159,12 +163,7 @@ namespace pc
                         std::size_t indexErase = it - pollsOut.begin() - noOfDeleted;
                         {
                            pc::threads::MutexGuard guard(pollsMutex);
-                           balancer->decPriority(balancerIndex,
-                                                 clientInfos[it->fd].deadline.MaxCount());
-                           clientInfos.erase(it->fd);
-                           // Delete current element
-                           pollsIn.erase(pollsIn.begin() + indexErase);
-                           updateIssued = true;
+                           terminate(it->fd, indexErase);
                         }
                         ++noOfDeleted;
                         // Notify user when a File Descriptor goes down
