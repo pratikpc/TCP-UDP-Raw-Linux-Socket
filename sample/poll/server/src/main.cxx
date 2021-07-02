@@ -79,7 +79,8 @@ void pollCallback(pollfd const&            poll,
          }
          std::ptrdiff_t newDeadlineMaxCount = std::atoll(res[0].c_str());
          clientInfo.changeMaxCount(newDeadlineMaxCount);
-         std::cout << "\nNew deadlien count for "<< clientInfo.clientId << " is " << newDeadlineMaxCount;
+         std::cout << "\nNew deadlien count for " << clientInfo.clientId << " is "
+                   << newDeadlineMaxCount;
       }
    }
 }
@@ -94,10 +95,9 @@ void* execTcp(void* arg)
    return NULL;
 }
 
-void downCallback(pc::balancer::priority& balencer, std::size_t const idx)
+void downCallback(std::size_t const idx)
 {
-   balencer.decPriority(idx);
-   std::cout << std::endl << "One client went down";
+   std::cout << std::endl << "One client went down at " << idx << " balancer";
 }
 
 int main()

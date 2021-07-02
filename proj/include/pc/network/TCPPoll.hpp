@@ -50,7 +50,7 @@ namespace pc
       {
          typedef std::vector<pollfd> pollVectorFd;
 
-         typedef void(DownCallback)(pc::balancer::priority&, std::size_t const);
+         typedef void(DownCallback)(std::size_t const);
 
          typedef std::tr1::unordered_map<int /*Socket*/, ClientInfo> ClientInfos;
 
@@ -143,7 +143,7 @@ namespace pc
                   }
                   ++noOfDeleted;
                   // Notify user when a File Descriptor goes down
-                  downCallback(*balancer, balancerIndex);
+                  downCallback(balancerIndex);
                }
                else if (it->revents & POLLIN)
                {
@@ -165,7 +165,7 @@ namespace pc
                         }
                         ++noOfDeleted;
                         // Notify user when a File Descriptor goes down
-                        downCallback(*balancer, balancerIndex);
+                        downCallback(balancerIndex);
                      }
                      else
                      {
