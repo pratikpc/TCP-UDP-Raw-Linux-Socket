@@ -69,7 +69,7 @@ namespace pc
       {
       }
 
-      bool PerformHealthCheck() const
+      bool HealthCheckNeeded() const
       {
          timespec curTime = getCurrentTime();
 
