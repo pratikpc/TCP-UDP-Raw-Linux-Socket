@@ -17,4 +17,5 @@ $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
 target_link_libraries(${PROJECT_NAME}
 INTERFACE
 pc::threads
+pc::queue
 )

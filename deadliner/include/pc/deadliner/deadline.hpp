@@ -5,6 +5,8 @@
 #include <ctime>
 #include <vector>
 
+#include <pc/queue.hpp>
+
 #include <pc/thread/Mutex.hpp>
 #include <pc/thread/MutexGuard.hpp>
 
@@ -50,21 +52,34 @@ namespace pc
 
    class Deadline
    {
-      typedef std::vector<timespec> timeQueue;
-
     protected:
-      std::ptrdiff_t maxCount;
+      pc::queue<timespec> queue;
+
       std::ptrdiff_t maxTime;
-      timeQueue      queue;
-      std::ptrdiff_t front;
-      std::ptrdiff_t rear;
+      std::ptrdiff_t maxHealthCheckTime;
 
       mutable pc::threads::Mutex mutex;
 
     public:
-      Deadline(std::size_t maxCount = 25, std::ptrdiff_t maxTime = 10 * 1.e9) :
-          maxCount(maxCount), maxTime(maxTime), queue(maxCount), front(-1), rear(-1)
+      Deadline(std::size_t    maxCount           = 25,
+               std::ptrdiff_t maxTime            = 10 * 1.e9,
+               std::ptrdiff_t maxHealthCheckTime = 100 * 1.e9) :
+          queue(maxCount),
+          maxTime(maxTime), maxHealthCheckTime(maxHealthCheckTime)
       {
+      }
+
+      bool PerformHealthCheck() const
+      {
+         timespec curTime = getCurrentTime();
+
+         pc::threads::MutexGuard guard(mutex);
+         if (queue.front != -1)
+         {
+            assert(curTime > queue.Last());
+            return ((curTime - queue.Last()) > maxTime);
+         }
+         return false;
       }
 
       operator bool() const
@@ -72,10 +87,11 @@ namespace pc
          timespec curTime = getCurrentTime();
 
          pc::threads::MutexGuard guard(mutex);
-         if ((front == 0 && rear == maxCount - 1) || (front == rear + 1))
+         // If Full
+         if (queue)
          {
-            assert(curTime > queue[front]);
-            return ((curTime - queue[front]) <= maxTime);
+            assert(curTime > queue.First());
+            return ((curTime - queue.First()) <= maxTime);
          }
          return false;
       }
@@ -87,23 +103,14 @@ namespace pc
       }
       Deadline& incrementMaxCount()
       {
-         return MaxCount(maxCount + 1);
+         return MaxCount(queue.maxCount + 1);
       }
       Deadline& increment()
       {
          pc::threads::MutexGuard guard(mutex);
 
          timespec curTime = getCurrentTime();
-         // If queue is full
-         if ((front == 0 && rear == maxCount - 1) || (front == rear + 1))
-         {
-            // Deque current value
-            front = (front + 1) % maxCount;
-         }
-         if (front == -1)
-            front = 0;
-         rear        = (rear + 1) % maxCount;
-         queue[rear] = curTime;
+         queue.Add(curTime);
          return *this;
       }
       Deadline& operator++()
@@ -115,34 +122,12 @@ namespace pc
       {
          pc::threads::MutexGuard guard(mutex);
          // Check if Queue needs to be expanded
-         if (maxCount < newMaxCount)
-         {
-            if (front > rear)
-            {
-               // Copy from start to finish to temporary
-               timeQueue temp(newMaxCount);
-               for (std::ptrdiff_t i = front, j = 0; i != rear;
-                    i = (i + 1) % maxCount, ++j)
-                  temp[j] = queue[i];
-               // Set front and rear to 0 and new end
-               front = 0;
-               rear  = maxCount;
-               // Clear queue
-               queue.clear();
-               // Move temp to queue
-               queue = temp;
-            }
-            // If the array is not yet circular
-            // Simply resize
-            else
-               queue.resize(newMaxCount);
-         }
-         maxCount = newMaxCount;
+         queue.MaxCount(newMaxCount);
          return *this;
       }
       std::size_t MaxCount() const
       {
-         return maxCount;
+         return queue.maxCount;
       }
    };
 } // namespace pc
