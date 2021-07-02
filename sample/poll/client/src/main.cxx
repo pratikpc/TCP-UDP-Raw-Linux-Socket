@@ -52,6 +52,7 @@ int main()
       if (!deadline)
       {
          std::cout << std::endl << "Message sending " << i;
+         tcp.send((const char*)message.data(), message.size());
          recv = tcp.recv(1000);
          if (recv.empty())
          {
@@ -60,7 +61,6 @@ int main()
          }
          std::cout << "\nServer says: " << recv.size() << " : "
                    << (const char*)recv.data();
-         tcp.send((const char*)message.data(), message.size());
          ++deadline;
       }
       else

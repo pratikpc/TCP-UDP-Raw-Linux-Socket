@@ -22,7 +22,9 @@ struct Config
 
 void pollCallback(pollfd const&            poll,
                   pc::network::ClientInfo& clientInfo,
-                  void*                    configParam)
+                  void*                    configParam,
+                  pc::balancer::priority&  balancer,
+                  std::size_t const        balancerIndex)
 {
    //   std::cout << "Poll called type"
    //             << " revents: " << poll.revents << "\n"
@@ -80,6 +82,10 @@ void pollCallback(pollfd const&            poll,
             return;
          }
          std::ptrdiff_t newDeadlineMaxCount = std::atoll(res[0].c_str());
+         balancer.setPriority(balancerIndex,
+                              // Update priority for given element
+                              balancer[balancerIndex] - clientInfo.deadline.MaxCount() +
+                                  newDeadlineMaxCount);
          clientInfo.changeMaxCount(newDeadlineMaxCount);
          std::cout << "\nNew deadlien count for " << clientInfo.clientId << " is "
                    << newDeadlineMaxCount;

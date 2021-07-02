@@ -57,12 +57,11 @@ namespace pc
 
          pollVectorFd pollsIn;
          pollVectorFd pollsOut;
+         bool         updateIssued;
 
          pc::threads::Mutex pollsMutex;
 
          ClientInfos clientInfos;
-
-         bool updateIssued;
 
          void pollUpdate()
          {
@@ -205,14 +204,15 @@ namespace pc
                      {
                         ++clientInfos[it->fd].deadline;
                         clientInfos[it->fd].callback(
-                            *it, clientInfos[it->fd], callbackConfig);
+                            *it, clientInfos[it->fd], callbackConfig, *balancer, balancerIndex);
                      }
                   }
                }
                else
                {
                   ++clientInfos[it->fd].deadline;
-                  clientInfos[it->fd].callback(*it, clientInfos[it->fd], callbackConfig);
+                  clientInfos[it->fd].callback(
+                      *it, clientInfos[it->fd], callbackConfig, *balancer, balancerIndex);
                }
             }
          }
