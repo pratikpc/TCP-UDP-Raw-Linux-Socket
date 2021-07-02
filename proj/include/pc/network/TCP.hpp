@@ -1,6 +1,9 @@
 #pragma once
 
 #include <pc/network/Socket.hpp>
+
+#include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <sys/socket.h>
 
 #include <vector>
@@ -23,6 +26,17 @@ namespace pc
             {
                throw std::runtime_error("Unable to listen");
             }
+         }
+         void keepAlive()
+         {
+            int keepcnt   = 1;
+            int keepidle  = 2;
+            int keepintvl = 2;
+            int yes       = 1;
+            flag(IPPROTO_TCP, TCP_KEEPCNT, keepcnt);
+            flag(IPPROTO_TCP, TCP_KEEPIDLE, keepidle);
+            flag(IPPROTO_TCP, TCP_KEEPINTVL, keepintvl);
+            flag(SOL_SOCKET, SO_KEEPALIVE, yes);
          }
 
          void invalidate()
