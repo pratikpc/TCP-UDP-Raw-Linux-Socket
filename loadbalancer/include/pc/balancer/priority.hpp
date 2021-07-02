@@ -60,6 +60,11 @@ namespace pc
             sizes[index]    = value;
             lowestSizeIndex = MinIdx(lowestSizeIndex);
          }
+         std::size_t operator[](std::size_t index) const
+         {
+            pc::threads::MutexGuard guard(mutex);
+            return sizes[index];
+         }
          priority& MaxCount(std::size_t MaxCount)
          {
             pc::threads::MutexGuard guard(mutex);
