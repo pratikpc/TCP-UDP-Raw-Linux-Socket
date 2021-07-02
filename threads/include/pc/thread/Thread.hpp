@@ -12,7 +12,7 @@ namespace pc
          bool      detached;
 
        public:
-         Thread(void* (*start_routine)(void*), void* arg) : detached(false)
+         Thread(void* (*start_routine)(void*), void* arg = NULL) : detached(false)
          {
             pthread_create(&threadId, NULL, start_routine, arg);
          }
