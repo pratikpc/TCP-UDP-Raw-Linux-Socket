@@ -18,6 +18,8 @@ namespace pc
          pc::Deadline deadline;
          Callback     callback;
 
+         int socket;
+
          bool deadlineBreach() const
          {
             return deadline;

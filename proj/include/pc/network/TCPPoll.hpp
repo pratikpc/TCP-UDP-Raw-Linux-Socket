@@ -109,6 +109,8 @@ namespace pc
                updateIssued        = true;
 
                clientInfos[socket].callback = callback;
+               clientInfos[socket].socket   = socket;
+
                balancer->incPriority(balancerIndex,
                                      clientInfos[socket].deadline.MaxCount());
                ++clientInfos[socket].deadline;
