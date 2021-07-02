@@ -18,17 +18,33 @@ namespace pc
                 // If same second, left > right
                 (left.tv_sec == right.tv_sec && left.tv_nsec >= right.tv_nsec);
       }
-      timespec operator-(timespec const& left, timespec const& right)
+      std::ptrdiff_t operator-(timespec const& left, timespec const& right)
       {
          timespec ret;
-         ret.tv_sec  = left.tv_sec - right.tv_sec;
+         // Note that in our case left sec > right sec always
+         ret.tv_sec = left.tv_sec - right.tv_sec;
+         // If Left and right seconds are different
+         // tv_nsec will always be positive
+         // But if left_sec = right_sec
+         //    Then it can be negative
+         // As a result, nanos would be negative
          ret.tv_nsec = left.tv_nsec - right.tv_nsec;
-         return ret;
-      }
-      bool operator<=(timespec const& left, std::ptrdiff_t const right)
-      {
-         // Convert to nanos and compare
-         return (left.tv_sec * 1.e9 + left.tv_nsec) <= right;
+         // But fret not.
+         // If seconds are equal, nanos are positive
+         // Ensuring our result is always positive
+         // If seconds are not equal, it means the difference in seconds is positive
+         // But negative nanos are handled because seconds
+         // are converted to nanos
+         // And seconds to nanos >= nanos themselves
+         // Again >= 0 solution
+         // Sample
+         // 2 minute 45 - 1 minute 55
+         // Under our algo
+         // 1 minute -10 seconds
+         // That looks weird. But we will convert it to seconds
+         // But 60 seconds - 10 seconds
+         // Is 50 seconds so handled
+         return ((std::ptrdiff_t)ret.tv_sec) * 1.e9 + ret.tv_nsec;
       }
    } // namespace
    class Deadline
