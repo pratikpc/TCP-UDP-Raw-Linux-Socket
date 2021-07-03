@@ -13,73 +13,68 @@
 #include <pc/thread/Mutex.hpp>
 #include <pc/thread/MutexGuard.hpp>
 
-#include <pc/network/ClientInfo.hpp>
 #include <pc/network/TCPPoll.hpp>
+
+#include <pc/protocol/ClientInfo.hpp>
+#include <pc/protocol/Config.hpp>
 
 namespace pc
 {
-   namespace network
+   namespace protocol
    {
       class LearnProtocol
       {
-         typedef void(DownCallback)(std::size_t const);
          typedef std::tr1::unordered_map<int /*Socket*/, ClientInfo> ClientInfos;
 
          pc::threads::Mutex pollsMutex;
 
-         ClientInfos clientInfos;
-         TCPPoll     tcpPoll;
+         ClientInfos      clientInfos;
+         network::TCPPoll tcpPoll;
 
          void terminate(int socket, std::size_t indexErase)
          {
-            balancer->decPriority(balancerIndex, clientInfos[socket].deadline.MaxCount());
+            config->balancer->decPriority(balancerIndex,
+                                          clientInfos[socket].deadline.MaxCount());
             clientInfos.erase(socket);
             // Delete current element
             tcpPoll -= indexErase;
          }
          void executeCallback(pollfd const& poll)
          {
-            ++clientInfos[poll.fd].deadline;
-            clientInfos[poll.fd].callback(
-                poll, clientInfos[poll.fd], callbackConfig, *balancer, balancerIndex);
+            if (!clientInfos[poll.fd].hasClientId())
+               SetupConnection(poll, clientInfos[poll.fd]);
+            else
+            {
+               clientInfos[poll.fd].callback(poll, clientInfos[poll.fd]);
+               ++clientInfos[poll.fd].deadline;
+            }
          }
 
-         bool HealthCheckServer(pc::network::ClientInfo& clientInfo)
+         bool HealthCheckServer(ClientInfo& clientInfo)
          {
             try
             {
-               std::string message = "DOWN-CHCK";
-               pc::network::TCP::sendRaw(
-                   clientInfo.socket, (const char*)message.data(), message.size());
-               pollfd polls[1];
-               polls[0].fd     = clientInfo.socket;
-               polls[0].events = POLLIN;
-
-               if (poll(polls, 1, 10 * 1000) < 1)
+               // Send Down Check first
+               pc::network::TCP::sendRaw(clientInfo.socket, "DOWN-CHCK");
+               // The client must respond with alive
+               network::buffer data = tcpPoll.read(clientInfo.socket, 1000, timeout);
+               if (data.empty() || strncmp(data.data(), "ALIVE-ALIVE", 11) != 0)
                   return false;
-               if (polls[0].revents & POLLIN)
-               {
-                  std::vector<char> data =
-                      pc::network::TCP::recvRaw(clientInfo.socket, 1000);
-                  if (strncmp(data.data(), "ALIVE-ALIVE", 11) != 0)
-                     return false;
-                  return true;
-               }
+               return true;
             }
             catch (std::exception& ex)
             {
+#ifdef DEBUG
+               std::cout << "\nHealthCheckServer\t:Exception thrown\t:" << ex.what();
+#endif
             }
             return false;
          }
 
        public:
-         DownCallback* downCallback;
-
          std::size_t balancerIndex;
-         void*       callbackConfig;
+         Config*     config;
          std::size_t timeout;
-
-         pc::balancer::priority* balancer;
 
          void Add(int const socket, ClientInfo::Callback callback)
          {
@@ -93,7 +88,8 @@ namespace pc
             clientInfos[socket]          = ClientInfo();
             clientInfos[socket].callback = callback;
             clientInfos[socket].socket   = socket;
-            balancer->incPriority(balancerIndex, clientInfos[socket].deadline.MaxCount());
+            config->balancer->incPriority(balancerIndex,
+                                          clientInfos[socket].deadline.MaxCount());
             ++clientInfos[socket].deadline;
          }
 
@@ -102,16 +98,39 @@ namespace pc
             return tcpPoll.size();
          }
 
+         network::buffer read(pollfd& poll, std::size_t size)
+         {
+            return network::TCPPoll::read(poll, size, timeout);
+         }
+
+         void SetupConnection(pollfd poll, ClientInfo& clientInfo)
+         {
+            network::buffer data = read(poll, 8);
+            if (strncmp(data.data(), "ACK-ACK", 7) != 0)
+            {
+               throw std::runtime_error("ACK-ACK not received. Protocol violated");
+            }
+            pc::network::TCP::sendRaw(poll.fd, "ACK-SYN");
+            data = read(poll, 40);
+
+            clientInfo.clientId = std::string(data.data());
+            pc::network::TCP::sendRaw(poll.fd, "JOIN");
+            std::size_t newDeadlineMaxCount =
+                config->ExtractDeadlineMaxCountFromDatabase(clientInfo.clientId);
+            config->balancer->setPriority(balancerIndex,
+                                          // Update priority for given element
+                                          (*config->balancer)[balancerIndex] -
+                                              clientInfo.deadline.MaxCount() +
+                                              newDeadlineMaxCount);
+            clientInfo.changeMaxCount(newDeadlineMaxCount);
+         }
+
          void execHealthChecks()
          {
             for (DataQueue<pollfd>::QueueVec::iterator it = tcpPoll.dataQueue.out.begin();
                  it != tcpPoll.dataQueue.out.end();
                  ++it)
-            {
-               std::cout << clientInfos[it->fd].clientId << " : " << std::boolalpha
-                         << clientInfos[it->fd].deadline.HealthCheckNeeded() << "\n";
                if (clientInfos[it->fd].deadline.HealthCheckNeeded())
-               {
                   if (!HealthCheckServer(clientInfos[it->fd]))
                   {
                      close(it->fd);
@@ -121,10 +140,8 @@ namespace pc
                         terminate(it->fd, indexErase);
                      }
                      // Notify user when a File Descriptor goes down
-                     downCallback(balancerIndex);
+                     config->downCallback(balancerIndex);
                   }
-               }
-            }
          }
 
          void pollExec()
@@ -133,7 +150,7 @@ namespace pc
                pc::threads::MutexGuard lock(pollsMutex);
                tcpPoll.PerformUpdate();
             }
-            int const rv = tcpPoll.poll(timeout * 1000);
+            int const rv = tcpPoll.poll(timeout);
             if (rv == 0)
                // Timeout
                return;
@@ -151,7 +168,7 @@ namespace pc
                      terminate(it->fd, indexErase);
                   }
                   // Notify user when a File Descriptor goes down
-                  downCallback(balancerIndex);
+                  config->downCallback(balancerIndex);
                }
                else if (it->revents & POLLIN)
                {
@@ -162,11 +179,12 @@ namespace pc
                      {
                         close(it->fd);
                         std::size_t indexErase = it - tcpPoll.dataQueue.out.begin();
-
-                        pc::threads::MutexGuard guard(pollsMutex);
-                        terminate(it->fd, indexErase);
+                        {
+                           pc::threads::MutexGuard guard(pollsMutex);
+                           terminate(it->fd, indexErase);
+                        }
                         // Notify user when a File Descriptor goes down
-                        downCallback(balancerIndex);
+                        config->downCallback(balancerIndex);
                      }
                      else
                         executeCallback(*it);
@@ -177,5 +195,5 @@ namespace pc
             }
          }
       };
-   } // namespace network
+   } // namespace protocol
 } // namespace pc

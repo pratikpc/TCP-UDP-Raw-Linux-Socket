@@ -3,8 +3,8 @@
 #include <sstream>
 
 #include <pc/network/TCP.hpp>
-#include <pc/network/LearnProtocol.hpp>
 #include <pc/network/ip.hpp>
+#include <pc/protocol/LearnProtocol.hpp>
 
 #include <pc/thread/Thread.hpp>
 
@@ -12,43 +12,17 @@
 
 #include <sys/sysinfo.h>
 
-#include <pc/pqpp/Connection.hpp>
-
-#include <pc/lexical_cast.hpp>
-
-struct Config
+std::string repeat(std::string value, std::size_t times)
 {
-   pc::pqpp::Connection connection;
-   Config(std::string connectionString) : connection(connectionString) {}
-   std::size_t ExtractDeadlineMaxCountFromDatabase(std::string const clientId)
-   {
-      std::vector<const char*> params(2);
-      params[0] = clientId.c_str();
-      params[1] = "45"; // DEFAULT
+   std::ostringstream stream;
+   for (std::size_t i = 0; i < times; ++i)
+      stream << value;
+   return stream.str();
+}
 
-      static pc::threads::Mutex mutex;
-      pc::threads::MutexGuard   guard(mutex);
-      pc::pqpp::IterateResult   res = connection.iterate(
-          "SELECT coalesce(MAX(priority),$2) AS priority FROM priority_table WHERE "
-          "clientId=$1",
-          params);
-      if (!res)
-      {
-         throw std::runtime_error("Unable to extract deadline max count from database");
-      }
-      std::ptrdiff_t newDeadlineMaxCount =
-          pc::lexical_cast<std::string, std::ptrdiff_t>(res[0]);
-      return newDeadlineMaxCount;
-   }
-};
-
-void pollCallback(pollfd const&            poll,
-                  pc::network::ClientInfo& clientInfo,
-                  void*                    configParam,
-                  pc::balancer::priority&  balancer,
-                  std::size_t const        balancerIndex)
+void pollCallback(pollfd const& poll, pc::protocol::ClientInfo& clientInfo)
 {
-   //   std::cout << "Poll called type"
+   //   std::cout << "\nPoll called type"
    //             << " revents: " << poll.revents << "\n"
    //             << ((poll.revents & POLLIN) ? "POLLIN\n" : "")
    //             << ((poll.revents & POLLPRI) ? "POLLPRI\n" : "")
@@ -56,55 +30,23 @@ void pollCallback(pollfd const&            poll,
    //             << ((poll.revents & POLLERR) ? "POLLERR\n" : "")
    //             << ((poll.revents & POLLNVAL) ? "POLLNVAL\n" : "");
 
-   // std::cout << "Poll called " << poll.fd << "\n";
    if (!(poll.revents & POLLIN))
       return;
-   std::vector<char> data = pc::network::TCP::recvRaw(poll.fd, 1000);
+   pc::network::buffer data = pc::network::TCP::recvRaw(poll.fd, 1000);
    if (data.empty())
    {
       return;
    }
 
-   if (clientInfo.hasClientId())
-   {
-      if (strncmp(data.data(), "DEAD-INC", 8) == 0)
-         clientInfo.deadline.incrementMaxCount();
-      // std::cout << "\nReceived data " << data.get();
-      std::string message = "Server says hi ";
-      pc::network::TCP::sendRaw(poll.fd, (const char*)message.data(), message.size());
-   }
-   else
-   {
-      if (strncmp(data.data(), "ACK-ACK", 7) != 0)
-      {
-         throw std::runtime_error("ACK-ACK not received. Protocol violated");
-      }
-      std::string message = "ACK-SYN";
-      pc::network::TCP::sendRaw(poll.fd, (const char*)message.data(), message.size());
-      data = pc::network::TCP::recvRaw(poll.fd, 1000);
-
-      message = "JOIN";
-      pc::network::TCP::sendRaw(poll.fd, (const char*)message.data(), message.size());
-      clientInfo.clientId = std::string(data.data());
-      std::cout << "\nNew Client ID joined " << clientInfo.clientId;
-      {
-         Config*     config = (Config*)configParam;
-         std::size_t newDeadlineMaxCount =
-             config->ExtractDeadlineMaxCountFromDatabase(clientInfo.clientId);
-         balancer.setPriority(balancerIndex,
-                              // Update priority for given element
-                              balancer[balancerIndex] - clientInfo.deadline.MaxCount() +
-                                  newDeadlineMaxCount);
-         clientInfo.changeMaxCount(newDeadlineMaxCount);
-         std::cout << "\nNew deadlien count for " << clientInfo.clientId << " is "
-                   << newDeadlineMaxCount;
-      }
-   }
+   if (strncmp(data.data(), "DEAD-INC", 8) == 0)
+      clientInfo.deadline.incrementMaxCount();
+   const std::string message = repeat("Server says hi " + clientInfo.clientId, 1);
+   pc::network::TCP::sendRaw(poll.fd, message);
 }
 
 void* execTcp(void* arg)
 {
-   pc::network::LearnProtocol& poll = *((pc::network::LearnProtocol*)arg);
+   pc::protocol::LearnProtocol& poll = *((pc::protocol::LearnProtocol*)arg);
    while (true)
    {
       poll.pollExec();
@@ -130,11 +72,14 @@ int main()
    pc::network::TCP tcp(ip.bind());
    tcp.setReusable();
    tcp.listen();
-   std::vector<pc::network::LearnProtocol> polls(get_nprocs());
+   std::vector<pc::protocol::LearnProtocol> protocols(get_nprocs());
 
-   pc::balancer::priority balancer(polls.size());
+   pc::balancer::priority balancer(protocols.size());
 
-   Config config("postgresql://postgres@localhost:5432/");
+   pc::protocol::Config config("postgresql://postgres@localhost:5432/");
+   config.downCallback = &downCallback;
+   config.balancer     = &balancer;
+
    {
       pc::pqpp::Result res = config.connection.exec(
           "CREATE TABLE IF NOT EXISTS priority_table ("
@@ -149,15 +94,13 @@ int main()
       std::cout << "\nTable Created";
    }
 
-   for (std::vector<pc::network::LearnProtocol>::iterator it = polls.begin();
-        it != polls.end();
+   for (std::vector<pc::protocol::LearnProtocol>::iterator it = protocols.begin();
+        it != protocols.end();
         ++it)
    {
-      it->balancerIndex       = (it - polls.begin());
-      it->downCallback        = &downCallback;
-      it->balancer            = &balancer;
-      it->callbackConfig      = &config;
-      it->timeout             = 10;
+      it->config        = &config;
+      it->balancerIndex = (it - protocols.begin());
+      it->timeout       = 10;
       pc::threads::Thread(&execTcp, &(*it)).detach();
    }
 
@@ -169,7 +112,7 @@ int main()
          continue;
       child.keepAlive();
       std::size_t currentBalance = *balancer;
-      polls[currentBalance].Add(child.socket, pollCallback);
+      protocols[currentBalance].Add(child.socket, pollCallback);
       std::cout << std::endl
                 << "Connected to " << child.socket << " on " << currentBalance
                 << " thread : Balancer" << balancer;

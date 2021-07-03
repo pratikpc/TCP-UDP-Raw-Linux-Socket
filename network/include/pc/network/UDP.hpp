@@ -1,7 +1,7 @@
 #pragma once
 
-#include <pc/network/SimplePair.hpp>
 #include <pc/network/Socket.hpp>
+#include <pc/network/types.hpp>
 #include <pc/network/ip.hpp>
 #include <sys/socket.h>
 
@@ -20,13 +20,13 @@ namespace pc
             o.socket = -1;
          }
 
-         std::vector<char> recv(std::size_t size, int flags = 0) const
+         network::buffer recv(std::size_t size, int flags = 0) const
          {
             int opt;
 
             sockaddr_storage  their_addr;
             socklen_t         addr_len = sizeof(their_addr);
-            std::vector<char> output(size);
+            network::buffer output(size);
             if ((opt = ::recvfrom(socket,
                                   output.data(),
                                   size,
@@ -35,7 +35,7 @@ namespace pc
                                   &addr_len)) == -1)
                throw std::runtime_error("Unable to read data");
             if (opt == 0)
-               return std::vector<char>();
+               return network::buffer();
             return output;
          }
          // template <typename T>

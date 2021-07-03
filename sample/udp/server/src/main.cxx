@@ -18,7 +18,7 @@ int main()
 
    while (1)
    {
-      std::vector<char> recv = udp.recv(1000);
+      pc::network::buffer recv = udp.recv(1000);
       if (recv.empty())
          break;
       recv[1000 - 1] = '\0';

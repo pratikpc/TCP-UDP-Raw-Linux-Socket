@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.16)
 set(CMAKE_CXX_STANDARD 98)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-project(tcp-udp-server
+project(network
 	VERSION 1.0.0
 	DESCRIPTION
 	"A basic TCP/UDP Server")
@@ -24,10 +24,4 @@ target_compile_options(${PROJECT_NAME}
   -Wall
   -Wextra
   -Wpedantic
-)
-
-target_link_libraries(${PROJECT_NAME}
-INTERFACE
-pc::threads
-pc::deadliner
 )

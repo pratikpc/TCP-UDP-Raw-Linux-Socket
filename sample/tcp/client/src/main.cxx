@@ -17,7 +17,7 @@ int main()
    while (true)
    {
       {
-         std::vector<char> recv = tcp.recv(1000);
+         pc::network::buffer recv = tcp.recv(1000);
          if (recv.empty())
             // Gracefull disconnection
             break;
@@ -28,7 +28,7 @@ int main()
       std::string message;
       if (std::getline(std::cin, message))
       {
-         tcp.send((const char*)message.data(), message.size());
+         tcp.send(message);
          std::cout << "\nMessage sent";
       }
    }

@@ -14,11 +14,10 @@ void* childSocketExec(void* arg)
    {
       {
          std::cout << "\nMessage: ";
-         std::string message = "nokia tyre ";
          //  if (std::getline(std::cin, message))
          //  {
          sleep(3);
-         child->send((const char*)message.data(), message.size());
+         child->send("nokia tyre");
          //  }
          //     else
          //     {
@@ -26,7 +25,7 @@ void* childSocketExec(void* arg)
          //     }
       }
       {
-         std::vector<char> recv = child->recv(1000);
+         pc::network::buffer recv = child->recv(1000);
          if (recv.empty())
             break;
          recv[1000 - 1] = '\0';

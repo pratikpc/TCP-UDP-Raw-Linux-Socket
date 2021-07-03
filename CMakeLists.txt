@@ -5,8 +5,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 project(root)
 
-add_subdirectory(sample)
-add_subdirectory(proj)
+add_subdirectory(network)
 add_subdirectory(threads)
 add_subdirectory(memory)
 add_subdirectory(loadbalancer)
@@ -15,3 +14,6 @@ add_subdirectory(pqpp)
 add_subdirectory(queue)
 add_subdirectory(templates)
 add_subdirectory(lexical_cast)
+add_subdirectory(protocol)
+
+add_subdirectory(sample)

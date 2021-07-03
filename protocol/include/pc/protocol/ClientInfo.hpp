@@ -5,16 +5,12 @@
 
 namespace pc
 {
-   namespace network
+   namespace protocol
    {
       class ClientInfo
       {
        public:
-         typedef void (*Callback)(pollfd const&,
-                                  ClientInfo&,
-                                  void* /*Configuration details*/,
-                                  balancer::priority&,
-                                  std::size_t);
+         typedef void (*Callback)(pollfd const&, ClientInfo&);
 
          std::string  clientId;
          pc::Deadline deadline;
@@ -38,5 +34,5 @@ namespace pc
             return *this;
          }
       };
-   } // namespace network
+   } // namespace protocol
 } // namespace pc
