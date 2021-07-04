@@ -69,5 +69,9 @@ namespace pc
       {
          return out.data();
       }
+      typename QueueVec::const_reference front() const
+      {
+         return in.front();
+      }
    };
 } // namespace pc
