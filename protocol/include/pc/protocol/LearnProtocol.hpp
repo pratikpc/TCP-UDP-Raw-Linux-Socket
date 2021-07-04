@@ -1,10 +1,7 @@
 #pragma once
 
-#include <map>
 #include <tr1/unordered_map>
-#include <vector>
 
-#include <poll.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
 
