@@ -2,6 +2,7 @@
 
 #include <cstdlib>
 #include <string>
+#include <sstream>
 
 #include <pc/templates.hpp>
 
