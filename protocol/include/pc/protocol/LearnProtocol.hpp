@@ -177,10 +177,9 @@ namespace pc
                }
                else if (it->revents & POLLIN)
                {
-                  std::size_t bytes;
-                  if (ioctl(it->fd, FIONREAD, &bytes) != -1)
-                  {
-                     if (bytes == 0)
+                  char        arr[10];
+                  std::size_t bytes = pc::network::TCP::recvRaw(it->fd, arr, 8, MSG_PEEK);
+                  if (bytes <= 0)
                      {
                         close(it->fd);
                         std::size_t indexErase = it - tcpPoll.dataQueue.out.begin();
