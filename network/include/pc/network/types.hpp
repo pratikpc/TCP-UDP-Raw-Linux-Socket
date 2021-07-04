@@ -1,11 +1,11 @@
 #pragma once
 
-#include <vector>
+#include <pc/opt/vector.hpp>
 
 namespace pc
 {
    namespace network
    {
-      typedef std::vector<char> buffer;
+      typedef opt::Vector<char> buffer;
    }
 } // namespace pc

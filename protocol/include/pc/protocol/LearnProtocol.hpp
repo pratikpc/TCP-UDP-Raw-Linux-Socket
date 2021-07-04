@@ -57,8 +57,9 @@ namespace pc
                // Send Down Check first
                pc::network::TCP::sendRaw(clientInfo.socket, "DOWN-CHCK");
                // The client must respond with alive
-               network::buffer data = tcpPoll.read(clientInfo.socket, 1000, timeout);
-               if (data.empty() || strncmp(data.data(), "ALIVE-ALIVE", 11) != 0)
+               network::buffer data(11);
+               tcpPoll.read(clientInfo.socket, data, timeout);
+               if (!data || strncmp(data, "ALIVE-ALIVE", 11) != 0)
                   return false;
                return true;
             }
@@ -98,22 +99,30 @@ namespace pc
             return tcpPoll.size();
          }
 
-         network::buffer read(pollfd& poll, std::size_t size)
+         void read(pollfd& poll, network::buffer& buffer)
          {
-            return network::TCPPoll::read(poll, size, timeout);
+            return network::TCPPoll::read(poll, buffer, timeout);
          }
-
+         void readOnly(pollfd& poll, network::buffer& buffer, std::size_t size)
+         {
+            return network::TCPPoll::readOnly(poll, buffer, size, timeout);
+         }
          void SetupConnection(pollfd poll, ClientInfo& clientInfo)
          {
-            network::buffer data = read(poll, 8);
-            if (strncmp(data.data(), "ACK-ACK", 7) != 0)
+            network::buffer data(40);
+            readOnly(poll, data, 7);
+            if (!data || strncmp(data, "ACK-ACK", 7) != 0)
             {
+               std::cout << "ACK-ACK not received\n";
                throw std::runtime_error("ACK-ACK not received. Protocol violated");
             }
             pc::network::TCP::sendRaw(poll.fd, "ACK-SYN");
-            data = read(poll, 40);
+               std::cout << "ACK-SYN send" << data->data() << "\n";
 
-            clientInfo.clientId = std::string(data.data());
+            read(poll, data);
+            clientInfo.clientId = std::string(data);
+               std::cout << "Cklient-ID received" << data->data() << "\n";
+
             pc::network::TCP::sendRaw(poll.fd, "JOIN");
             std::size_t newDeadlineMaxCount =
                 config->ExtractDeadlineMaxCountFromDatabase(clientInfo.clientId);
@@ -150,8 +159,7 @@ namespace pc
                pc::threads::MutexGuard lock(pollsMutex);
                tcpPoll.PerformUpdate();
             }
-            int const rv = tcpPoll.poll(timeout);
-            if (rv == 0)
+            if (tcpPoll.poll(timeout) == 0)
                // Timeout
                return;
             for (DataQueue<pollfd>::QueueVec::iterator it = tcpPoll.dataQueue.out.begin();

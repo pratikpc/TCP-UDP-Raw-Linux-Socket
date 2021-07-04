@@ -1,8 +1,8 @@
 #pragma once
 
 #include <pc/network/Socket.hpp>
-#include <pc/network/types.hpp>
 #include <pc/network/ip.hpp>
+#include <pc/network/types.hpp>
 #include <sys/socket.h>
 
 #include <vector>
@@ -20,23 +20,19 @@ namespace pc
             o.socket = -1;
          }
 
-         network::buffer recv(std::size_t size, int flags = 0) const
+         network::buffer recv(network::buffer& buffer, int flags = 0) const
          {
-            int opt;
-
-            sockaddr_storage  their_addr;
-            socklen_t         addr_len = sizeof(their_addr);
-            network::buffer output(size);
-            if ((opt = ::recvfrom(socket,
-                                  output.data(),
-                                  size,
-                                  flags,
-                                  (sockaddr*)&their_addr,
-                                  &addr_len)) == -1)
+            sockaddr_storage their_addr;
+            socklen_t        addr_len = sizeof(their_addr);
+            int              opt      = ::recvfrom(
+                socket, buffer, buffer.size(), flags, (sockaddr*)&their_addr, &addr_len);
+            if (opt == -1)
                throw std::runtime_error("Unable to read data");
             if (opt == 0)
-               return network::buffer();
-            return output;
+               buffer = false;
+            else
+               buffer = true;
+            return buffer;
          }
          // template <typename T>
          // T recv(int flags = 0)

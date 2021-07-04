@@ -10,27 +10,16 @@ void* childSocketExec(void* arg)
 {
    pc::network::TCP* child = (pc::network::TCP*)arg;
    std::cout << "Accepted " << child->socket << "\n";
+   pc::network::buffer recv(1000);
    while (true)
    {
-      {
-         std::cout << "\nMessage: ";
-         //  if (std::getline(std::cin, message))
-         //  {
-         sleep(3);
-         child->send("nokia tyre");
-         //  }
-         //     else
-         //     {
-         //        continue;
-         //     }
-      }
-      {
-         pc::network::buffer recv = child->recv(1000);
-         if (recv.empty())
-            break;
-         recv[1000 - 1] = '\0';
-         std::cout << "Client said : " << recv.data() << "\n";
-      }
+      std::cout << "\nMessage: ";
+      sleep(3);
+      child->send("nokia tyre");
+      child->recv(recv);
+      if (!recv)
+         break;
+      std::cout << "Client said : " << recv->data() << "\n";
    }
    std::cout << "Server disconnected : " << child->socket << "\n";
 

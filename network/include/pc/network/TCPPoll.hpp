@@ -58,19 +58,27 @@ namespace pc
             return TCPPoll::poll(dataQueue, timeout);
          }
 
-         static buffer read(pollfd& poll, std::size_t size, std::size_t timeout)
+         static void read(pollfd& poll, buffer& buffer, std::size_t timeout)
+         {
+            return TCPPoll::readOnly(poll, buffer, buffer, timeout);
+         }
+         static void
+             readOnly(pollfd& poll, buffer& buffer, std::size_t size, std::size_t timeout)
          {
             int ret = TCPPoll::poll(poll, timeout);
             if (ret == 0 || !(poll.revents & POLLIN))
-               return buffer();
-            return network::TCP::recvRaw(poll.fd, size, MSG_DONTWAIT);
+            {
+               buffer = false;
+               return;
+            }
+            return network::TCP::recvOnly(poll.fd, buffer, size, MSG_DONTWAIT);
          }
-         static buffer read(int socket, std::size_t size, std::size_t timeout)
+         static void read(int socket, buffer& buffer, std::size_t timeout)
          {
             pollfd poll;
             poll.fd     = socket;
             poll.events = POLLIN;
-            return TCPPoll::read(poll, size, timeout);
+            return TCPPoll::read(poll, buffer, timeout);
          }
 
          std::size_t size() const

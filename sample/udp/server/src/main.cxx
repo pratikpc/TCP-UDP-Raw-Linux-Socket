@@ -14,15 +14,14 @@ int main()
    std::string ipstr = ip;
    std::cout << "IP = " << ipstr;
    std::cout << "\n Hostname = " << ip.hostName();
-   pc::network::UDP udp(ip.bind());
-
+   pc::network::UDP    udp(ip.bind());
+   pc::network::buffer recv(100);
    while (1)
    {
-      pc::network::buffer recv = udp.recv(1000);
-      if (recv.empty())
+      udp.recv(recv);
+      if (!recv)
          break;
-      recv[1000 - 1] = '\0';
-      std::cout << "Client said : " << recv.data() << "\n";
+      std::cout << "Client said : " << recv->data() << "\n";
    }
    return EXIT_SUCCESS;
 }

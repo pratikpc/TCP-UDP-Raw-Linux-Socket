@@ -25,3 +25,9 @@ target_compile_options(${PROJECT_NAME}
   -Wextra
   -Wpedantic
 )
+
+
+target_link_libraries(${PROJECT_NAME}
+INTERFACE
+pc::opt
+)

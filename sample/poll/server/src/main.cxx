@@ -32,13 +32,14 @@ void pollCallback(pollfd const& poll, pc::protocol::ClientInfo& clientInfo)
 
    if (!(poll.revents & POLLIN))
       return;
-   pc::network::buffer data = pc::network::TCP::recvRaw(poll.fd, 1000);
-   if (data.empty())
+   pc::network::buffer data(1000);
+   pc::network::TCP::recv(poll.fd, data);
+   if (!data)
    {
       return;
    }
 
-   if (strncmp(data.data(), "DEAD-INC", 8) == 0)
+   if (strncmp(data->data(), "DEAD-INC", 8) == 0)
       clientInfo.deadline.incrementMaxCount();
    const std::string message = repeat("Server says hi " + clientInfo.clientId, 1);
    pc::network::TCP::sendRaw(poll.fd, message);

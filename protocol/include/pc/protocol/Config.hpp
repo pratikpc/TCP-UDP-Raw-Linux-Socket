@@ -13,12 +13,12 @@ namespace pc
       struct Config
       {
          typedef void(DownCallback)(std::size_t const);
+         typedef balancer::priority   balancerT;
+         typedef pc::pqpp::Connection DBConnection;
 
-         pc::pqpp::Connection connection;
-
+         DBConnection  connection;
          DownCallback* downCallback;
-
-         pc::balancer::priority* balancer;
+         balancerT*    balancer;
 
          Config(std::string connectionString) : connection(connectionString) {}
 
