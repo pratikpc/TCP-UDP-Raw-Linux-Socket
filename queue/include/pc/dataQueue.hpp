@@ -1,6 +1,5 @@
 #pragma once
 
-#include <poll.h>
 #include <vector>
 
 namespace pc
@@ -10,7 +9,7 @@ namespace pc
    {
     public:
       typedef std::vector<std::size_t> RemoveIndexes;
-      typedef std::vector<pollfd>      QueueVec;
+      typedef std::vector<T>      QueueVec;
 
     private:
       bool          updateIssued;

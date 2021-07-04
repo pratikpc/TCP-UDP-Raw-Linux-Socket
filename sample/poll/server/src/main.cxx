@@ -20,29 +20,12 @@ std::string repeat(std::string value, std::size_t times)
    return stream.str();
 }
 
-void pollCallback(pollfd const& poll, pc::protocol::ClientInfo& clientInfo)
+pc::protocol::NetworkSendPacket pollCallback(pc::protocol::NetworkPacket const& packet,
+                                             pc::protocol::ClientInfo const& clientInfo)
 {
-   //   std::cout << "\nPoll called type"
-   //             << " revents: " << poll.revents << "\n"
-   //             << ((poll.revents & POLLIN) ? "POLLIN\n" : "")
-   //             << ((poll.revents & POLLPRI) ? "POLLPRI\n" : "")
-   //             << ((poll.revents & POLLHUP) ? "POLLHUP\n" : "")
-   //             << ((poll.revents & POLLERR) ? "POLLERR\n" : "")
-   //             << ((poll.revents & POLLNVAL) ? "POLLNVAL\n" : "");
-
-   if (!(poll.revents & POLLIN))
-      return;
-   pc::network::buffer data(1000);
-   pc::network::TCP::recv(poll.fd, data);
-   if (!data)
-   {
-      return;
-   }
-
-   if (strncmp(data->data(), "DEAD-INC", 8) == 0)
-      clientInfo.deadline.incrementMaxCount();
-   const std::string message = repeat("Server says hi " + clientInfo.clientId, 1);
-   pc::network::TCP::sendRaw(poll.fd, message);
+   std::string const response = packet.data + " was received from " + clientInfo.clientId;
+   pc::protocol::NetworkSendPacket responsePacket(response);
+   return responsePacket;
 }
 
 void* execTcp(void* arg)
@@ -51,7 +34,7 @@ void* execTcp(void* arg)
    while (true)
    {
       poll.pollExec();
-      poll.execHealthChecks();
+      poll.execHealthChecksServer();
    }
    return NULL;
 }

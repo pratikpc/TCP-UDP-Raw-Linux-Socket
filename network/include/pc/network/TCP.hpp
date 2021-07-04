@@ -82,7 +82,7 @@ namespace pc
             while (total < size)
             {
                ssize_t const recv =
-                   ::recv(socket, buffer->data() + total, size - total, flags);
+                   ::recv(socket, buffer.data() + total, size - total, flags);
                if (recv == 0)
                   break;
                // If this is not Async

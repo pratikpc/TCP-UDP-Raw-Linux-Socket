@@ -24,8 +24,12 @@ namespace pc
          {
             sockaddr_storage their_addr;
             socklen_t        addr_len = sizeof(their_addr);
-            int              opt      = ::recvfrom(
-                socket, buffer, buffer.size(), flags, (sockaddr*)&their_addr, &addr_len);
+            int              opt      = ::recvfrom(socket,
+                                 buffer->data(),
+                                 buffer.size(),
+                                 flags,
+                                 (sockaddr*)&their_addr,
+                                 &addr_len);
             if (opt == -1)
                throw std::runtime_error("Unable to read data");
             if (opt == 0)

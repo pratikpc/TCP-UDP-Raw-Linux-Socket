@@ -1,0 +1,11 @@
+# Execution commands in Codespce
+
+/workspaces/TCP-UDP-Raw-Linux-Socket/build/sample/poll/server/sample-tcp-poll-server
+/workspaces/TCP-UDP-Raw-Linux-Socket/build/sample/poll/client/sample-tcp-poll-client 
+
+ docker run --name client --network work-net --rm -it -v /workspaces/TCP-UDP-Raw-Linux-Socket/build/sample/poll/client/sample-tcp-poll-client:/work/run:ro ubuntu-pg-test /work/run
+ docker run --name server --network work-net --rm -it -v /workspaces/TCP-UDP-Raw-Linux-Socket/build/sample/poll/server/sample-tcp-poll-server:/work/run:ro ubuntu-pg-test /work/run
+ docker network create --driver bridge work-net
+ docker network disconnect work-net client
+ docker kill server client
+

@@ -9,66 +9,69 @@ namespace pc
       template <typename T>
       class Vector
       {
-         typedef std::vector<T> Data;
+         typedef std::vector<T> Items;
 
-         Data data;
+         Items items;
+
+       public:
          bool hasValue;
 
        public:
-         Vector(std::size_t size = 0) : data(size), hasValue(false) {}
+         Vector(std::size_t size = 0) : items(size), hasValue(false) {}
 
          operator bool() const
          {
-            return !data.empty() && hasValue;
+            return !items.empty() && hasValue;
          }
+
          operator std::size_t() const
          {
-            return data.size();
+            return items.size();
          }
-         Vector<T> operator=(bool const value)
+         Vector<T>& operator=(bool const value)
          {
             hasValue = value;
             return *this;
          }
          std::vector<T>* operator->()
          {
-            return &data;
+            return &items;
          }
          std::size_t size()
          {
-            return data.size();
+            return items.size();
          }
-         operator T*()
+         T* data()
          {
-            return data.data();
+            return items.data();
          }
-         operator T*() const
+         const T* data() const
          {
-            return data.data();
+            return items.data();
          }
          T& operator[](std::size_t index)
          {
-            return data[index];
+            return items[index];
          }
          T operator[](std::size_t index) const
          {
-            return data[index];
+            return items[index];
          }
-         typename Data::iterator begin()
+         typename Items::iterator begin()
          {
-            return data.begin();
+            return items.begin();
          }
-         typename Data::iterator end()
+         typename Items::iterator end()
          {
-            return data.end();
+            return items.end();
          }
-         typename Data::const_iterator begin() const
+         typename Items::const_iterator begin() const
          {
-            return data.begin();
+            return items.begin();
          }
-         typename Data::const_iterator end() const
+         typename Items::const_iterator end() const
          {
-            return data.end();
+            return items.end();
          }
       };
    } // namespace opt
