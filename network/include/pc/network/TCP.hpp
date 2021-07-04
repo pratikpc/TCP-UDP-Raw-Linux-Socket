@@ -71,10 +71,10 @@ namespace pc
             }
             return opt;
          }
-         static void recvOnly(int const         socket,
-                              network::buffer&  buffer,
-                              std::size_t const size,
-                              int const         flags = 0)
+         static std::size_t recvOnly(int const         socket,
+                                     network::buffer&  buffer,
+                                     std::size_t const size,
+                                     int const         flags = 0)
          {
             std::size_t total = 0;
             // Async recv might not recv all values
@@ -111,18 +111,19 @@ namespace pc
                buffer = false;
             else
                buffer = true;
+            return total;
          }
-         static void recv(int const socket, network::buffer& buffer, int const flags = 0)
+         static std::size_t recv(int const socket, network::buffer& buffer, int const flags = 0)
          {
             return TCP::recvOnly(socket, buffer, buffer, flags);
          }
-         void recvOnly(network::buffer&  buffer,
+         std::size_t recvOnly(network::buffer&  buffer,
                        std::size_t const size,
                        int const         flags = 0)
          {
             return TCP::recvOnly(socket, buffer, size, flags);
          }
-         void recv(network::buffer& buffer, int const flags = 0)
+         std::size_t recv(network::buffer& buffer, int const flags = 0)
          {
             return TCP::recv(socket, buffer, flags);
          }
