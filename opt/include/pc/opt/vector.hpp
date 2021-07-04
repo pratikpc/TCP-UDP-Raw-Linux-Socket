@@ -9,8 +9,9 @@ namespace pc
       template <typename T>
       class Vector
       {
-         std::vector<T> data;
+         typedef std::vector<T> Data;
 
+         Data data;
          bool hasValue;
 
        public:
@@ -29,17 +30,13 @@ namespace pc
             hasValue = value;
             return *this;
          }
-         std::vector<T>* operator->() const
+         std::vector<T>* operator->()
          {
             return &data;
          }
          std::size_t size()
          {
             return data.size();
-         }
-         std::vector<T>* operator->()
-         {
-            return &data;
          }
          operator T*()
          {
@@ -48,6 +45,30 @@ namespace pc
          operator T*() const
          {
             return data.data();
+         }
+         T& operator[](std::size_t index)
+         {
+            return data[index];
+         }
+         T operator[](std::size_t index) const
+         {
+            return data[index];
+         }
+         typename Data::iterator begin()
+         {
+            return data.begin();
+         }
+         typename Data::iterator end()
+         {
+            return data.end();
+         }
+         typename Data::const_iterator begin() const
+         {
+            return data.begin();
+         }
+         typename Data::const_iterator end() const
+         {
+            return data.end();
          }
       };
    } // namespace opt
