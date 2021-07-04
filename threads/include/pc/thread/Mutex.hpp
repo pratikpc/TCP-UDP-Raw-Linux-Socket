@@ -24,5 +24,5 @@ namespace pc
             pthread_mutex_destroy(&mutex);
          }
       };
-   } // namespace network
+   } // namespace threads
 } // namespace pc
