@@ -1,5 +1,6 @@
 #pragma once
 
+#include <poll.h>
 #include <vector>
 
 namespace pc
