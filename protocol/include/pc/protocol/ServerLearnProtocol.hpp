@@ -51,24 +51,24 @@ namespace pc
             ++clientInfos[socket].deadline;
             return packet;
          }
-         void executeCallback(pollfd poll)
+         void executeCallback(DataQueue<pollfd>::QueueVec::iterator it)
          {
-            if (!clientInfos[poll.fd].hasClientId())
+            if (!clientInfos[it->fd].hasClientId())
             {
-               return setupConnection(poll, clientInfos[poll.fd]);
+               return setupConnection(*it, clientInfos[it->fd]);
             }
             network::buffer buffer(100);
-            NetworkPacket   readPacket = NetworkPacket::Read(poll, buffer, 0);
+            NetworkPacket   readPacket = NetworkPacket::Read(*it, buffer, 0);
             if (readPacket.command == Commands::DownDetect::DownAlive)
             {
-               clientInfos[poll.fd].scheduleTermination = false;
+               clientInfos[it->fd].scheduleTermination = false;
                return;
             }
             if (readPacket.command != Commands::Send)
                return;
-            NetworkSendPacket packet = executeCallback(poll.fd, readPacket);
+            NetworkSendPacket const packet          = executeCallback(it->fd, readPacket);
             if (packet.command == Commands::Send)
-               packet.Write(poll, timeout);
+               packet.Write(*it, timeout);
          }
 
          void setupConnection(pollfd poll, ClientInfo& clientInfo)
@@ -176,7 +176,7 @@ namespace pc
                   std::cout << "The number of available bytes are " << bytes << std::endl;
                   if (bytes <= 0)
                      return terminate(it);
-                     executeCallback(*it);
+                  executeCallback(it);
                }
             }
          }
