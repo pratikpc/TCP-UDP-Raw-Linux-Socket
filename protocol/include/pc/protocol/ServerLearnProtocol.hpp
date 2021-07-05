@@ -28,13 +28,21 @@ namespace pc
             return tcpPoll.size();
          }
 
-         void terminate(int socket, std::size_t indexErase)
+         void terminate(DataQueue<pollfd>::QueueVec::iterator it)
          {
+            close(it->fd);
+            {
+               pc::threads::MutexGuard guard(pollsMutex);
+
+               std::size_t indexErase = it - tcpPoll.dataQueue.out.begin();
             config->balancer->decPriority(balancerIndex,
-                                          clientInfos[socket].deadline.MaxCount());
-            clientInfos.erase(socket);
+                                             clientInfos[it->fd].deadline.MaxCount());
+               clientInfos.erase(it->fd);
             // Delete current element
             tcpPoll -= indexErase;
+         }
+            // Notify user when a File Descriptor goes down
+            config->downCallback(balancerIndex);
          }
          NetworkSendPacket executeCallback(int socket, NetworkPacket const& readPacket)
          {
@@ -141,16 +149,7 @@ namespace pc
                   // So no message came
                   // Hence kill
                   else
-                  {
-                     close(it->fd);
-                     std::size_t indexErase = it - tcpPoll.dataQueue.out.begin();
-                     {
-                        pc::threads::MutexGuard guard(pollsMutex);
-                        terminate(it->fd, indexErase);
-                     }
-                     // Notify user when a File Descriptor goes down
-                     config->downCallback(balancerIndex);
-                  }
+                     terminate(it);
                }
          }
 
@@ -169,32 +168,14 @@ namespace pc
             {
                if (it->revents & POLLHUP || it->revents & POLLNVAL ||
                    clientInfos[it->fd].deadlineBreach())
+                  return terminate(it);
+               if (it->revents & POLLIN)
                {
-                  close(it->fd);
-                  std::size_t indexErase = it - tcpPoll.dataQueue.out.begin();
-                  {
-                     pc::threads::MutexGuard guard(pollsMutex);
-                     terminate(it->fd, indexErase);
-                  }
-                  // Notify user when a File Descriptor goes down
-                  config->downCallback(balancerIndex);
-               }
-               else if (it->revents & POLLIN)
-               {
-                  char        arr[10];
-                  std::size_t bytes = pc::network::TCP::recvRaw(it->fd, arr, 8, MSG_PEEK);
+                  char    arr[2];
+                  ssize_t bytes = pc::network::TCP::recvRaw(it->fd, arr, 1, MSG_PEEK);
+                  std::cout << "The number of available bytes are " << bytes << std::endl;
                   if (bytes <= 0)
-                  {
-                     close(it->fd);
-                     std::size_t indexErase = it - tcpPoll.dataQueue.out.begin();
-                     {
-                        pc::threads::MutexGuard guard(pollsMutex);
-                        terminate(it->fd, indexErase);
-                     }
-                     // Notify user when a File Descriptor goes down
-                     config->downCallback(balancerIndex);
-                  }
-                  else
+                     return terminate(it);
                      executeCallback(*it);
                }
                else
