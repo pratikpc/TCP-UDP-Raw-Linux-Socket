@@ -4,6 +4,8 @@
 #include <pc/lexical_cast.hpp>
 #include <pc/pqpp/Connection.hpp>
 
+#include <pc/balancer/priority.hpp>
+
 #include <string>
 
 namespace pc
