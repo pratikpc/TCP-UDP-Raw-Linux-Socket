@@ -33,9 +33,9 @@ namespace pc
             if (opt == -1)
                throw std::runtime_error("Unable to read data");
             if (opt == 0)
-               buffer = false;
+               buffer.setDoesNotHaveValue();
             else
-               buffer = true;
+               buffer.setHasValue();
             return buffer;
          }
          // template <typename T>

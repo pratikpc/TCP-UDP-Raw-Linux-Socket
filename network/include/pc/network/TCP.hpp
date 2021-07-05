@@ -113,9 +113,9 @@ namespace pc
             }
             if (total == 0)
                // If empty
-               buffer = false;
+               buffer.setDoesNotHaveValue();
             else
-               buffer = true;
+               buffer.setHasValue();
             return total;
          }
          static std::size_t

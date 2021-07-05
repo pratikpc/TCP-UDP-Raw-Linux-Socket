@@ -28,10 +28,18 @@ namespace pc
          {
             return items.size();
          }
-         Vector<T>& operator=(bool const value)
+         Vector<T>& setIfHasValue(bool const value)
          {
             hasValue = value;
             return *this;
+         }
+         Vector<T>& setHasValue()
+         {
+            return setIfHasValue(true);
+         }
+         Vector<T>& setDoesNotHaveValue()
+         {
+            return setIfHasValue(false);
          }
          std::vector<T>* operator->()
          {
