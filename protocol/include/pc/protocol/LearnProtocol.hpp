@@ -28,8 +28,6 @@ namespace pc
       {
          typedef std::tr1::unordered_map<int /*Socket*/, ClientInfo> ClientInfos;
 
-         typedef std::tr1::unordered_set<int /*socket*/> HealthTerminate;
-
          ClientInfos        clientInfos;
          network::TCPPoll   tcpPoll;
          pc::threads::Mutex pollsMutex;
