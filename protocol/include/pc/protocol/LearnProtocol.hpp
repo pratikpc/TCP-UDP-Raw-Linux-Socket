@@ -30,10 +30,9 @@ namespace pc
 
          typedef std::tr1::unordered_set<int /*socket*/> HealthTerminate;
 
+         ClientInfos        clientInfos;
+         network::TCPPoll   tcpPoll;
          pc::threads::Mutex pollsMutex;
-
-         ClientInfos      clientInfos;
-         network::TCPPoll tcpPoll;
 
          void terminate(int socket, std::size_t indexErase)
          {
@@ -133,6 +132,9 @@ namespace pc
 
          void execHealthChecksServer()
          {
+            if (config != NULL && !config->healthCheckDurationToPerform)
+               return;
+
             for (DataQueue<pollfd>::QueueVec::iterator it = tcpPoll.dataQueue.out.begin();
                  it != tcpPoll.dataQueue.out.end();
                  ++it)

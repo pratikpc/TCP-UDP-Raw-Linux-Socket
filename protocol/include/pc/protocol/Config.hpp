@@ -1,8 +1,8 @@
 #pragma once
 
-#include <pc/pqpp/Connection.hpp>
-
+#include <pc/deadliner/IfNotWithin.hpp>
 #include <pc/lexical_cast.hpp>
+#include <pc/pqpp/Connection.hpp>
 
 #include <string>
 
@@ -13,12 +13,14 @@ namespace pc
       struct Config
       {
          typedef void(DownCallback)(std::size_t const);
-         typedef balancer::priority   balancerT;
-         typedef pc::pqpp::Connection DBConnection;
+         typedef balancer::priority     balancerT;
+         typedef pqpp::Connection   DBConnection;
+         typedef deadliner::IfNotWithin IfNotWithin;
 
          DBConnection  connection;
          DownCallback* downCallback;
          balancerT*    balancer;
+         IfNotWithin   healthCheckDurationToPerform;
 
          Config(std::string connectionString) : connection(connectionString) {}
 
