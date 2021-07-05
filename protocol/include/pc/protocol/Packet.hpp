@@ -29,16 +29,11 @@ namespace pc
             if (recvData.IsFailure())
             {
                if (recvData.PollFailure)
-               {
                   command = Commands::Empty;
-                  return;
-               }
                // Anything other than Poll Failure
-               if (recvData.IsFailure())
-               {
+               else
                   command = Commands::MajorErrors::SocketClosed;
-                  return;
-               }
+               return;
             }
             command.resize(4);
             assert(recvData.NoOfBytes >= command.size());

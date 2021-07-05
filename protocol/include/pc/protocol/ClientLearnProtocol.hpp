@@ -48,11 +48,11 @@ namespace pc
             ++deadline;
             return packet;
          }
-         network::TCPResult Write(NetworkSendPacket const& packet)
+         network::TCPResult Write(NetworkSendPacket const& packet) const
          {
             return packet.Write(server, timeout);
          }
-         void SetupConnection()
+         void SetupConnection() const
          {
             NetworkPacket const ackAck(Commands::Setup::Ack);
             ackAck.Write(server, timeout);

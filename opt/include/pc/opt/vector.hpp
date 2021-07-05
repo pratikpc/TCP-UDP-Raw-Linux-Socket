@@ -26,7 +26,7 @@ namespace pc
 
          operator std::size_t() const
          {
-            return items.size();
+            return size();
          }
          Vector<T>& setIfHasValue(bool const value)
          {
@@ -45,7 +45,7 @@ namespace pc
          {
             return &items;
          }
-         std::size_t size()
+         std::size_t size() const
          {
             return items.size();
          }

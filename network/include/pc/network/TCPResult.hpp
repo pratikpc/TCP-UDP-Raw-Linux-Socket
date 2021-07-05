@@ -13,7 +13,7 @@ namespace pc
          bool SocketClosed;
          bool PollFailure;
 
-         bool IsFailure()
+         bool IsFailure() const
          {
             return NoOfBytes == 0 || SocketClosed || PollFailure;
          }

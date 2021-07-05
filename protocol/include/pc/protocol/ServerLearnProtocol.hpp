@@ -72,7 +72,7 @@ namespace pc
             clientInfos[it->fd].scheduleTermination = false;
             NetworkSendPacket const packet          = executeCallback(it->fd, readPacket);
             if (packet.command == Commands::Send)
-               if(!WritePacket(packet, it))
+               if (!WritePacket(packet, it))
                   closeConnection(it);
          }
 

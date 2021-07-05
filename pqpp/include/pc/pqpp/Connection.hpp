@@ -29,11 +29,11 @@ namespace pc
          {
             return PQstatus(conn) == CONNECTION_OK;
          }
-         Result exec(std::string exec)
+         Result exec(std::string exec) const
          {
             return (PQexec(conn, exec.c_str()));
          }
-         Result exec(std::string exec, std::vector<const char*> const& params)
+         Result exec(std::string exec, std::vector<const char*> const& params) const
          {
             return (PQexecParams(conn,
                                  exec.c_str(),
@@ -44,11 +44,11 @@ namespace pc
                                  NULL, /* default to all text params */
                                  0 /* ask for binary results */));
          }
-         IterateResult iterate(std::string exec)
+         IterateResult iterate(std::string exec) const
          {
             return (PQexec(conn, exec.c_str()));
          }
-         IterateResult iterate(std::string exec, std::vector<const char*> const& params)
+         IterateResult iterate(std::string exec, std::vector<const char*> const& params) const
          {
             return (PQexecParams(conn,
                                  exec.c_str(),

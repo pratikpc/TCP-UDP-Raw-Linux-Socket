@@ -20,13 +20,13 @@ namespace pc
             left.socket = -1;
          };
 
-         bool invalid()
+         bool invalid() const
          {
             return socket == -1;
          }
 
          template <typename T>
-         void flag(int level, int name, T const& val)
+         void flag(int level, int name, T const& val) const
          {
             if (setsockopt(socket, level, name, &val, sizeof(val)) == -1)
                throw std::runtime_error("Unable to set flag");

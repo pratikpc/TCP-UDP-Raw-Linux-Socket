@@ -44,7 +44,7 @@ void* func(void* clientIndexPtr)
        repeat("Hi server from " + protocol.clientId, 10));
    for (std::size_t i = 0; true; i++)
    {
-      std::cout << std::endl << "Message sending " << i << " at " << protocol.clientId;
+      std::cout << "Message sending " << i << " at " << protocol.clientId << std::endl;
       pc::protocol::NetworkSendPacket packet("Hi server from " + protocol.clientId);
 
       pc::network::TCPResult result = protocol.Write(packet);
@@ -57,11 +57,14 @@ void* func(void* clientIndexPtr)
          std::cout << "Server says: " << responsePacket.data.size() << " : "
                    << responsePacket.data << " at " << protocol.clientId << std::endl;
       else
+      {
          std::cout << std::endl << "No communication at " << protocol.clientId;
-      usleep(2 * 1000 * 1000 / 25);
+         sleep(2);
+      }
+      usleep(4 * 1000 * 1000 / 25);
       // sleep(32);
    }
-   std::cout << "Iteration over" << std::endl;
+   std::cout << "Iteration over " << clientId << std::endl;
    return NULL;
 }
 
