@@ -12,23 +12,25 @@ namespace pc
       namespace
       {
          template <std::size_t N>
-         std::size_t countPacketBytesToRead(pollfd&           poll,
-                                            network::buffer&  buffer,
-                                            std::size_t const timeout)
+         network::TCPResult countPacketBytesToRead(pollfd&           poll,
+                                                  network::buffer&  buffer,
+                                                  std::size_t const timeout)
          {
-            std::size_t bytesToRead = 0;
-            network::TCPPoll::readOnly(poll, buffer, N, timeout);
-            if (!buffer)
-               return 0;
+            std::size_t       bytesToRead = 0;
+            network::TCPResult recvData =
+                network::TCPPoll::readOnly(poll, buffer, N, timeout);
+            if (recvData.IsFailure())
+               return recvData;
+
             // buffer[0] << 0 + buffer[1] << CHAR_BIT
             // Convert char array to integer
             for (std::size_t i = 0; i < N; ++i)
                bytesToRead |= (((std::size_t)buffer[i]) << (CHAR_BIT * i));
             assert(buffer.size() > bytesToRead);
-            std::size_t bytesRead =
-                network::TCPPoll::readOnly(poll, buffer, bytesToRead, timeout);
-            assert(bytesRead == bytesToRead);
-            return bytesRead;
+
+            recvData = network::TCPPoll::readOnly(poll, buffer, bytesToRead, timeout);
+            assert(recvData.NoOfBytes == bytesToRead);
+            return recvData;
          }
       } // namespace
       template <std::size_t N>
@@ -46,21 +48,25 @@ namespace pc
          {
             return command.size() + data.size();
          }
-         RawPacket(network::buffer const& buffer, std::size_t packetSize)
+         RawPacket(network::buffer const& buffer, network::TCPResult recvData)
          {
-            if (packetSize == 0)
+            if (recvData.IsFailure())
             {
+               // If polling failed
+               if (recvData.PollFailure)
+               {
                   command = Commands::Empty;
-               return;
+                  return;
+               }
             }
             command.resize(4);
-            assert(packetSize >= command.size());
+            assert(recvData.NoOfBytes >= command.size());
             std::copy(buffer.begin(), buffer.begin() + command.size(), command.begin());
-            if (packetSize > command.size())
+            if (recvData.NoOfBytes > command.size())
             {
-               data.resize(packetSize - command.size());
+               data.resize(recvData.NoOfBytes - command.size());
                std::copy(buffer.begin() + command.size(),
-                         buffer.begin() + packetSize,
+                         buffer.begin() + recvData.NoOfBytes,
                          data.begin());
             }
          }
@@ -74,8 +80,9 @@ namespace pc
          static RawPacket<N>
              Read(pollfd poll, network::buffer& buffer, std::size_t const timeout)
          {
-            std::size_t packetSize = countPacketBytesToRead<N>(poll, buffer, timeout);
-            return RawPacket(buffer, packetSize);
+            network::TCPResult const recvData =
+                countPacketBytesToRead<N>(poll, buffer, timeout);
+            return RawPacket(buffer, recvData);
          }
 
          void Write(pollfd poll, std::size_t timeout) const

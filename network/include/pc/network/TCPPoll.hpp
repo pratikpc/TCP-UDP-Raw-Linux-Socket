@@ -59,7 +59,7 @@ namespace pc
             return TCPPoll::poll(dataQueue, timeout);
          }
 
-         static std::size_t
+         static TCPResult
              readOnly(pollfd poll, buffer& buffer, std::size_t size, std::size_t timeout)
          {
             poll.events   = POLLIN;
@@ -67,15 +67,17 @@ namespace pc
             if (ret == 0 || !(poll.revents & POLLIN))
             {
                buffer = false;
-               return 0;
+               TCPResult recvData;
+               recvData.PollFailure = true;
+               return recvData;
             }
             return network::TCP::recvOnly(poll.fd, buffer, size, MSG_DONTWAIT);
          }
-         static std::size_t read(pollfd poll, buffer& buffer, std::size_t timeout)
+         static TCPResult read(pollfd poll, buffer& buffer, std::size_t timeout)
          {
             return TCPPoll::readOnly(poll, buffer, buffer, timeout);
          }
-         static std::size_t read(int socket, buffer& buffer, std::size_t timeout)
+         static TCPResult read(int socket, buffer& buffer, std::size_t timeout)
          {
             pollfd poll;
             poll.fd = socket;

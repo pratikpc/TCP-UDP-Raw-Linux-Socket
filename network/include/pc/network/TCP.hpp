@@ -1,17 +1,16 @@
 #pragma once
 
 #include <pc/network/Socket.hpp>
+#include <pc/network/TCPResult.hpp>
 #include <pc/network/types.hpp>
 
+#include <cerrno>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <poll.h>
 #include <sys/socket.h>
 
-#include <cerrno>
-#include <cstring>
-
-#include <vector>
+#include <cassert>
 
 namespace pc
 {
@@ -76,12 +75,14 @@ namespace pc
                throw std::runtime_error("Unable to read data");
             return opt;
          }
-         static std::size_t recvOnly(int const         socket,
-                                     network::buffer&  buffer,
-                                     std::size_t const size,
-                                     int const         flags = 0)
+         static TCPResult recvOnly(int const         socket,
+                                   network::buffer&  buffer,
+                                   std::size_t const size,
+                                   int const         flags = 0)
          {
-            std::size_t total = 0;
+            std::size_t total            = 0;
+            std::size_t asyncFailCounter = 0;
+            TCPResult   recvData;
             // Async recv might not recv all values
             // We are interested in
             while (total < size)
@@ -107,29 +108,89 @@ namespace pc
                // It means no available data
                // Break
                if (recv == -1)
+               {
+                  int const errorCode = errno;
+
+                  // If this is not a socket then this is a very very major error
+                  assert(errorCode != ENOTSOCK);
+                  // If the socket has not been connected or listened to
+                  // Major error
+                  assert(errorCode != ENOTCONN);
+                  // Bad address
+                  // This error cannot be recovered from
+                  // And may indicate bigger problems within code
+                  // Only check in test builds
+                  assert(errorCode != EFAULT);
+
+                  // Upon async receive failure
+                  if (errorCode == EAGAIN || errorCode == EWOULDBLOCK)
+                  {
+                     ++asyncFailCounter;
+                     if (asyncFailCounter >= 5)
+                     {
+                        // If the async messaging fails
+                        // Sleep for a few moments
+                        sleep(5);
+                        // Reset counter
+                        asyncFailCounter = 0;
+                     }
+                     // Helps us ignore the break statement
+                     continue;
+                  }
+                  // For failures that can be recovered from
+                  // If some time passes
+                  if ( // The receive was interrupted by delivery of a signal before
+                       // any data was available;
+                       // https://stackoverflow.com/a/41474692/1691072
+                       // Recoverable
+                      errorCode == EINTR ||
+                      // No memory available
+                      errorCode == ENOMEM)
+                  {
+                     sleep(5);
+                     // Helps us ignore the break statement
+                     continue;
+                  }
+                  if ( // If socket is invalid
+                      errorCode == EBADF ||
+                      // If the other side refuses to connect
+                      errorCode == ECONNREFUSED ||
+                      // If this was not a socket descriptor in the first place
+                      // Note hat we have an assert running
+                      // But this would work better in runtime
+                      errorCode == ENOTSOCK ||
+                      // If the socket we are reading from is yet to be connected or
+                      // accepted This is very risky Let us just indicate closure here We
+                      // also have asserts running in debug builds
+                      errorCode == ENOTCONN)
+                  {
+                     recvData.SocketClosed = true;
+                  }
                   break;
+               }
                // We do not want to add the -1 in case AWAITABLE
                total += recv;
             }
+            recvData.NoOfBytes = total;
             if (total == 0)
                // If empty
                buffer.setDoesNotHaveValue();
             else
                buffer.setHasValue();
-            return total;
+            return recvData;
          }
-         static std::size_t
+         static TCPResult
              recv(int const socket, network::buffer& buffer, int const flags = 0)
          {
             return TCP::recvOnly(socket, buffer, buffer, flags);
          }
-         std::size_t recvOnly(network::buffer&  buffer,
-                              std::size_t const size,
-                              int const         flags = 0)
+         TCPResult recvOnly(network::buffer&  buffer,
+                            std::size_t const size,
+                            int const         flags = 0)
          {
             return TCP::recvOnly(socket, buffer, size, flags);
          }
-         std::size_t recv(network::buffer& buffer, int const flags = 0)
+         TCPResult recv(network::buffer& buffer, int const flags = 0)
          {
             return TCP::recv(socket, buffer, flags);
          }
