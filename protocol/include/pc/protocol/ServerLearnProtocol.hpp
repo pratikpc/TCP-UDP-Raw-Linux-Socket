@@ -178,8 +178,6 @@ namespace pc
                      return terminate(it);
                      executeCallback(*it);
                }
-               else
-                  executeCallback(*it);
             }
          }
       };
