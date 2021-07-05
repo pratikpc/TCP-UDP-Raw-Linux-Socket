@@ -64,6 +64,8 @@ namespace pc
                clientInfos[it->fd].scheduleTermination = false;
                return;
             }
+            if (readPacket.command == Commands::MajorErrors::SocketClosed)
+               return closeConnection(it);
             if (readPacket.command != Commands::Send)
                return;
             clientInfos[it->fd].scheduleTermination = false;
@@ -174,7 +176,6 @@ namespace pc
                {
                   char    arr[2];
                   ssize_t bytes = pc::network::TCP::recvRaw(it->fd, arr, 1, MSG_PEEK);
-                  std::cout << "The number of available bytes are " << bytes << std::endl;
                   if (bytes <= 0)
                      return closeConnection(it);
                   executeCallback(it);

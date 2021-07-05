@@ -22,6 +22,10 @@ namespace pc
             std::string const DownCheck = "DWNC";
             std::string const DownAlive = "DWNA";
          } // namespace DownDetect
+         namespace MajorErrors
+         {
+            std::string const SocketClosed = "ERCL";
+         }
       } // namespace Commands
    }    // namespace protocol
 } // namespace pc

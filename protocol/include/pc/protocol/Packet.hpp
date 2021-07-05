@@ -28,10 +28,14 @@ namespace pc
          {
             if (recvData.IsFailure())
             {
-               // If polling failed
                if (recvData.PollFailure)
                {
                   command = Commands::Empty;
+                  return;
+               }
+               if (recvData.SocketClosed)
+               {
+                  command = Commands::MajorErrors::SocketClosed;
                   return;
                }
             }
@@ -64,7 +68,7 @@ namespace pc
                // Convert char array to integer
                std::size_t bytesToRead = 0;
                for (std::size_t i = 0; i < N; ++i)
-                  bytesToRead |= (((std::size_t)buffer[i]) << (CHAR_BIT * i));
+                  bytesToRead |= (((unsigned char)buffer[i]) << (CHAR_BIT * i));
                assert(buffer.size() > bytesToRead);
 
                recvData = network::TCPPoll::readOnly(poll, buffer, bytesToRead, timeout);
@@ -87,7 +91,7 @@ namespace pc
                for (size_t i = 0; i < N; ++i)
                {
                   unsigned char value =
-                      ((std::size_t)packetSize >> (CHAR_BIT * (i))) & UCHAR_MAX;
+                      ((unsigned char)packetSize >> (CHAR_BIT * (i))) & UCHAR_MAX;
                   sizeBuffer[i] = value;
                }
                network::TCPPoll::write(poll, sizeBuffer + command + data, timeout);
