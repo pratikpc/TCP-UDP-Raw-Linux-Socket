@@ -81,7 +81,7 @@ namespace pc
             return RawPacket(buffer, recvData);
          }
 
-         void Write(pollfd poll, std::size_t timeout) const
+         network::TCPResult Write(pollfd poll, std::size_t timeout) const
          {
             std::size_t const packetSize = size();
             // Convert packet to string array
@@ -95,7 +95,7 @@ namespace pc
                       ((unsigned char)packetSize >> (CHAR_BIT * (i))) & UCHAR_MAX;
                   sizeBuffer[i] = value;
                }
-               network::TCPPoll::write(poll, sizeBuffer + command + data, timeout);
+               return network::TCPPoll::write(poll, sizeBuffer + command + data, timeout);
             }
          }
       };

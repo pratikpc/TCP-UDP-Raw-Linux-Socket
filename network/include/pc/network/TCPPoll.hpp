@@ -83,18 +83,20 @@ namespace pc
             poll.fd = socket;
             return TCPPoll::read(poll, buffer, timeout);
          }
-         static std::size_t
+         static TCPResult
              write(pollfd poll, std::string const& out, std::size_t timeout)
          {
             poll.events   = POLLOUT;
             int const ret = TCPPoll::poll(poll, timeout);
             if (ret == 0 || !(poll.revents & POLLOUT))
             {
-               return 0;
+               TCPResult result;
+               result.PollFailure = true;
+               return result;
             }
             return network::TCP::sendRaw(poll.fd, out, MSG_DONTWAIT);
          }
-         static std::size_t write(int socket, std::string const& out, std::size_t timeout)
+         static TCPResult write(int socket, std::string const& out, std::size_t timeout)
          {
             pollfd poll;
             poll.fd = socket;

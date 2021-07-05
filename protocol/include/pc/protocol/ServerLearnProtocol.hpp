@@ -18,6 +18,7 @@ namespace pc
       class ServerLearnProtocol : public LearnProtocol
       {
          typedef std::tr1::unordered_map<int /*Socket*/, ClientInfo> ClientInfos;
+         typedef DataQueue<pollfd>::QueueVec::iterator               QueueIterator;
 
          ClientInfos        clientInfos;
          network::TCPPoll   tcpPoll;
@@ -28,7 +29,7 @@ namespace pc
             return tcpPoll.size();
          }
 
-         void closeConnection(DataQueue<pollfd>::QueueVec::iterator it)
+         void closeConnection(QueueIterator it)
          {
             close(it->fd);
             {
@@ -51,11 +52,11 @@ namespace pc
             ++clientInfos[socket].deadline;
             return packet;
          }
-         void executeCallback(DataQueue<pollfd>::QueueVec::iterator it)
+         void executeCallback(QueueIterator it)
          {
             if (!clientInfos[it->fd].hasClientId())
             {
-               return setupConnection(*it, clientInfos[it->fd]);
+               return setupConnection(it, clientInfos[it->fd]);
             }
             network::buffer buffer(UINT16_MAX);
             NetworkPacket   readPacket = NetworkPacket::Read(*it, buffer, 0);
@@ -71,32 +72,38 @@ namespace pc
             clientInfos[it->fd].scheduleTermination = false;
             NetworkSendPacket const packet          = executeCallback(it->fd, readPacket);
             if (packet.command == Commands::Send)
-               packet.Write(*it, timeout);
+               if(!WritePacket(packet, it))
+                  closeConnection(it);
          }
 
-         void setupConnection(pollfd poll, ClientInfo& clientInfo)
+         bool WritePacket(NetworkPacket const& packet, QueueIterator it)
+         {
+            network::TCPResult result = packet.Write(*it, timeout);
+            return !result.IsFailure();
+         }
+
+         void setupConnection(QueueIterator it, ClientInfo& clientInfo)
          {
             network::buffer data(40);
-            NetworkPacket   ackAck = NetworkPacket::Read(poll, data, timeout);
+            NetworkPacket   ackAck = NetworkPacket::Read(*it, data, timeout);
             if (ackAck.command != Commands::Setup::Ack)
-            {
                throw std::runtime_error(Commands::Setup::Ack +
                                         " not received. Protocol violated");
-            }
             NetworkPacket const ackSyn(Commands::Setup::Syn);
-            ackSyn.Write(poll, timeout);
+            if (!WritePacket(ackSyn, it))
+               throw std::runtime_error(Commands::Setup::Syn +
+                                        " not sent. Protocol violated");
 
-            NetworkPacket const clientId = NetworkPacket::Read(poll, data, timeout);
+            NetworkPacket const clientId = NetworkPacket::Read(*it, data, timeout);
             if (clientId.command != Commands::Setup::ClientID)
-            {
                throw std::runtime_error(Commands::Setup::ClientID +
                                         " not received. Protocol violated");
-            }
             clientInfo.clientId = std::string(clientId.data);
 
             NetworkPacket const join(Commands::Setup::Join);
-            join.Write(poll, timeout);
-
+            if (!WritePacket(join, it))
+               throw std::runtime_error(Commands::Setup::Join +
+                                        " not sent. Protocol violated");
             std::size_t newDeadlineMaxCount =
                 config->ExtractDeadlineMaxCountFromDatabase(clientInfo.clientId);
             config->balancer->setPriority(balancerIndex,
@@ -133,7 +140,7 @@ namespace pc
             if (config != NULL && !config->healthCheckDurationToPerform)
                return;
 
-            for (DataQueue<pollfd>::QueueVec::iterator it = tcpPoll.dataQueue.out.begin();
+            for (QueueIterator it = tcpPoll.dataQueue.out.begin();
                  it != tcpPoll.dataQueue.out.end();
                  ++it)
                if (clientInfos[it->fd].deadline.HealthCheckNeeded())
@@ -165,7 +172,7 @@ namespace pc
             if (tcpPoll.poll(timeout) == 0)
                // Timeout
                return;
-            for (DataQueue<pollfd>::QueueVec::iterator it = tcpPoll.dataQueue.out.begin();
+            for (QueueIterator it = tcpPoll.dataQueue.out.begin();
                  it != tcpPoll.dataQueue.out.end();
                  ++it)
             {

@@ -46,9 +46,14 @@ void* func(void* clientIndexPtr)
    {
       std::cout << std::endl << "Message sending " << i << " at " << protocol.clientId;
       pc::protocol::NetworkSendPacket packet("Hi server from " + protocol.clientId);
-      protocol.Send(packet);
+
+      pc::network::TCPResult result = protocol.Write(packet);
+      if (result.IsFailure())
+         break;
       pc::protocol::NetworkPacket responsePacket = protocol.Read(buffer);
-      if (responsePacket.command != pc::protocol::Commands::Empty)
+      if (responsePacket.command == pc::protocol::Commands::MajorErrors::SocketClosed)
+         break;
+      else if (responsePacket.command != pc::protocol::Commands::Empty)
          std::cout << "Server says: " << responsePacket.data.size() << " : "
                    << responsePacket.data << " at " << protocol.clientId << std::endl;
       else
@@ -56,6 +61,7 @@ void* func(void* clientIndexPtr)
       usleep(2 * 1000 * 1000 / 25);
       // sleep(32);
    }
+   std::cout << "Iteration over" << std::endl;
    return NULL;
 }
 

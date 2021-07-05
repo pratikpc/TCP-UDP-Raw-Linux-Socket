@@ -50,7 +50,7 @@ namespace pc
             }
             return packet;
          }
-         void Send(NetworkSendPacket const& packet)
+         network::TCPResult Write(NetworkSendPacket const& packet)
          {
             return packet.Write(server, timeout);
          }

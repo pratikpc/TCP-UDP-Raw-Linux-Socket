@@ -210,26 +210,35 @@ namespace pc
          {
             return TCP::recv(socket, buffer, flags);
          }
-         std::size_t send(std::string const& data, int const flags = 0)
+         TCPResult send(std::string const& data, int const flags = 0)
          {
             return TCP::sendRaw(socket, data.data(), data.size(), flags);
          }
-         static std::size_t sendRaw(int const    socket,
-                                    const char*  msg,
-                                    size_t const len,
-                                    int const    flags = 0)
+         static TCPResult sendRaw(int const    socket,
+                                  const char*  msg,
+                                  size_t const len,
+                                  int const    flags = 0)
          {
-            std::size_t total = 0;
+            std::size_t total            = 0;
+            std::size_t asyncFailCounter = 0;
+            TCPResult   result;
+
             // Send might not send all values
             while (total < len)
             {
-               std::size_t const sent =
-                   TCP::sendSingle(socket, msg + total, len - total, flags);
-               total += sent;
+               ssize_t const sent = ::send(socket, msg, len, flags);
+               if (sent == -1)
+               {
+                  if (!TCP::HandleError(result, asyncFailCounter))
+                     break;
+               }
+               else
+                  total += sent;
             }
-            return total;
+            result.NoOfBytes = total;
+            return result;
          }
-         static std::size_t
+         static TCPResult
              sendRaw(int const socket, std::string const& data, int const flags = 0)
          {
             return sendRaw(socket, data.data(), data.size(), flags);
