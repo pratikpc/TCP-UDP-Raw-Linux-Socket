@@ -5,8 +5,9 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 
-#include <pc/protocol/LearnProtocol.hpp>
 #include <pc/protocol/ClientInfo.hpp>
+#include <pc/protocol/Config.hpp>
+#include <pc/protocol/LearnProtocol.hpp>
 
 #include <pc/network/TCPPoll.hpp>
 
