@@ -10,9 +10,8 @@ namespace pc
 {
    namespace protocol
    {
-      class ClientInfo
+      struct ClientInfo
       {
-       public:
          int                     socket;
          std::string             clientId;
          pc::deadliner::Deadline deadline;

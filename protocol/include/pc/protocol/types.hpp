@@ -6,8 +6,7 @@ namespace pc
 {
    namespace protocol
    {
-      class ClientInfo;
-
+      struct ClientInfo;
       typedef RawPacket<2>     NetworkPacket;
       typedef RawSendPacket<2> NetworkSendPacket;
       typedef NetworkSendPacket (*ClientResponseCallback)(NetworkPacket const&,
