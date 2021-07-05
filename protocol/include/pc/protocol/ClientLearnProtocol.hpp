@@ -25,17 +25,13 @@ namespace pc
          pc::deadliner::Deadline deadline;
 
        public:
-         std::string const       clientId;
+         std::string const clientId;
 
          ClientLearnProtocol(int socket, std::string const& clientId) : clientId(clientId)
          {
             server.fd = socket;
          }
-         pollfd getServer()
-         {
-            return server;
-         }
-         NetworkPacket clientExecCallback(network::buffer& buffer)
+         NetworkPacket Read(network::buffer& buffer)
          {
             // If deadline crossed, sleep
             // if (clientInfos[server.fd].deadline)
@@ -48,11 +44,15 @@ namespace pc
             {
                NetworkPacket alive(commands::downdetect::DownAlive);
                alive.Write(server, timeout);
-               return clientExecCallback(buffer);
+               return Read(buffer);
             }
             return packet;
          }
-         void setupConnection()
+         void Send(NetworkSendPacket const& packet)
+         {
+            return packet.Write(server, timeout);
+         }
+         void SetupConnection()
          {
             NetworkPacket const ackAck(commands::setup::Ack);
             ackAck.Write(server, timeout);

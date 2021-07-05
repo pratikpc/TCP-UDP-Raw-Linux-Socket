@@ -30,16 +30,15 @@ void* func(void* clientIndexPtr)
 
    pc::protocol::ClientLearnProtocol protocol(tcp.socket, clientId);
    protocol.timeout = 10;
-   protocol.setupConnection();
+   protocol.SetupConnection();
 
    pc::network::buffer buffer(200);
-   pollfd              server = protocol.getServer();
    for (std::size_t i = 0; true; i++)
    {
       std::cout << std::endl << "Message sending " << i << " at " << protocol.clientId;
       pc::protocol::NetworkSendPacket packet("Hi server from " + protocol.clientId);
-      packet.Write(server, protocol.timeout);
-      pc::protocol::NetworkPacket responsePacket = protocol.clientExecCallback(buffer);
+      protocol.Send(packet);
+      pc::protocol::NetworkPacket responsePacket = protocol.Read(buffer);
       if (responsePacket.command != pc::protocol::commands::Empty)
          std::cout << "Server says: " << responsePacket.data.size() << " : "
                    << responsePacket.data << " at " << protocol.clientId << std::endl;
