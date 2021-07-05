@@ -4,13 +4,16 @@
 
 #include <pc/network/TCP.hpp>
 #include <pc/network/ip.hpp>
-#include <pc/protocol/LearnProtocol.hpp>
+#include <pc/protocol/ServerLearnProtocol.hpp>
 
 #include <pc/thread/Thread.hpp>
 
 #include <pc/balancer/priority.hpp>
 
 #include <sys/sysinfo.h>
+
+typedef pc::protocol::ServerLearnProtocol Protocol;
+typedef std::vector<Protocol>             ServerLearnProtocols;
 
 std::string repeat(std::string value, std::size_t times)
 {
@@ -30,18 +33,18 @@ pc::protocol::NetworkSendPacket pollCallback(pc::protocol::NetworkPacket const& 
 
 void* execTcp(void* arg)
 {
-   pc::protocol::LearnProtocol& poll = *((pc::protocol::LearnProtocol*)arg);
+   Protocol& poll = *((Protocol*)arg);
    while (true)
    {
-      poll.pollExec();
-      poll.execHealthChecksServer();
+      poll.poll();
+      poll.execHealthCheck();
    }
    return NULL;
 }
 
 void downCallback(std::size_t const idx)
 {
-   std::cout << std::endl << "One client went down at " << idx << " balancer";
+   std::cout << "One client went down at " << idx << " balancer" << std::endl;
 }
 
 int main()
@@ -56,7 +59,7 @@ int main()
    pc::network::TCP tcp(ip.bind());
    tcp.setReusable();
    tcp.listen();
-   std::vector<pc::protocol::LearnProtocol> protocols(get_nprocs());
+   ServerLearnProtocols protocols(get_nprocs());
 
    pc::balancer::priority balancer(protocols.size());
 
@@ -78,8 +81,7 @@ int main()
       std::cout << "\nTable Created";
    }
 
-   for (std::vector<pc::protocol::LearnProtocol>::iterator it = protocols.begin();
-        it != protocols.end();
+   for (ServerLearnProtocols::iterator it = protocols.begin(); it != protocols.end();
         ++it)
    {
       it->config        = &config;

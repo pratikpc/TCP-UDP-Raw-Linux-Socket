@@ -3,7 +3,7 @@
 #include <pc/network/TCP.hpp>
 #include <pc/network/ip.hpp>
 
-#include <pc/protocol/LearnProtocol.hpp>
+#include <pc/protocol/ClientLearnProtocol.hpp>
 
 #include <cstdlib>
 #include <ctime>
@@ -28,24 +28,23 @@ void* func(void* clientIndexPtr)
    std::string const clientId = "CLIENT-" + pc::lexical_cast(clientIndex);
    std::cout << std::endl << "ClientId = " << clientId;
 
-   pc::protocol::LearnProtocol protocol;
+   pc::protocol::ClientLearnProtocol protocol(tcp.socket, clientId);
    protocol.timeout = 10;
-   protocol.Add(tcp.socket);
-   protocol.setupConnectionClient(clientId);
+   protocol.setupConnection();
 
    pc::network::buffer buffer(200);
-   pollfd              server = protocol.clientGetServer();
+   pollfd              server = protocol.getServer();
    for (std::size_t i = 0; true; i++)
    {
-      std::cout << std::endl << "Message sending " << i << " at " << clientId;
-      pc::protocol::NetworkSendPacket packet("Hi server from " + clientId);
+      std::cout << std::endl << "Message sending " << i << " at " << protocol.clientId;
+      pc::protocol::NetworkSendPacket packet("Hi server from " + protocol.clientId);
       packet.Write(server, protocol.timeout);
       pc::protocol::NetworkPacket responsePacket = protocol.clientExecCallback(buffer);
       if (responsePacket.command != pc::protocol::commands::Empty)
          std::cout << "Server says: " << responsePacket.data.size() << " : "
-                   << responsePacket.data << " at " << clientId << std::endl;
+                   << responsePacket.data << " at " << protocol.clientId << std::endl;
       else
-         std::cout << std::endl << "No communication at " << clientId;
+         std::cout << std::endl << "No communication at " << protocol.clientId;
       usleep(2 * 1000 * 1000 / 25);
       // sleep(32);
    }
