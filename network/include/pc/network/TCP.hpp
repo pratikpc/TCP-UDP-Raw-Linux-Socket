@@ -5,6 +5,7 @@
 
 #include <netinet/in.h>
 #include <netinet/tcp.h>
+#include <poll.h>
 #include <sys/socket.h>
 
 #include <cerrno>
@@ -21,7 +22,14 @@ namespace pc
          TCP(int const socket) : Socket(socket) {}
          TCP(TCP& o) : Socket(o.socket)
          {
-            o.socket = -1;
+            o.invalidate();
+         }
+
+         operator pollfd() const
+         {
+            pollfd poll;
+            poll.fd = socket;
+            return poll;
          }
 
          void listen(int backlog = 5)
@@ -113,13 +121,14 @@ namespace pc
                buffer = true;
             return total;
          }
-         static std::size_t recv(int const socket, network::buffer& buffer, int const flags = 0)
+         static std::size_t
+             recv(int const socket, network::buffer& buffer, int const flags = 0)
          {
             return TCP::recvOnly(socket, buffer, buffer, flags);
          }
          std::size_t recvOnly(network::buffer&  buffer,
-                       std::size_t const size,
-                       int const         flags = 0)
+                              std::size_t const size,
+                              int const         flags = 0)
          {
             return TCP::recvOnly(socket, buffer, size, flags);
          }
