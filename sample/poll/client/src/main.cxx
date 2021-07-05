@@ -16,19 +16,18 @@ void* func(void* clientIndexPtr)
    pc::network::IP ip(SOCK_STREAM);
    ip.load("127.0.0.1", "9900");
 
-   std::string      ipstr = ip;
-   pc::network::TCP tcp(ip.connect());
    std::cout << "\nHostname = " << pc::network::IP::hostName();
-   tcp.keepAlive();
-
+   std::string      ipstr = ip;
    std::cout << std::endl << "IP = " << ipstr;
+   pc::network::TCP server(ip.connect());
+   server.keepAlive();
 
-   int clientIndex = *((int*)clientIndexPtr);
+   int const clientIndex = *((int*)clientIndexPtr);
 
    std::string const clientId = "CLIENT-" + pc::lexical_cast(clientIndex);
    std::cout << std::endl << "ClientId = " << clientId;
 
-   pc::protocol::ClientLearnProtocol protocol(tcp.socket, clientId);
+   pc::protocol::ClientLearnProtocol protocol(server, clientId);
    protocol.timeout = 10;
    protocol.SetupConnection();
 

@@ -6,6 +6,7 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 
+#include <pc/network/TCP.hpp>
 #include <pc/network/TCPPoll.hpp>
 
 #include <pc/protocol/LearnProtocol.hpp>
@@ -21,15 +22,16 @@ namespace pc
       struct ClientLearnProtocol : public pc::protocol::LearnProtocol
       {
        private:
-         pollfd                  server;
-         pc::deadliner::Deadline deadline;
+         network::TCP        server;
+         deadliner::Deadline deadline;
 
        public:
          std::string const clientId;
 
-         ClientLearnProtocol(int socket, std::string const& clientId) : clientId(clientId)
+         ClientLearnProtocol(network::TCP& server, std::string const& clientId) :
+             server(server), clientId(clientId)
          {
-            server.fd = socket;
+            assert(!this->server.invalid());
          }
          NetworkPacket Read(network::buffer& buffer)
          {
@@ -65,7 +67,6 @@ namespace pc
                                         " not received. Protocol violated");
             }
             NetworkPacket const clientIdSend(commands::setup::ClientID, clientId);
-            // clientInfos[server.fd].clientId = clientId;
             clientIdSend.Write(server, timeout);
             NetworkPacket join = NetworkPacket::Read(server, data, timeout);
             if (join.command != commands::setup::Join)
