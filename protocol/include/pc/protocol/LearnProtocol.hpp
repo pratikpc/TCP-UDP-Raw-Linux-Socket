@@ -165,14 +165,14 @@ namespace pc
                }
          }
 
-         pollfd clientGetFrontElem()
+         pollfd clientGetServer()
          {
             return tcpPoll.dataQueue.front();
          }
          NetworkPacket clientExecCallback(network::buffer& buffer)
          {
             // Will contain only one link to server
-            pollfd server = tcpPoll.dataQueue.front();
+            pollfd server = clientGetServer();
             // If deadline crossed, sleep
             if (clientInfos[server.fd].deadline)
             {

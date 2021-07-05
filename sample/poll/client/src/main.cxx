@@ -34,7 +34,7 @@ void* func(void* clientIndexPtr)
    protocol.setupConnectionClient(clientId);
 
    pc::network::buffer buffer(200);
-   pollfd              server = protocol.clientGetFrontElem();
+   pollfd              server = protocol.clientGetServer();
    for (std::size_t i = 0; true; i++)
    {
       std::cout << std::endl << "Message sending " << i << " at " << clientId;
