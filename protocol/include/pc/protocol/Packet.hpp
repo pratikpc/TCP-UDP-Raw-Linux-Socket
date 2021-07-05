@@ -44,7 +44,7 @@ namespace pc
          static std::size_t const SizeBytes = N;
 
        private:
-         operator std::size_t() const
+         std::size_t size() const
          {
             return command.size() + data.size();
          }
@@ -87,7 +87,7 @@ namespace pc
 
          void Write(pollfd poll, std::size_t timeout) const
          {
-            std::size_t const packetSize = *this;
+            std::size_t const packetSize = size();
             // Convert packet to string array
             {
                // Convert size to buffer
