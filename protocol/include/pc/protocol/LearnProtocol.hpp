@@ -111,12 +111,12 @@ namespace pc
             poll.fd     = socket;
             poll.events = POLLIN;
 
+            ClientInfo clientInfo = ClientInfo::createClientInfo(socket, callback);
+
             // Protect this during multithreaded access
             pc::threads::MutexGuard lock(pollsMutex);
             tcpPoll += poll;
-            clientInfos[socket]          = ClientInfo();
-            clientInfos[socket].callback = callback;
-            clientInfos[socket].socket   = socket;
+            clientInfos[socket] = clientInfo;
             if (config != NULL)
                config->balancer->incPriority(balancerIndex,
                                              clientInfos[socket].deadline.MaxCount());

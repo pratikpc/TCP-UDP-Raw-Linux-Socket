@@ -13,13 +13,21 @@ namespace pc
       class ClientInfo
       {
        public:
+         int                     socket;
          std::string             clientId;
          pc::deadliner::Deadline deadline;
          ClientResponseCallback  callback;
+         bool                    scheduleTermination;
 
-         bool scheduleTermination;
-
-         int socket;
+         static ClientInfo createClientInfo(int socket, ClientResponseCallback callback)
+         {
+            ClientInfo clientInfo;
+            clientInfo.callback            = callback;
+            clientInfo.socket              = socket;
+            clientInfo.clientId            = "";
+            clientInfo.scheduleTermination = false;
+            return clientInfo;
+         }
 
          bool deadlineBreach() const
          {
