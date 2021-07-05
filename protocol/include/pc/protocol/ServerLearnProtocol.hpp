@@ -66,6 +66,7 @@ namespace pc
             }
             if (readPacket.command != Commands::Send)
                return;
+            clientInfos[it->fd].scheduleTermination = false;
             NetworkSendPacket const packet          = executeCallback(it->fd, readPacket);
             if (packet.command == Commands::Send)
                packet.Write(*it, timeout);
