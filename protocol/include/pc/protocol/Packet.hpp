@@ -9,30 +9,6 @@ namespace pc
 {
    namespace protocol
    {
-      namespace
-      {
-         template <std::size_t N>
-         network::TCPResult countPacketBytesToRead(pollfd&           poll,
-                                                  network::buffer&  buffer,
-                                                  std::size_t const timeout)
-         {
-            std::size_t       bytesToRead = 0;
-            network::TCPResult recvData =
-                network::TCPPoll::readOnly(poll, buffer, N, timeout);
-            if (recvData.IsFailure())
-               return recvData;
-
-            // buffer[0] << 0 + buffer[1] << CHAR_BIT
-            // Convert char array to integer
-            for (std::size_t i = 0; i < N; ++i)
-               bytesToRead |= (((std::size_t)buffer[i]) << (CHAR_BIT * i));
-            assert(buffer.size() > bytesToRead);
-
-            recvData = network::TCPPoll::readOnly(poll, buffer, bytesToRead, timeout);
-            assert(recvData.NoOfBytes == bytesToRead);
-            return recvData;
-         }
-      } // namespace
       template <std::size_t N>
       class RawPacket
       {
@@ -80,8 +56,23 @@ namespace pc
          static RawPacket<N>
              Read(pollfd poll, network::buffer& buffer, std::size_t const timeout)
          {
-            network::TCPResult const recvData =
-                countPacketBytesToRead<N>(poll, buffer, timeout);
+            network::TCPResult recvData =
+                network::TCPPoll::readOnly(poll, buffer, N, timeout);
+            if (!recvData.IsFailure())
+            {
+               // buffer[0] << 0 + buffer[1] << CHAR_BIT
+               // Convert char array to integer
+               std::size_t bytesToRead = 0;
+               for (std::size_t i = 0; i < N; ++i)
+                  bytesToRead |= (((std::size_t)buffer[i]) << (CHAR_BIT * i));
+               assert(buffer.size() > bytesToRead);
+
+               recvData = network::TCPPoll::readOnly(poll, buffer, bytesToRead, timeout);
+               if (!recvData.IsFailure())
+               {
+                  assert(recvData.NoOfBytes == bytesToRead);
+               }
+            }
             return RawPacket(buffer, recvData);
          }
 
