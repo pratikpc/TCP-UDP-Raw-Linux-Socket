@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cassert>
 #include <climits>
 #include <pc/network/TCPPoll.hpp>
 #include <pc/protocol/Commands.hpp>
