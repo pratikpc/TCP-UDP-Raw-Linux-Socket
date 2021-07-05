@@ -73,10 +73,7 @@ namespace pc
          {
             ssize_t opt = ::recv(socket, input, size, flags);
             if (opt == -1)
-            {
-               std::cout << std::endl << "Error was : " << strerror(errno) << " : ";
                throw std::runtime_error("Unable to read data");
-            }
             return opt;
          }
          static std::size_t recvOnly(int const         socket,
@@ -167,10 +164,7 @@ namespace pc
          {
             std::ptrdiff_t const sent = ::send(socket, msg, len, flags);
             if (sent == -1)
-            {
-               std::cout << std::endl << "Error was : " << strerror(errno) << " : ";
                throw std::invalid_argument("Unable to send");
-            }
             return sent;
          }
       };

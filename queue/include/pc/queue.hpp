@@ -1,6 +1,6 @@
 #pragma once
 
-#include <cstddef>
+#include <cassert>
 #include <vector>
 
 namespace pc

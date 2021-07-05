@@ -4,6 +4,7 @@
 
 #include <poll.h>
 
+#include <pc/network/TCP.hpp>
 #include <pc/network/types.hpp>
 
 namespace pc

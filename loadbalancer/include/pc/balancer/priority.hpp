@@ -2,6 +2,8 @@
 
 #include <pc/thread/Mutex.hpp>
 #include <pc/thread/MutexGuard.hpp>
+
+#include <ostream>
 #include <vector>
 
 namespace pc
