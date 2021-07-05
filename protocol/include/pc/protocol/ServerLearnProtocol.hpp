@@ -59,15 +59,15 @@ namespace pc
             }
             network::buffer buffer(100);
             NetworkPacket   readPacket = NetworkPacket::Read(poll, buffer, 0);
-            if (readPacket.command == commands::downdetect::DownAlive)
+            if (readPacket.command == Commands::DownDetect::DownAlive)
             {
                clientInfos[poll.fd].scheduleTermination = false;
                return;
             }
-            if (readPacket.command != commands::Send)
+            if (readPacket.command != Commands::Send)
                return;
             NetworkSendPacket packet = executeCallback(poll.fd, readPacket);
-            if (packet.command == commands::Send)
+            if (packet.command == Commands::Send)
                packet.Write(poll, timeout);
          }
 
@@ -75,23 +75,23 @@ namespace pc
          {
             network::buffer data(40);
             NetworkPacket   ackAck = NetworkPacket::Read(poll, data, timeout);
-            if (ackAck.command != commands::setup::Ack)
+            if (ackAck.command != Commands::Setup::Ack)
             {
-               throw std::runtime_error(commands::setup::Ack +
+               throw std::runtime_error(Commands::Setup::Ack +
                                         " not received. Protocol violated");
             }
-            NetworkPacket const ackSyn(commands::setup::Syn);
+            NetworkPacket const ackSyn(Commands::Setup::Syn);
             ackSyn.Write(poll, timeout);
 
             NetworkPacket const clientId = NetworkPacket::Read(poll, data, timeout);
-            if (clientId.command != commands::setup::ClientID)
+            if (clientId.command != Commands::Setup::ClientID)
             {
-               throw std::runtime_error(commands::setup::ClientID +
+               throw std::runtime_error(Commands::Setup::ClientID +
                                         " not received. Protocol violated");
             }
             clientInfo.clientId = std::string(clientId.data);
 
-            NetworkPacket const join(commands::setup::Join);
+            NetworkPacket const join(Commands::Setup::Join);
             join.Write(poll, timeout);
 
             std::size_t newDeadlineMaxCount =
@@ -139,7 +139,7 @@ namespace pc
                   if (!clientInfos[it->fd].scheduleTermination)
                   {
                      // Send Down Check first
-                     NetworkPacket downCheck(commands::downdetect::DownCheck);
+                     NetworkPacket downCheck(Commands::DownDetect::DownCheck);
                      downCheck.Write(*it, timeout);
                      clientInfos[it->fd].scheduleTermination = true;
                   }

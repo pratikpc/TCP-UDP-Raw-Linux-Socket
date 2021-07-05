@@ -50,7 +50,7 @@ namespace pc
          {
             if (packetSize == 0)
             {
-               command = commands::Empty;
+                  command = Commands::Empty;
                return;
             }
             command.resize(4);
@@ -99,7 +99,7 @@ namespace pc
       template <std::size_t N>
       struct RawSendPacket : RawPacket<N>
       {
-         RawSendPacket(std::string data) : RawPacket<N>(commands::Send, data) {}
+         RawSendPacket(std::string data) : RawPacket<N>(Commands::Send, data) {}
       };
    } // namespace protocol
 } // namespace pc

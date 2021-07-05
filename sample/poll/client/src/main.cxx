@@ -38,7 +38,7 @@ void* func(void* clientIndexPtr)
       pc::protocol::NetworkSendPacket packet("Hi server from " + protocol.clientId);
       protocol.Send(packet);
       pc::protocol::NetworkPacket responsePacket = protocol.Read(buffer);
-      if (responsePacket.command != pc::protocol::commands::Empty)
+      if (responsePacket.command != pc::protocol::Commands::Empty)
          std::cout << "Server says: " << responsePacket.data.size() << " : "
                    << responsePacket.data << " at " << protocol.clientId << std::endl;
       else

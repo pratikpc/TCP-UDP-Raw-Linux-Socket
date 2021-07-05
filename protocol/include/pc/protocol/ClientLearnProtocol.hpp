@@ -42,9 +42,9 @@ namespace pc
             //    return NetworkPacket(commands::Empty);
             // }
             NetworkPacket packet = NetworkPacket::Read(server, buffer, timeout);
-            if (packet.command == commands::downdetect::DownCheck)
+            if (packet.command == Commands::DownDetect::DownCheck)
             {
-               NetworkPacket alive(commands::downdetect::DownAlive);
+               NetworkPacket alive(Commands::DownDetect::DownAlive);
                alive.Write(server, timeout);
                return Read(buffer);
             }
@@ -56,22 +56,22 @@ namespace pc
          }
          void SetupConnection()
          {
-            NetworkPacket const ackAck(commands::setup::Ack);
+            NetworkPacket const ackAck(Commands::Setup::Ack);
             ackAck.Write(server, timeout);
 
             network::buffer data(40);
             NetworkPacket   ackSyn = NetworkPacket::Read(server, data, timeout);
-            if (ackSyn.command != commands::setup::Syn)
+            if (ackSyn.command != Commands::Setup::Syn)
             {
-               throw std::runtime_error(commands::setup::Syn +
+               throw std::runtime_error(Commands::Setup::Syn +
                                         " not received. Protocol violated");
             }
-            NetworkPacket const clientIdSend(commands::setup::ClientID, clientId);
+            NetworkPacket const clientIdSend(Commands::Setup::ClientID, clientId);
             clientIdSend.Write(server, timeout);
             NetworkPacket join = NetworkPacket::Read(server, data, timeout);
-            if (join.command != commands::setup::Join)
+            if (join.command != Commands::Setup::Join)
             {
-               throw std::runtime_error(commands::setup::Join +
+               throw std::runtime_error(Commands::Setup::Join +
                                         " not received. Protocol violated");
             }
          }
