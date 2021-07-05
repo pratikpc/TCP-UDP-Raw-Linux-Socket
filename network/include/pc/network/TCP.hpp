@@ -75,6 +75,80 @@ namespace pc
                throw std::runtime_error("Unable to read data");
             return opt;
          }
+         static bool HandleError(TCPResult& result, std::size_t& asyncFailCounter)
+         {
+            int const errorCode = errno;
+            // If this is not a socket then this is a very very major error
+            assert(errorCode != ENOTSOCK);
+            // If the socket has not been connected or listened to
+            // Major error
+            assert(errorCode != ENOTCONN);
+            // Bad address
+            // This error cannot be recovered from
+            // And may indicate bigger problems within code
+            // Only check in test builds
+            assert(errorCode != EFAULT);
+            // Some bit in the flags argument is inappropriate for the socket type.
+            assert(errorCode != EOPNOTSUPP);
+
+            // Upon async receive failure
+            if (errorCode == EAGAIN || errorCode == EWOULDBLOCK)
+            {
+               ++asyncFailCounter;
+               if (asyncFailCounter >= 5)
+               {
+                  // If the async messaging fails
+                  // Sleep for a few moments
+                  sleep(5);
+                  // Reset counter
+                  asyncFailCounter = 0;
+               }
+               return true;
+            }
+            // For failures that can be recovered from
+            // If some time passes
+            if ( // The receive was interrupted by delivery of a signal before
+                 // any data was available;
+                 // https://stackoverflow.com/a/41474692/1691072
+                 // Recoverable
+                errorCode == EINTR ||
+                // No memory available
+                errorCode == ENOMEM ||
+                // Another Fast Open is in progress.
+                errorCode == EALREADY)
+            {
+               sleep(5);
+               // Helps us ignore the break statement
+               return true;
+            }
+            if ( // If socket is invalid
+                errorCode == EBADF ||
+                // If local end is shut down on connection oriented socket
+                // Assume this leads to socket closure
+                errorCode == EPIPE ||
+                // Write access was denied on the given file
+                errorCode == EACCES ||
+                // Connection reset by peer
+                errorCode == ECONNRESET ||
+                // If the other side refuses to connect
+                errorCode == ECONNREFUSED ||
+                // If this was not a socket descriptor in the first place
+                // Note hat we have an assert running
+                // But this would work better in runtime
+                errorCode == ENOTSOCK ||
+                // If the socket we are reading from is yet to be connected or
+                // accepted This is very risky Let us just indicate closure here We
+                // also have asserts running in debug builds
+                errorCode == ENOTCONN ||
+                // Some bit in the flags argument is inappropriate for the socket
+                // type.
+                errorCode == ENOTSUP)
+            {
+               result.SocketClosed = true;
+               return false;
+            }
+            return false;
+         }
          static TCPResult recvOnly(int const         socket,
                                    network::buffer&  buffer,
                                    std::size_t const size,
@@ -82,7 +156,7 @@ namespace pc
          {
             std::size_t total            = 0;
             std::size_t asyncFailCounter = 0;
-            TCPResult   recvData;
+            TCPResult   result;
             // Async recv might not recv all values
             // We are interested in
             while (total < size)
@@ -103,81 +177,23 @@ namespace pc
                   total += recv;
                   break;
                }
-               // As this is an awaitable loop
-               // If recv is -1
-               // It means no available data
-               // Break
                if (recv == -1)
                {
-                  int const errorCode = errno;
-
-                  // If this is not a socket then this is a very very major error
-                  assert(errorCode != ENOTSOCK);
-                  // If the socket has not been connected or listened to
-                  // Major error
-                  assert(errorCode != ENOTCONN);
-                  // Bad address
-                  // This error cannot be recovered from
-                  // And may indicate bigger problems within code
-                  // Only check in test builds
-                  assert(errorCode != EFAULT);
-
-                  // Upon async receive failure
-                  if (errorCode == EAGAIN || errorCode == EWOULDBLOCK)
-                  {
-                     ++asyncFailCounter;
-                     if (asyncFailCounter >= 5)
-                     {
-                        // If the async messaging fails
-                        // Sleep for a few moments
-                        sleep(5);
-                        // Reset counter
-                        asyncFailCounter = 0;
-                     }
-                     // Helps us ignore the break statement
-                     continue;
-                  }
-                  // For failures that can be recovered from
-                  // If some time passes
-                  if ( // The receive was interrupted by delivery of a signal before
-                       // any data was available;
-                       // https://stackoverflow.com/a/41474692/1691072
-                       // Recoverable
-                      errorCode == EINTR ||
-                      // No memory available
-                      errorCode == ENOMEM)
-                  {
-                     sleep(5);
-                     // Helps us ignore the break statement
-                     continue;
-                  }
-                  if ( // If socket is invalid
-                      errorCode == EBADF ||
-                      // If the other side refuses to connect
-                      errorCode == ECONNREFUSED ||
-                      // If this was not a socket descriptor in the first place
-                      // Note hat we have an assert running
-                      // But this would work better in runtime
-                      errorCode == ENOTSOCK ||
-                      // If the socket we are reading from is yet to be connected or
-                      // accepted This is very risky Let us just indicate closure here We
-                      // also have asserts running in debug builds
-                      errorCode == ENOTCONN)
-                  {
-                     recvData.SocketClosed = true;
-                  }
-                  break;
+                  if (!TCP::HandleError(result, asyncFailCounter))
+                     break;
                }
-               // We do not want to add the -1 in case AWAITABLE
-               total += recv;
+               else
+               { // We do not want to add the -1 in case AWAITABLE
+                  total += recv;
+               }
             }
-            recvData.NoOfBytes = total;
+            result.NoOfBytes = total;
             if (total == 0)
                // If empty
                buffer.setDoesNotHaveValue();
             else
                buffer.setHasValue();
-            return recvData;
+            return result;
          }
          static TCPResult
              recv(int const socket, network::buffer& buffer, int const flags = 0)
