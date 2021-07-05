@@ -57,7 +57,7 @@ namespace pc
             {
                return setupConnection(*it, clientInfos[it->fd]);
             }
-            network::buffer buffer(100);
+            network::buffer buffer(UINT16_MAX);
             NetworkPacket   readPacket = NetworkPacket::Read(*it, buffer, 0);
             if (readPacket.command == Commands::DownDetect::DownAlive)
             {
