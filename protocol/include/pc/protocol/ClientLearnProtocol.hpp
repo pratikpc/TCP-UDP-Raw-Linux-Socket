@@ -36,11 +36,8 @@ namespace pc
          NetworkPacket Read(network::buffer& buffer)
          {
             // If deadline crossed, sleep
-            // if (clientInfos[server.fd].deadline)
-            // {
-            //    sleep(timeout / 1000);
-            //    return NetworkPacket(commands::Empty);
-            // }
+            if (deadline)
+               return NetworkPacket(Commands::Empty);
             NetworkPacket packet = NetworkPacket::Read(server, buffer, timeout);
             if (packet.command == Commands::DownDetect::DownCheck)
             {
@@ -48,6 +45,7 @@ namespace pc
                alive.Write(server, timeout);
                return Read(buffer);
             }
+            ++deadline;
             return packet;
          }
          network::TCPResult Write(NetworkSendPacket const& packet)
