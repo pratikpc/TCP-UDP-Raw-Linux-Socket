@@ -1,6 +1,7 @@
 #pragma once
 
 #include <tr1/unordered_map>
+#include <tr1/unordered_set>
 
 #include <sys/ioctl.h>
 #include <unistd.h>
@@ -19,8 +20,6 @@
 #include <pc/protocol/Packet.hpp>
 #include <pc/protocol/types.hpp>
 
-#include <set>
-
 namespace pc
 {
    namespace protocol
@@ -29,7 +28,7 @@ namespace pc
       {
          typedef std::tr1::unordered_map<int /*Socket*/, ClientInfo> ClientInfos;
 
-         typedef std::set<int /*socket*/> HealthTerminate;
+         typedef std::tr1::unordered_set<int /*socket*/> HealthTerminate;
 
          pc::threads::Mutex pollsMutex;
 
