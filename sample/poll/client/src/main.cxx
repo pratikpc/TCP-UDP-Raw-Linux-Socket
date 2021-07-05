@@ -11,13 +11,21 @@
 
 #include <pc/lexical_cast.hpp>
 
+std::string repeat(std::string value, std::size_t times)
+{
+   std::ostringstream stream;
+   for (std::size_t i = 0; i < times; ++i)
+      stream << value;
+   return stream.str();
+}
+
 void* func(void* clientIndexPtr)
 {
    pc::network::IP ip(SOCK_STREAM);
    ip.load("127.0.0.1", "9900");
 
    std::cout << "\nHostname = " << pc::network::IP::hostName();
-   std::string      ipstr = ip;
+   std::string ipstr = ip;
    std::cout << std::endl << "IP = " << ipstr;
    pc::network::TCP server(ip.connect());
    server.keepAlive();
@@ -31,7 +39,9 @@ void* func(void* clientIndexPtr)
    protocol.timeout = 10;
    protocol.SetupConnection();
 
-   pc::network::buffer buffer(200);
+   pc::network::buffer             buffer(200);
+   pc::protocol::NetworkSendPacket packet(
+       repeat("Hi server from " + protocol.clientId, 10));
    for (std::size_t i = 0; true; i++)
    {
       std::cout << std::endl << "Message sending " << i << " at " << protocol.clientId;

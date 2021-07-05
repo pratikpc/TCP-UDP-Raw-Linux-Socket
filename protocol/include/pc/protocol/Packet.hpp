@@ -33,7 +33,8 @@ namespace pc
                   command = Commands::Empty;
                   return;
                }
-               if (recvData.SocketClosed)
+               // Anything other than Poll Failure
+               if (recvData.IsFailure())
                {
                   command = Commands::MajorErrors::SocketClosed;
                   return;
