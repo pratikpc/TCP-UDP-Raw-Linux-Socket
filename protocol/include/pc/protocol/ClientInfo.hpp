@@ -1,6 +1,6 @@
 #pragma once
 
-#include <pc/deadliner/deadline.hpp>
+#include <pc/deadliner/Deadline.hpp>
 
 #include <pc/protocol/types.hpp>
 
@@ -13,9 +13,9 @@ namespace pc
       class ClientInfo
       {
        public:
-         std::string            clientId;
-         pc::Deadline           deadline;
-         ClientResponseCallback callback;
+         std::string             clientId;
+         pc::deadliner::Deadline deadline;
+         ClientResponseCallback  callback;
 
          bool scheduleTermination;
 
