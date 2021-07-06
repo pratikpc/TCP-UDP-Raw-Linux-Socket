@@ -48,9 +48,9 @@ namespace pc
             timestamps.insert(socket, std::make_pair(timer::seconds(), it));
             return *this;
          }
-         iterator removeAndIterate(int socket)
+         iterator removeAndIterate(iterator it)
          {
-            return timestamps.removeAndIterate(socket);
+            return timestamps.removeAndIterate(it);
          }
       };
    } // namespace deadliner

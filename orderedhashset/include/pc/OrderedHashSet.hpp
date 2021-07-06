@@ -64,15 +64,13 @@ namespace pc
          mapper[key] = newItemIt;
       }
 
-      iterator removeAndIterate(Key const key)
+      iterator removeAndIterate(iterator it)
       {
-         assert(contains(key));
-         iterator removeExistingIt = mapper[key];
-         removeExistingIt          = iterate.erase(removeExistingIt);
-
-         typename Mapper::iterator removeExistingMapperIt = mapper.find(key);
-         mapper.erase(removeExistingMapperIt);
-         return removeExistingIt;
+         typename Mapper::iterator removeExistingMapperIt = mapper.find(it->first);
+         if (removeExistingMapperIt != mapper.end())
+            mapper.erase(removeExistingMapperIt);
+         it = iterate.erase(it);
+         return it;
       }
    };
 } // namespace pc

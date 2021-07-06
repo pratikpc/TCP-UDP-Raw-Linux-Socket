@@ -29,11 +29,6 @@ namespace pc
          MostRecentTimestamps mostRecentTimestamps;
          pc::threads::Mutex   mostRecentTimestampsMutex;
 
-         std::size_t size() const
-         {
-            return tcpPoll.size();
-         }
-
          void closeConnection(QueueIterator it)
          {
             int socket = it->fd;
@@ -79,12 +74,7 @@ namespace pc
                pc::threads::MutexGuard guard(pollsMutex);
                clientInfos[it->fd].scheduleTermination = false;
             }
-            {
-               pc::threads::MutexGuard guard(mostRecentTimestampsMutex);
-               // Add socket and iterator to current index
-               // Makes removal easy
-               mostRecentTimestamps.insert(it->fd, it);
-            }
+
             if (readPacket.command == Commands::MajorErrors::SocketClosed)
                return closeConnection(it);
             if (readPacket.command != Commands::Send)
@@ -93,6 +83,12 @@ namespace pc
             if (packet.command == Commands::Send)
                if (!WritePacket(packet, it))
                   closeConnection(it);
+            {
+               pc::threads::MutexGuard guard(mostRecentTimestampsMutex);
+               // Add socket and iterator to current index
+               // Makes removal easy
+               mostRecentTimestamps.insert(it->fd, it);
+            }
          }
 
          bool WritePacket(NetworkPacket const& packet, QueueIterator it)
@@ -158,9 +154,6 @@ namespace pc
          {
             if (config != NULL && !config->healthCheckDurationToPerform)
                return;
-            if (mostRecentTimestamps.size() == 0)
-               return;
-
             std::time_t const now = timer::seconds();
 
             pc::threads::MutexGuard guard(mostRecentTimestampsMutex);
@@ -176,8 +169,7 @@ namespace pc
                if (clientInfos[socket].scheduleTermination)
                {
                   closeConnection(it->second.second);
-                  pc::threads::MutexGuard guard(mostRecentTimestampsMutex);
-                  it = mostRecentTimestamps.removeAndIterate(socket);
+                  it = mostRecentTimestamps.removeAndIterate(it);
                }
                // It is enabled
                // So if we end up here again
@@ -193,6 +185,10 @@ namespace pc
             }
          }
 
+         std::size_t size() const
+         {
+            return tcpPoll.size();
+         }
          void poll()
          {
             {
