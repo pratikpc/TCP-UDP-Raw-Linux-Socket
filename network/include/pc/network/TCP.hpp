@@ -126,8 +126,14 @@ namespace pc
                 // No memory available
                 errorCode == ENOMEM ||
                 // Another Fast Open is in progress.
-                errorCode == EALREADY)
+                errorCode == EALREADY ||
+                // On timeout
+                // Best to sleep and retry
+                errorCode == ETIMEDOUT)
             {
+               // Supports sleeping for a small while
+               // And then retrying to get the
+               // same data
                sleep(5);
                // Helps us ignore the break statement
                return true;
