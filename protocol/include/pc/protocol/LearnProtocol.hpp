@@ -1,5 +1,5 @@
 #pragma once
-#include <cstddef>
+#include <ctime>
 
 namespace pc
 {
@@ -8,7 +8,7 @@ namespace pc
       class LearnProtocol
       {
        public:
-         std::size_t timeout;
+         std::time_t timeout;
       };
    } // namespace protocol
 } // namespace pc

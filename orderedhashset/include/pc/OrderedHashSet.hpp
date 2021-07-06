@@ -72,5 +72,13 @@ namespace pc
          it = iterate.erase(it);
          return it;
       }
+      void remove(Key const key)
+      {
+         typename Mapper::iterator mapperIt = mapper.find(key);
+         if (mapperIt == mapper.end())
+            return;
+         iterate.erase(mapperIt->second);
+         mapper.erase(mapperIt);
+      }
    };
 } // namespace pc

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <tr1/unordered_map>
+#include <tr1/unordered_set>
 
 #include <sys/ioctl.h>
 #include <unistd.h>
@@ -19,8 +20,7 @@ namespace pc
       {
          typedef std::tr1::unordered_map<int /*Socket*/, ClientInfo> ClientInfos;
          typedef DataQueue<pollfd>::QueueVec::iterator               QueueIterator;
-         typedef deadliner::MostRecentTimestamps<DataQueue<pollfd>::QueueVec>
-             MostRecentTimestamps;
+         typedef deadliner::MostRecentTimestamps                     MostRecentTimestamps;
 
          ClientInfos        clientInfos;
          network::TCPPoll   tcpPoll;
@@ -48,10 +48,10 @@ namespace pc
                // Delete current element
                tcpPoll -= indexErase;
             }
-            // {
-            //    pc::threads::MutexGuard guard(mostRecentTimestampsMutex);
-            //    mostRecentTimestamps -= socket;
-            // }
+            {
+               pc::threads::MutexGuard guard(mostRecentTimestampsMutex);
+               mostRecentTimestamps.remove(socket);
+            }
             // Notify user when a File Descriptor goes down
             config->downCallback(balancerIndex);
          }
@@ -60,6 +60,12 @@ namespace pc
             NetworkSendPacket packet =
                 clientInfos[socket].callback(readPacket, clientInfos[socket]);
             ++clientInfos[socket].deadline;
+            {
+               pc::threads::MutexGuard guard(mostRecentTimestampsMutex);
+               // Add socket and iterator to current index
+               // Makes removal easy
+               mostRecentTimestamps.insert(socket);
+            }
             return packet;
          }
          void executeCallback(QueueIterator it)
@@ -83,12 +89,6 @@ namespace pc
             if (packet.command == Commands::Send)
                if (!WritePacket(packet, it))
                   closeConnection(it);
-            {
-               pc::threads::MutexGuard guard(mostRecentTimestampsMutex);
-               // Add socket and iterator to current index
-               // Makes removal easy
-               mostRecentTimestamps.insert(it->fd, it);
-            }
          }
 
          bool WritePacket(NetworkPacket const& packet, QueueIterator it)
@@ -148,47 +148,56 @@ namespace pc
             config->balancer->incPriority(balancerIndex,
                                           clientInfos[socket].deadline.MaxCount());
             ++clientInfos[socket].deadline;
+            {
+               pc::threads::MutexGuard guard(mostRecentTimestampsMutex);
+               // Add socket and iterator to current index
+               // Makes removal easy
+               mostRecentTimestamps.insert(socket);
+            }
          }
 
          void execHealthCheck()
          {
-            if (config != NULL && !config->healthCheckDurationToPerform)
-               return;
             std::time_t const now = timer::seconds();
 
-            for (MostRecentTimestamps::iterator it = mostRecentTimestamps.begin();
-                 it != mostRecentTimestamps.end();)
+            std::tr1::unordered_set<int /*socket*/> socketsToRemove;
+
+            if (mostRecentTimestamps.size() == 0)
+               return;
             {
-               int socket = it->first;
-               // Input is sorted by ascending order
-               if ((now - it->second.first /*Time then*/) <
-                   config->healthCheckDurationToPerform.maxDurationDifference)
-                  break;
-               bool terminate = false;
+               // pc::threads::MutexGuard guard(mostRecentTimestampsMutex);
+               for (MostRecentTimestamps::iterator it = mostRecentTimestamps.begin();
+                    it != mostRecentTimestamps.end();
+                    ++it)
                {
-                  pc::threads::MutexGuard guard(pollsMutex);
-                  terminate = clientInfos[socket].scheduleTermination;
-               }
-               // If this is not the cycle to terminate
-               if (terminate)
-               {
-                  closeConnection(it->second.second);
-                  pc::threads::MutexGuard guard(mostRecentTimestampsMutex);
-                  it = mostRecentTimestamps.removeAndIterate(it);
-               }
-               // It is enabled
-               // So if we end up here again
-               // It means that the Health Check was not reset during
-               // So no message came
-               // Hence kill
-               else
-               {
-                  ++it;
-                  // Schedule termination
-                  pc::threads::MutexGuard guard(pollsMutex);
-                  clientInfos[socket].scheduleTermination = true;
+                  int socket = it->first;
+                  // Input is sorted by ascending order
+                  if ((now - it->second /*Time then*/) < timeout)
+                     break;
+                  bool terminate = clientInfos[socket].scheduleTermination;
+
+                  // If this is not the cycle to terminate
+                  if (terminate)
+                     socketsToRemove.insert(socket);
+                  // It is enabled
+                  // So if we end up here again
+                  // It means that the Health Check was not reset during
+                  // So no message came
+                  // Hence kill
+                  else
+                     // Schedule termination
+                     clientInfos[socket].scheduleTermination = true;
                }
             }
+            if (!socketsToRemove.empty())
+               for (QueueIterator it = tcpPoll.dataQueue.out.begin();
+                    it != tcpPoll.dataQueue.out.end();
+                    ++it)
+               {
+                  int socket = it->fd;
+                  if (socketsToRemove.find(socket) != socketsToRemove.end())
+                     closeConnection(it);
+               }
          }
 
          std::size_t size() const

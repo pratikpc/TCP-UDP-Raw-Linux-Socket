@@ -15,21 +15,18 @@ namespace pc
       struct Config
       {
          typedef void(DownCallback)(std::size_t const);
-         typedef balancer::priority     balancerT;
-         typedef pqpp::Connection       DBConnection;
-         typedef deadliner::IfNotWithin IfNotWithin;
+         typedef balancer::priority balancerT;
+         typedef pqpp::Connection   DBConnection;
 
          DBConnection  connection;
          balancerT*    balancer;
-         IfNotWithin   healthCheckDurationToPerform;
          DownCallback* downCallback;
 
          Config(std::string   connectionString,
                 balancerT&    balancer,
                 DownCallback* downCallback) :
              connection(connectionString),
-             balancer(&balancer), healthCheckDurationToPerform(),
-             downCallback(downCallback)
+             balancer(&balancer), downCallback(downCallback)
          {
          }
 

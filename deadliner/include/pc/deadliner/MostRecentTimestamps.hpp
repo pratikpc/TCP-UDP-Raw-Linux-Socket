@@ -7,15 +7,12 @@ namespace pc
 {
    namespace deadliner
    {
-      template <typename DataQueue>
       struct MostRecentTimestamps
       {
-         typedef pc::OrderedHashSet<
-             int /*socket*/,
-             std::pair<std::time_t, typename DataQueue::iterator> /* */>
-                                                     Timestamps;
-         typedef typename Timestamps::iterator       iterator;
-         typedef typename Timestamps::const_iterator const_iterator;
+         typedef pc::OrderedHashSet<int /*socket*/, std::time_t> Timestamps;
+
+         typedef Timestamps::iterator       iterator;
+         typedef Timestamps::const_iterator const_iterator;
 
        private:
          Timestamps timestamps;
@@ -43,14 +40,18 @@ namespace pc
             return timestamps.size();
          }
 
-         MostRecentTimestamps& insert(int socket, typename DataQueue::iterator it)
+         MostRecentTimestamps& insert(int socket)
          {
-            timestamps.insert(socket, std::make_pair(timer::seconds(), it));
+            timestamps.insert(socket, timer::seconds());
             return *this;
          }
          iterator removeAndIterate(iterator it)
          {
             return timestamps.removeAndIterate(it);
+         }
+         void remove(int socket)
+         {
+            return timestamps.remove(socket);
          }
       };
    } // namespace deadliner
