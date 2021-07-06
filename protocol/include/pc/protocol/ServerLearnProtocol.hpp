@@ -156,7 +156,6 @@ namespace pc
                return;
             std::time_t const now = timer::seconds();
 
-            pc::threads::MutexGuard guard(mostRecentTimestampsMutex);
             for (MostRecentTimestamps::iterator it = mostRecentTimestamps.begin();
                  it != mostRecentTimestamps.end();)
             {
@@ -165,10 +164,16 @@ namespace pc
                if ((now - it->second.first /*Time then*/) <
                    config->healthCheckDurationToPerform.maxDurationDifference)
                   break;
+               bool terminate = false;
+               {
+                  pc::threads::MutexGuard guard(pollsMutex);
+                  terminate = clientInfos[socket].scheduleTermination;
+               }
                // If this is not the cycle to terminate
-               if (clientInfos[socket].scheduleTermination)
+               if (terminate)
                {
                   closeConnection(it->second.second);
+                  pc::threads::MutexGuard guard(mostRecentTimestampsMutex);
                   it = mostRecentTimestamps.removeAndIterate(it);
                }
                // It is enabled
@@ -178,9 +183,10 @@ namespace pc
                // Hence kill
                else
                {
-                  // Schedule termination
-                  clientInfos[socket].scheduleTermination = true;
                   ++it;
+                  // Schedule termination
+                  pc::threads::MutexGuard guard(pollsMutex);
+                  clientInfos[socket].scheduleTermination = true;
                }
             }
          }

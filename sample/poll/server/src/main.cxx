@@ -31,15 +31,24 @@ pc::protocol::NetworkSendPacket pollCallback(pc::protocol::NetworkPacket const& 
    return responsePacket;
 }
 
-void* execTcp(void* arg)
+void* execPoll(void* arg)
 {
    Protocol& poll = *((Protocol*)arg);
    while (true)
-   {
       poll.poll();
-      poll.execHealthCheck();
-   }
    return NULL;
+}
+
+void* execHealthCheck(void* arg)
+{
+   ServerLearnProtocols& protocols = *((ServerLearnProtocols*)(arg));
+   while (true)
+   {
+      sleep(10);
+      for (ServerLearnProtocols::iterator it = protocols.begin(); it != protocols.end();
+           ++it)
+         it->execHealthCheck();
+   }
 }
 
 void downCallback(std::size_t const idx)
@@ -86,8 +95,9 @@ int main()
       it->config        = &config;
       it->balancerIndex = (it - protocols.begin());
       it->timeout       = 10;
-      pc::threads::Thread(&execTcp, &(*it)).detach();
+      pc::threads::Thread(&execPoll, &(*it)).detach();
    }
+   pc::threads::Thread(&execHealthCheck, &protocols).detach();
 
    while (true)
    {
