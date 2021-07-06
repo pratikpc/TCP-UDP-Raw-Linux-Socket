@@ -2,8 +2,9 @@
 
 #include <cassert>
 #include <cstddef>
-#include <ctime>
 #include <vector>
+
+#include <pc/timer/timer.hpp>
 
 #include <pc/queue.hpp>
 
@@ -16,12 +17,7 @@ namespace pc
    {
       namespace
       {
-         bool operator>(timespec const& left, timespec const& right)
-         {
-            return left.tv_sec > right.tv_sec ||
-                   // If same second, left > right
-                   (left.tv_sec == right.tv_sec && left.tv_nsec >= right.tv_nsec);
-         }
+
          std::ptrdiff_t operator-(timespec const& left, timespec const& right)
          {
             timespec ret;
@@ -72,7 +68,7 @@ namespace pc
 
          bool HealthCheckNeeded() const
          {
-            timespec curTime = getCurrentTime();
+            timespec curTime = timer::now();
 
             pc::threads::MutexGuard guard(mutex);
             if (queue.rear != -1)
@@ -85,7 +81,7 @@ namespace pc
 
          operator bool() const
          {
-            timespec curTime = getCurrentTime();
+            timespec curTime = timer::now();
 
             pc::threads::MutexGuard guard(mutex);
             // If Full
@@ -96,12 +92,6 @@ namespace pc
             }
             return false;
          }
-         static timespec getCurrentTime()
-         {
-            timespec specTime;
-            clock_gettime(CLOCK_MONOTONIC, &specTime);
-            return specTime;
-         }
          Deadline& incrementMaxCount()
          {
             return MaxCount(queue.maxCount + 1);
@@ -110,7 +100,7 @@ namespace pc
          {
             pc::threads::MutexGuard guard(mutex);
 
-            timespec curTime = getCurrentTime();
+            timespec curTime = timer::now();
             queue.Add(curTime);
             return *this;
          }

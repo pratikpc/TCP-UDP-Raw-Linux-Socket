@@ -1,6 +1,6 @@
 #pragma once
 
-#include <ctime>
+#include <pc/timer/timer.hpp>
 
 namespace pc
 {
@@ -13,13 +13,13 @@ namespace pc
 
        public:
          IfNotWithin(std::time_t maxDurationDifferenceSeconds = 10) :
-             lastDeadlineCheck(std::time(NULL)),
+             lastDeadlineCheck(timer::seconds()),
              maxDurationDifference(maxDurationDifferenceSeconds)
          {
          }
          operator bool()
          {
-            std::time_t currentTimeSc = std::time(NULL);
+            std::time_t const currentTimeSc = timer::seconds();
             if ((currentTimeSc - lastDeadlineCheck) > maxDurationDifference)
             {
                lastDeadlineCheck = currentTimeSc;
