@@ -63,9 +63,8 @@ int main()
 
    pc::balancer::priority balancer(protocols.size());
 
-   pc::protocol::Config config("postgresql://postgres@localhost:5432/");
-   config.downCallback = &downCallback;
-   config.balancer     = &balancer;
+   pc::protocol::Config config(
+       "postgresql://postgres@localhost:5432/", balancer, &downCallback);
 
    {
       pc::pqpp::Result res = config.connection.exec(

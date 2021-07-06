@@ -16,15 +16,22 @@ namespace pc
       {
          typedef void(DownCallback)(std::size_t const);
          typedef balancer::priority     balancerT;
-         typedef pqpp::Connection   DBConnection;
+         typedef pqpp::Connection       DBConnection;
          typedef deadliner::IfNotWithin IfNotWithin;
 
          DBConnection  connection;
-         DownCallback* downCallback;
          balancerT*    balancer;
          IfNotWithin   healthCheckDurationToPerform;
+         DownCallback* downCallback;
 
-         Config(std::string connectionString) : connection(connectionString) {}
+         Config(std::string   connectionString,
+                balancerT&    balancer,
+                DownCallback* downCallback) :
+             connection(connectionString),
+             balancer(&balancer), healthCheckDurationToPerform(),
+             downCallback(downCallback)
+         {
+         }
 
          std::size_t ExtractDeadlineMaxCountFromDatabase(std::string const clientId)
          {
