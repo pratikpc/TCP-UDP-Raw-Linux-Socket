@@ -38,15 +38,19 @@ namespace pc
             return timestamps.end();
          }
 
+         std::size_t size() const
+         {
+            return timestamps.size();
+         }
+
          MostRecentTimestamps& insert(int socket, typename DataQueue::iterator it)
          {
             timestamps.insert(socket, std::make_pair(timer::seconds(), it));
             return *this;
          }
-         MostRecentTimestamps& operator-=(int socket)
+         iterator removeAndIterate(int socket)
          {
-            timestamps.remove(socket);
-            return *this;
+            return timestamps.removeAndIterate(socket);
          }
       };
    } // namespace deadliner

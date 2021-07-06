@@ -44,6 +44,11 @@ namespace pc
          return mapper.find(key) != mapper.end();
       }
 
+      std::size_t size() const
+      {
+         return iterate.size();
+      }
+
       void insert(Key const key, Value const value)
       {
          // If already present
@@ -59,13 +64,15 @@ namespace pc
          mapper[key] = newItemIt;
       }
 
-      void remove(Key const key)
+      iterator removeAndIterate(Key const key)
       {
          assert(contains(key));
-         typename Iterator::iterator removeExistingIt = mapper[key];
-         iterate.erase(removeExistingIt);
+         iterator removeExistingIt = mapper[key];
+         removeExistingIt          = iterate.erase(removeExistingIt);
+
          typename Mapper::iterator removeExistingMapperIt = mapper.find(key);
          mapper.erase(removeExistingMapperIt);
+         return removeExistingIt;
       }
    };
 } // namespace pc
