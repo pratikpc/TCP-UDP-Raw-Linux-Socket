@@ -9,9 +9,10 @@ namespace pc
       class IfNotWithin
       {
          std::time_t lastDeadlineCheck;
-         std::time_t maxDurationDifference;
 
        public:
+         std::time_t maxDurationDifference;
+
          IfNotWithin(std::time_t maxDurationDifferenceSeconds = 10) :
              lastDeadlineCheck(timer::seconds()),
              maxDurationDifference(maxDurationDifferenceSeconds)
