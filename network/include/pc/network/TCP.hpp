@@ -12,6 +12,8 @@
 
 #include <cassert>
 
+#include <cstring>
+
 namespace pc
 {
    namespace network
@@ -65,6 +67,15 @@ namespace pc
             int yes = 1;
             flag(SOL_SOCKET, SO_REUSEADDR, yes);
          }
+
+         static bool containsDataToRead(int socket, int const flags = 0)
+         {
+            char    val;
+            ssize_t bytes = pc::network::TCP::recvRaw(
+                socket, &val, sizeof(val), MSG_PEEK | MSG_DONTWAIT | flags);
+            return bytes > 0;
+         }
+
          static ssize_t recvRaw(int const         socket,
                                 char*             input,
                                 std::size_t const size,

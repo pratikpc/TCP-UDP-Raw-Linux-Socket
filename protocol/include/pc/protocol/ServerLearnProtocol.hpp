@@ -181,9 +181,7 @@ namespace pc
                   return closeConnection(it);
                if (it->revents & POLLIN)
                {
-                  char    arr[2];
-                  ssize_t bytes = pc::network::TCP::recvRaw(it->fd, arr, 1, MSG_PEEK);
-                  if (bytes <= 0)
+                  if (!pc::network::TCP::containsDataToRead(it->fd))
                      return closeConnection(it);
                   executeCallback(it);
                }
