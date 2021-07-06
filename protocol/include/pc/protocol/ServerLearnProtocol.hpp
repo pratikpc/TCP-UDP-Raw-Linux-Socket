@@ -119,14 +119,22 @@ namespace pc
             if (!WritePacket(join, it))
                throw std::runtime_error(Commands::Setup::Join +
                                         " not sent. Protocol violated");
-            std::size_t newDeadlineMaxCount =
-                config->ExtractDeadlineMaxCountFromDatabase(clientInfo.clientId);
-            config->balancer->setPriority(balancerIndex,
-                                          // Update priority for given element
-                                          (*config->balancer)[balancerIndex] -
-                                              clientInfo.deadline.MaxCount() +
-                                              newDeadlineMaxCount);
-            clientInfo.changeMaxCount(newDeadlineMaxCount);
+            {
+               // As the balancer element is common
+               // and shared across protocols
+               // Make the balancer updation guard
+               // static
+               static pc::threads::Mutex balancerPriorityUpdationMutex;
+               pc::threads::MutexGuard   guard(balancerPriorityUpdationMutex);
+               std::size_t               newDeadlineMaxCount =
+                   config->ExtractDeadlineMaxCountFromDatabase(clientInfo.clientId);
+               config->balancer->setPriority(balancerIndex,
+                                             // Update priority for given element
+                                             (*config->balancer)[balancerIndex] -
+                                                 clientInfo.deadline.MaxCount() +
+                                                 newDeadlineMaxCount);
+               clientInfo.changeMaxCount(newDeadlineMaxCount);
+            }
          }
 
        public:

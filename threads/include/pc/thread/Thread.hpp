@@ -23,8 +23,8 @@ namespace pc
          }
          bool detach()
          {
-            cancellable = pthread_detach(threadId) == 0;
-            return cancellable;
+            cancellable = false;
+            return pthread_detach(threadId) == 0;
          }
          bool join()
          {
@@ -34,9 +34,8 @@ namespace pc
          }
          ~Thread()
          {
-            if (!cancellable)
-               return;
-            pthread_cancel(threadId);
+            if (cancellable)
+               pthread_cancel(threadId);
          }
       };
    } // namespace threads
