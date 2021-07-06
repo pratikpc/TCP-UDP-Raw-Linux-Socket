@@ -48,7 +48,8 @@ void* func(void* clientIndexPtr)
       pc::protocol::NetworkSendPacket packet("Hi server from " + protocol.clientId);
 
       pc::network::TCPResult result = protocol.Write(packet);
-      if(result.DeadlineFailure){
+      if (result.DeadlineFailure)
+      {
          sleep(2);
          continue;
       }
@@ -78,14 +79,16 @@ void* func(void* clientIndexPtr)
 int main()
 {
    std::vector<int> count(10);
+
+   std::vector<pc::threads::Thread> threads;
    for (std::size_t i = 0; i < count.size(); ++i)
    {
       count[i] = i;
-      pc::threads::Thread(func, &count[i]).detach();
+      pc::threads::Thread thread(func, &count[i]);
+      threads.push_back(thread);
    }
-   std::cout << "Hi\n";
-   for (std::size_t i = 0; i < 100; ++i)
-   {
-      sleep(UINT32_MAX);
-   }
+   for (std::vector<pc::threads::Thread>::iterator threadIt = threads.begin();
+        threadIt != threads.end();
+        ++threadIt)
+      threadIt->join();
 }

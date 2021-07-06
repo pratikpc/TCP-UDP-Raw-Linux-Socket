@@ -9,3 +9,8 @@ services:
         - POSTGRES_HOST_AUTH_METHOD=trust
         - POSTGRES_DB=database
 
+networks:
+  default:
+    external:
+      name: work-net
+
