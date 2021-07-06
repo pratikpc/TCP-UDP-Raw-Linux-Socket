@@ -21,7 +21,7 @@ int main()
       udp.recv(recv);
       if (!recv)
          break;
-      std::cout << "Client said : " << recv->data() << "\n";
+      std::cout << "Client said : " << recv.data() << "\n";
    }
    return EXIT_SUCCESS;
 }

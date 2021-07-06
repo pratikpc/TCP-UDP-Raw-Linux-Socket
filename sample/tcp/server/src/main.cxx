@@ -19,7 +19,7 @@ void* childSocketExec(void* arg)
       child->recv(recv);
       if (!recv)
          break;
-      std::cout << "Client said : " << recv->data() << "\n";
+      std::cout << "Client said : " << recv.data() << "\n";
    }
    std::cout << "Server disconnected : " << child->socket << "\n";
 

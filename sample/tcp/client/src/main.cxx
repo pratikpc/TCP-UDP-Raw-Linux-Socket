@@ -21,7 +21,7 @@ int main()
       if (!recv)
          // Gracefull disconnection
          break;
-      std::cout << "\nServer said : " << recv->data();
+      std::cout << "\nServer said : " << recv.data();
       std::cout << "\nSay: ";
       std::string message;
       if (std::getline(std::cin, message))

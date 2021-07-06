@@ -25,7 +25,7 @@ namespace pc
             sockaddr_storage their_addr;
             socklen_t        addr_len = sizeof(their_addr);
             int              opt      = ::recvfrom(socket,
-                                 buffer->data(),
+                                 buffer.data(),
                                  buffer.size(),
                                  flags,
                                  (sockaddr*)&their_addr,
