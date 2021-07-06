@@ -48,17 +48,23 @@ void* func(void* clientIndexPtr)
       pc::protocol::NetworkSendPacket packet("Hi server from " + protocol.clientId);
 
       pc::network::TCPResult result = protocol.Write(packet);
+      if(result.DeadlineFailure){
+         sleep(2);
+         continue;
+      }
       if (result.IsFailure())
          break;
       pc::protocol::NetworkPacket responsePacket = protocol.Read(buffer);
       if (responsePacket.command == pc::protocol::Commands::MajorErrors::SocketClosed)
          break;
-      else if (responsePacket.command != pc::protocol::Commands::Empty)
+      else if (responsePacket.command == pc::protocol::Commands::Send)
          std::cout << "Server says: " << responsePacket.data.size() << " : "
                    << responsePacket.data << " at " << protocol.clientId << std::endl;
       else
       {
-         std::cout << std::endl << "No communication at " << protocol.clientId;
+         std::cout << std::endl
+                   << "No communication at " << protocol.clientId << " at "
+                   << responsePacket.command;
          sleep(2);
       }
       usleep(4 * 1000 * 1000 / 25);

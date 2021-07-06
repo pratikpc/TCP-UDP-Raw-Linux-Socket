@@ -37,13 +37,19 @@ namespace pc
          {
             // If deadline crossed, sleep
             if (deadline)
-               return NetworkPacket(Commands::Empty);
+               return NetworkPacket(Commands::DeadlineCrossed);
             NetworkPacket packet = NetworkPacket::Read(server, buffer, timeout);
             ++deadline;
             return packet;
          }
          network::TCPResult Write(NetworkSendPacket const& packet) const
          {
+            if (deadline)
+            {
+               network::TCPResult result;
+               result.DeadlineFailure = true;
+               return result;
+            }
             return packet.Write(server, timeout);
          }
          void SetupConnection() const

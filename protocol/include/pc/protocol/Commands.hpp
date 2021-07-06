@@ -8,8 +8,9 @@ namespace pc
    {
       namespace Commands
       {
-         std::string const Send  = "SEND";
-         std::string const Empty = "EMTY";
+         std::string const Send            = "SEND";
+         std::string const DeadlineCrossed = "DEDC";
+         std::string const Empty           = "EMTY";
          namespace Setup
          {
             std::string const Ack      = "ACKA";
