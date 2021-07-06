@@ -26,10 +26,6 @@ namespace pc
          {
             return timestamps.begin();
          }
-         const_iterator end()
-         {
-            return timestamps.end();
-         }
          const_iterator end() const
          {
             return timestamps.end();
