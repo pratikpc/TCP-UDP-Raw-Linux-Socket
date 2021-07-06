@@ -162,6 +162,8 @@ namespace pc
                return;
 
             std::time_t const now = timer::seconds();
+
+            pc::threads::MutexGuard guard(mostRecentTimestampsMutex);
             for (MostRecentTimestamps::iterator it = mostRecentTimestamps.begin();
                  it != mostRecentTimestamps.end();)
             {
