@@ -19,4 +19,5 @@ INTERFACE
 pc::threads
 pc::queue
 pc::timer
+pc::orderedhashset
 )
