@@ -17,5 +17,6 @@ add_subdirectory(lexical_cast)
 add_subdirectory(protocol)
 add_subdirectory(opt)
 add_subdirectory(timer)
+add_subdirectory(orderedhashset)
 
 add_subdirectory(sample)
