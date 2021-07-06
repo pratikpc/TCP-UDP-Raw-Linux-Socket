@@ -17,11 +17,6 @@ namespace pc
             std::string const ClientID = "ACID";
             std::string const Join     = "JOIN";
          } // namespace Setup
-         namespace DownDetect
-         {
-            std::string const DownCheck = "DWNC";
-            std::string const DownAlive = "DWNA";
-         } // namespace DownDetect
          namespace MajorErrors
          {
             std::string const SocketClosed = "ERCL";

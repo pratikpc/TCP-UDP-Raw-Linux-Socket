@@ -39,12 +39,6 @@ namespace pc
             if (deadline)
                return NetworkPacket(Commands::Empty);
             NetworkPacket packet = NetworkPacket::Read(server, buffer, timeout);
-            if (packet.command == Commands::DownDetect::DownCheck)
-            {
-               NetworkPacket alive(Commands::DownDetect::DownAlive);
-               alive.Write(server, timeout);
-               return Read(buffer);
-            }
             ++deadline;
             return packet;
          }
