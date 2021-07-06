@@ -42,7 +42,7 @@ namespace pc
             ++deadline;
             return packet;
          }
-         network::TCPResult Write(NetworkSendPacket const& packet) const
+         network::TCPResult Write(NetworkSendPacket const& packet)
          {
             if (deadline)
             {
@@ -50,6 +50,7 @@ namespace pc
                result.DeadlineFailure = true;
                return result;
             }
+            ++deadline;
             return packet.Write(server, timeout);
          }
          void SetupConnection() const

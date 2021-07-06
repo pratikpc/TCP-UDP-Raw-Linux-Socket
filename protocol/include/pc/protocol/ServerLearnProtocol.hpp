@@ -87,8 +87,11 @@ namespace pc
                return;
             NetworkSendPacket const packet = executeCallback(it->fd, readPacket);
             if (packet.command == Commands::Send)
+            {
+               ++clientInfos[it->fd].deadline;
                if (!WritePacket(packet, it))
                   closeConnection(it);
+            }
          }
 
          bool WritePacket(NetworkPacket const& packet, QueueIterator it)
