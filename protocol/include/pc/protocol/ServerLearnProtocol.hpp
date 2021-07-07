@@ -151,14 +151,15 @@ namespace pc
             poll.events = POLLIN;
 
             ClientInfo clientInfo = ClientInfo::createClientInfo(socket, callback);
-
-            // Protect this during multithreaded access
-            pc::threads::MutexGuard lock(pollsMutex);
-            tcpPoll += poll;
-            clientInfos[socket] = clientInfo;
-            config->balancer->incPriority(balancerIndex,
-                                          clientInfos[socket].deadline.MaxCount());
-            ++clientInfos[socket].deadline;
+            {
+               // Protect this during multithreaded access
+               pc::threads::MutexGuard lock(pollsMutex);
+               tcpPoll += poll;
+               clientInfos[socket] = clientInfo;
+               config->balancer->incPriority(balancerIndex,
+                                             clientInfos[socket].deadline.MaxCount());
+               ++clientInfos[socket].deadline;
+            }
             {
                pc::threads::MutexGuard guard(mostRecentTimestampsMutex);
                // Add socket and iterator to current index
