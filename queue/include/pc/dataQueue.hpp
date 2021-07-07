@@ -65,7 +65,7 @@ namespace pc
       }
       std::size_t size() const
       {
-         return in.size();
+         return out.size();
       }
       T* data()
       {
