@@ -53,26 +53,33 @@ namespace pc
             ++deadline;
             return packet.Write(server, timeout);
          }
-         void SetupConnection() const
+         network::Result SetupConnection()
          {
             NetworkPacket const ackAck(Commands::Setup::Ack);
-            ackAck.Write(server, timeout);
 
+            network::Result result = Write(ackAck);
+            if (result.IsFailure())
+               return result;
             network::buffer data(40);
             NetworkPacket   ackSyn = NetworkPacket::Read(server, data, timeout);
             if (ackSyn.command != Commands::Setup::Syn)
             {
-               throw std::runtime_error(Commands::Setup::Syn +
-                                        " not received. Protocol violated");
+               std::cerr << Commands::Setup::Syn << " not received. Protocol violated";
+               result.SocketClosed = true;
+               return result;
             }
             NetworkPacket const clientIdSend(Commands::Setup::ClientID, clientId);
-            clientIdSend.Write(server, timeout);
+            result = clientIdSend.Write(server, timeout);
+            if (result.IsFailure())
+               return result;
             NetworkPacket join = NetworkPacket::Read(server, data, timeout);
             if (join.command != Commands::Setup::Join)
             {
-               throw std::runtime_error(Commands::Setup::Join +
-                                        " not received. Protocol violated");
+               result.SocketClosed = true;
+               std::cerr << Commands::Setup::Join << " not received. Protocol violated";
+               return result;
             }
+            return result;
          }
       };
    } // namespace protocol

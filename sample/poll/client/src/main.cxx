@@ -36,16 +36,8 @@ void* func(void* clientIndexPtr)
    std::cout << std::endl << "ClientId = " << clientId;
 
    pc::protocol::ClientLearnProtocol protocol(server, clientId);
-   protocol.timeout = 10;
-   protocol.SetupConnection();
-
-   pc::network::buffer             buffer(200);
-   pc::protocol::NetworkSendPacket packet(
-       repeat("Hi server from " + protocol.clientId, 10));
-   for (std::size_t i = 0; true; i++)
-   {
-      std::cout << "Message sending " << i << " at " << protocol.clientId << std::endl;
-      pc::protocol::NetworkSendPacket packet("Hi server from " + protocol.clientId);
+      pc::network::Result result = protocol.SetupConnection();
+      if (result.IsFailure())
 
       pc::network::Result result = protocol.Write(packet);
       if (result.DeadlineFailure)
