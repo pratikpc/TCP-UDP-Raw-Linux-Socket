@@ -9,7 +9,10 @@ namespace pc
    {
     public:
       typedef std::vector<std::size_t> RemoveIndexes;
-      typedef std::vector<T>      QueueVec;
+      typedef std::vector<T>           QueueVec;
+
+      typedef typename QueueVec::iterator       iterator;
+      typedef typename QueueVec::const_iterator const_iterator;
 
     private:
       bool          updateIssued;
@@ -26,14 +29,14 @@ namespace pc
       }
 
     public:
-      DataQueue& operator+=(T const& val)
+      DataQueue& Add(T const& val)
       {
          in.push_back(val);
          IssueUpdate();
          return *this;
       }
 
-      DataQueue& operator-=(std::size_t index)
+      DataQueue& RemoveAtIndex(std::size_t index)
       {
          removeIndexes.push_back(index);
          IssueUpdate();
@@ -68,9 +71,22 @@ namespace pc
       {
          return out.data();
       }
-      typename QueueVec::const_reference front() const
+
+      const_iterator begin() const
       {
-         return in.front();
+         return out.begin();
+      }
+      iterator begin()
+      {
+         return out.begin();
+      }
+      const_iterator end() const
+      {
+         return out.end();
+      }
+      iterator end()
+      {
+         return out.end();
       }
    };
 } // namespace pc

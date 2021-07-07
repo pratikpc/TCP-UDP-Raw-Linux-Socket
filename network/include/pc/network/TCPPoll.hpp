@@ -15,18 +15,37 @@ namespace pc
       {
        public:
          typedef pc::DataQueue<pollfd> PollFdQueue;
-         PollFdQueue                   dataQueue;
+
+         PollFdQueue dataQueue;
 
        public:
-         TCPPoll& operator+=(pollfd const& val)
+         TCPPoll addSocketToPoll(int socket)
          {
-            dataQueue += val;
+            ::pollfd poll;
+            poll.fd = socket;
+            dataQueue.Add(poll);
             return *this;
          }
-         TCPPoll& operator-=(std::size_t index)
+         TCPPoll& removeAtIndex(std::size_t index)
          {
-            dataQueue -= index;
+            dataQueue.RemoveAtIndex(index);
             return *this;
+         }
+         PollFdQueue::const_iterator begin() const
+         {
+            return dataQueue.begin();
+         }
+         PollFdQueue::iterator begin()
+         {
+            return dataQueue.begin();
+         }
+         PollFdQueue::const_iterator end() const
+         {
+            return dataQueue.end();
+         }
+         PollFdQueue::iterator end()
+         {
+            return dataQueue.end();
          }
 
          static int poll(pollfd* polls, std::size_t size, std::size_t timeout)
@@ -45,10 +64,6 @@ namespace pc
          {
             return TCPPoll::poll(&poll, 1, timeout);
          }
-         static int poll(PollFdQueue& data, std::size_t timeout)
-         {
-            return TCPPoll::poll(data.data(), data.size(), timeout);
-         }
          template <std::size_t size>
          static int poll(pollfd (&data)[size], std::size_t timeout)
          {
@@ -56,10 +71,12 @@ namespace pc
          }
          int poll(std::size_t timeout)
          {
-            return TCPPoll::poll(dataQueue, timeout);
+            return TCPPoll::poll(dataQueue.data(), dataQueue.size(), timeout);
          }
-         static TCPResult
-             readOnly(::pollfd poll, buffer& buffer, std::size_t size, std::size_t timeout)
+         static TCPResult readOnly(::pollfd    poll,
+                                   buffer&     buffer,
+                                   std::size_t size,
+                                   std::size_t timeout)
          {
             return TCPPoll::readOnly(poll.fd, buffer, size, timeout);
          }

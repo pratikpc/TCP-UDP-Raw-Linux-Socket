@@ -39,9 +39,7 @@ namespace pc
             // From polls
             {
                pc::threads::MutexGuard guard(pollsMutex);
-               for (QueueIterator it = tcpPoll.dataQueue.out.begin();
-                    it != tcpPoll.dataQueue.out.end();
-                    ++it)
+               for (QueueIterator it = tcpPoll.begin(); it != tcpPoll.end(); ++it)
                {
                   int const socket = it->fd;
                   // Check if the socket exists first of all
@@ -51,9 +49,9 @@ namespace pc
                      continue;
                   clientInfos.erase(socket);
 
-                  std::size_t const indexErase = it - tcpPoll.dataQueue.out.begin();
+                  std::size_t const indexErase = it - tcpPoll.begin();
                   // Delete current element
-                  tcpPoll -= indexErase;
+                  tcpPoll.removeAtIndex(indexErase);
 
                   config->balancer->decPriority(balancerIndex,
                                                 clientInfos[socket].deadline.MaxCount());
@@ -173,15 +171,11 @@ namespace pc
 
          void Add(int const socket, ClientResponseCallback callback)
          {
-            pollfd poll;
-            poll.fd     = socket;
-            poll.events = POLLIN;
-
             ClientInfo clientInfo = ClientInfo::createClientInfo(socket, callback);
             {
                // Protect this during multithreaded access
                pc::threads::MutexGuard lock(pollsMutex);
-               tcpPoll += poll;
+               tcpPoll.addSocketToPoll(socket);
                clientInfos[socket] = clientInfo;
                config->balancer->incPriority(balancerIndex,
                                              clientInfos[socket].deadline.MaxCount());
@@ -254,11 +248,10 @@ namespace pc
                return;
             UniqueSockets socketsToRemove;
             UniqueSockets socketsWithSuccess;
+            // Check poll results
             {
                pc::threads::MutexGuard lock(pollsMutex);
-               for (QueueIterator it = tcpPoll.dataQueue.out.begin();
-                    it != tcpPoll.dataQueue.out.end();
-                    ++it)
+               for (QueueIterator it = tcpPoll.begin(); it != tcpPoll.end(); ++it)
                {
                   int const socket = it->fd;
                   if (it->revents & POLLHUP || it->revents & POLLNVAL ||
