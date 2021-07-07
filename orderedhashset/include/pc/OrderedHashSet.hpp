@@ -64,6 +64,15 @@ namespace pc
          mapper[key] = newItemIt;
       }
 
+      Value const& operator[](Key const key) const
+      {
+         return *mapper[key];
+      }
+      Value& operator[](Key const key)
+      {
+         return *mapper[key];
+      }
+
       iterator removeAndIterate(iterator it)
       {
          typename Map::iterator removeExistingMapperIt = mapper.find(it->first);
