@@ -13,18 +13,20 @@ namespace pc
          bool SocketClosed;
          bool PollFailure;
          bool DeadlineFailure;
+         bool Ignore;
 
          bool IsFailure() const
          {
+            // Receiving ignore is not a sign of failure
             return NoOfBytes == 0 || SocketClosed || PollFailure || DeadlineFailure;
          }
-         bool isSuccess() const
+         bool IsSuccess() const
          {
             return !IsFailure();
          }
 
          Result() :
-             NoOfBytes(0), SocketClosed(false), PollFailure(false), DeadlineFailure(false)
+             NoOfBytes(0), SocketClosed(false), PollFailure(false), DeadlineFailure(false), Ignore(false)
          {
          }
       };

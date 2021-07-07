@@ -99,7 +99,7 @@ namespace pc
             }
             if (readPacket.command != Commands::Send)
             {
-               result.NoOfBytes = 0;
+               result.Ignore = true;
                return result;
             }
             NetworkSendPacket const packet =
