@@ -88,10 +88,10 @@ namespace pc
          {
             if (!clientInfos[socket].hasClientId())
                return setupConnection(socket, clientInfos[socket]);
-            network::buffer buffer(UINT16_MAX);
-            NetworkPacket   readPacket = NetworkPacket::Read(socket, buffer, 0);
-            clientInfos[socket].scheduleTermination = false;
+            network::buffer    buffer(UINT16_MAX);
+            NetworkPacket      readPacket = NetworkPacket::Read(socket, buffer, 0);
             network::TCPResult result;
+
             if (readPacket.command == Commands::MajorErrors::SocketClosed)
             {
                result.SocketClosed = true;
@@ -266,7 +266,10 @@ namespace pc
                            socketsToRemove.insert(socket);
                         // If not failure, this operation was a success
                         else if (!result.IsFailure())
+                        {
                            socketsWithSuccess.insert(socket);
+                           clientInfos[socket].scheduleTermination = false;
+                        }
                      }
                      else
                         socketsToRemove.insert(socket);
