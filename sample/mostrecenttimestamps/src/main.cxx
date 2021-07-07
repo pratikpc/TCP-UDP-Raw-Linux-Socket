@@ -13,9 +13,9 @@ int main()
         ++it)
    {
       *it = (it - indexes.begin()) * 24;
-      timestamps.insert(it - indexes.begin());
+      timestamps.updateFor(it - indexes.begin());
    }
-   timestamps.insert(5);
+   timestamps.updateFor(5);
    for (MostRecentTimestamps::iterator it = timestamps.begin();
         it != timestamps.end();
         ++it)

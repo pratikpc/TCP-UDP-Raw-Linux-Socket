@@ -183,7 +183,7 @@ namespace pc
             }
             {
                pc::threads::MutexGuard guard(mostRecentTimestampsMutex);
-               mostRecentTimestamps.insert(socket);
+               mostRecentTimestamps.updateFor(socket);
             }
          }
 
@@ -274,7 +274,7 @@ namespace pc
                }
             }
             // Upon success
-            // Add to sockets with success
+            // Update timestamps
             {
                pc::threads::MutexGuard guard(mostRecentTimestampsMutex);
                for (UniqueSockets::const_iterator it = socketsWithSuccess.begin();
@@ -282,7 +282,7 @@ namespace pc
                     ++it)
                   // Add socket and iterator to current index
                   // Makes removal easy
-                  mostRecentTimestamps.insert(*it /*socket*/);
+                  mostRecentTimestamps.updateFor(*it /*socket*/);
             }
             closeSocketConnections(socketsToRemove);
          }

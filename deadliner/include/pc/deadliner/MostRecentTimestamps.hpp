@@ -36,7 +36,7 @@ namespace pc
             return timestamps.size();
          }
 
-         MostRecentTimestamps& insert(int socket)
+         MostRecentTimestamps& updateFor(int socket)
          {
             timestamps.insert(socket, timer::seconds());
             return *this;
