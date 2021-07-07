@@ -1,5 +1,6 @@
 #pragma once
 
+#include <tr1/unordered_set>
 #include <vector>
 
 namespace pc
@@ -8,8 +9,8 @@ namespace pc
    class DataQueue
    {
     public:
-      typedef std::vector<std::size_t> RemoveIndexes;
-      typedef std::vector<T>           QueueVec;
+      typedef std::tr1::unordered_set<std::size_t> RemoveIndexes;
+      typedef std::vector<T>                       QueueVec;
 
       typedef typename QueueVec::iterator       iterator;
       typedef typename QueueVec::const_iterator const_iterator;
@@ -18,9 +19,7 @@ namespace pc
       bool          updateIssued;
       RemoveIndexes removeIndexes;
       QueueVec      in;
-
-    public:
-      QueueVec out;
+      QueueVec      out;
 
     private:
       void IssueUpdate()
@@ -38,7 +37,7 @@ namespace pc
 
       DataQueue& RemoveAtIndex(std::size_t index)
       {
-         removeIndexes.push_back(index);
+         removeIndexes.insert(index);
          IssueUpdate();
          return *this;
       }
@@ -46,21 +45,22 @@ namespace pc
       {
          if (!updateIssued)
             return;
-         std::size_t noOfDeleted = 0;
          if (!removeIndexes.empty())
          {
-            for (RemoveIndexes::iterator it = removeIndexes.begin();
-                 it != removeIndexes.end();
-                 ++it, ++noOfDeleted)
+            out.clear();
+            for (std::size_t i = 0; i < in.size(); ++i)
             {
-               std::size_t indexErase = *it - noOfDeleted;
-               in.erase(in.begin() + indexErase);
+               if (removeIndexes.find(i) == removeIndexes.end())
+                  out.push_back(in[i]);
             }
             // Clear indices
             removeIndexes.clear();
+            in = out;
          }
-         out = in;
-
+         else
+         {
+            out = in;
+         }
          updateIssued = false;
       }
       std::size_t size() const
