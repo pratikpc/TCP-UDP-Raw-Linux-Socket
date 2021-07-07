@@ -52,12 +52,16 @@ namespace pc
              command(command), data(data)
          {
          }
-
          static RawPacket<N>
-             Read(pollfd poll, network::buffer& buffer, std::size_t const timeout)
+             Read(::pollfd const poll, network::buffer& buffer, std::size_t const timeout)
+         {
+            return RawPacket<N>::Read(poll.fd, buffer, timeout);
+         }
+         static RawPacket<N>
+             Read(int const socket, network::buffer& buffer, std::size_t const timeout)
          {
             network::TCPResult recvData =
-                network::TCPPoll::readOnly(poll, buffer, N, timeout);
+                network::TCPPoll::readOnly(socket, buffer, N, timeout);
             if (!recvData.IsFailure())
             {
                // buffer[0] << 0 + buffer[1] << CHAR_BIT
@@ -67,7 +71,8 @@ namespace pc
                   bytesToRead |= (((unsigned char)buffer[i]) << (CHAR_BIT * i));
                assert(buffer.size() > bytesToRead);
 
-               recvData = network::TCPPoll::readOnly(poll, buffer, bytesToRead, timeout);
+               recvData =
+                   network::TCPPoll::readOnly(socket, buffer, bytesToRead, timeout);
                if (!recvData.IsFailure())
                {
                   assert(recvData.NoOfBytes == bytesToRead);
@@ -75,8 +80,11 @@ namespace pc
             }
             return RawPacket(buffer, recvData);
          }
-
-         network::TCPResult Write(pollfd poll, std::size_t timeout) const
+         network::TCPResult Write(::pollfd poll, std::size_t timeout) const
+         {
+            return Write(poll.fd, timeout);
+         }
+         network::TCPResult Write(int const socket, std::size_t timeout) const
          {
             std::size_t const packetSize = size();
             // Convert packet to string array
@@ -90,7 +98,8 @@ namespace pc
                       ((unsigned char)packetSize >> (CHAR_BIT * (i))) & UCHAR_MAX;
                   sizeBuffer[i] = value;
                }
-               return network::TCPPoll::write(poll, sizeBuffer + command + data, timeout);
+               return network::TCPPoll::write(
+                   socket, sizeBuffer + command + data, timeout);
             }
          }
       };

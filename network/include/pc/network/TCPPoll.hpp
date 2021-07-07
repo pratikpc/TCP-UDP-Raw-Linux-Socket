@@ -58,11 +58,18 @@ namespace pc
          {
             return TCPPoll::poll(dataQueue, timeout);
          }
-
          static TCPResult
-             readOnly(pollfd poll, buffer& buffer, std::size_t size, std::size_t timeout)
+             readOnly(::pollfd poll, buffer& buffer, std::size_t size, std::size_t timeout)
          {
-            poll.events   = POLLIN;
+            return TCPPoll::readOnly(poll.fd, buffer, size, timeout);
+         }
+         static TCPResult
+             readOnly(int fd, buffer& buffer, std::size_t size, std::size_t timeout)
+         {
+            ::pollfd poll;
+            poll.fd     = fd;
+            poll.events = POLLIN;
+
             int const ret = TCPPoll::poll(poll, timeout);
             if (ret == 0 || !(poll.revents & POLLIN))
             {
@@ -75,7 +82,7 @@ namespace pc
          }
          static TCPResult read(pollfd poll, buffer& buffer, std::size_t timeout)
          {
-            return TCPPoll::readOnly(poll, buffer, buffer, timeout);
+            return TCPPoll::readOnly(poll, buffer, buffer.size(), timeout);
          }
          static TCPResult read(int socket, buffer& buffer, std::size_t timeout)
          {
@@ -84,7 +91,7 @@ namespace pc
             return TCPPoll::read(poll, buffer, timeout);
          }
          static TCPResult
-             write(pollfd poll, std::string const& out, std::size_t timeout)
+             write(pollfd poll, std::string const& out, std::size_t const timeout)
          {
             poll.events   = POLLOUT;
             int const ret = TCPPoll::poll(poll, timeout);
