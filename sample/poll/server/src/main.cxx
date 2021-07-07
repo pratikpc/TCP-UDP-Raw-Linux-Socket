@@ -12,8 +12,9 @@
 
 #include <sys/sysinfo.h>
 
-typedef pc::protocol::ServerLearnProtocol Protocol;
-typedef std::vector<Protocol>             ServerLearnProtocols;
+namespace protocol = pc::protocol;
+typedef protocol::ServerLearnProtocol Protocol;
+typedef std::vector<Protocol>         ProtocolVec;
 
 std::string repeat(std::string value, std::size_t times)
 {
@@ -23,11 +24,11 @@ std::string repeat(std::string value, std::size_t times)
    return stream.str();
 }
 
-pc::protocol::NetworkSendPacket pollCallback(pc::protocol::NetworkPacket const& packet,
-                                             pc::protocol::ClientInfo const& clientInfo)
+protocol::NetworkSendPacket pollCallback(protocol::NetworkPacket const& packet,
+                                         protocol::ClientInfo const&    clientInfo)
 {
    std::string const response = packet.data + " was received from " + clientInfo.clientId;
-   pc::protocol::NetworkSendPacket responsePacket(response);
+   protocol::NetworkSendPacket responsePacket(response);
    return responsePacket;
 }
 
@@ -41,12 +42,11 @@ void* execPoll(void* arg)
 
 void* execHealthCheck(void* arg)
 {
-   ServerLearnProtocols& protocols = *((ServerLearnProtocols*)(arg));
+   ProtocolVec& protocols = *((ProtocolVec*)(arg));
    while (true)
    {
       sleep(10);
-      for (ServerLearnProtocols::iterator it = protocols.begin(); it != protocols.end();
-           ++it)
+      for (ProtocolVec::iterator it = protocols.begin(); it != protocols.end(); ++it)
          it->execHealthCheck();
    }
 }
@@ -68,11 +68,11 @@ int main()
    pc::network::TCP tcp(ip.bind());
    tcp.setReusable();
    tcp.listen();
-   ServerLearnProtocols protocols(get_nprocs());
+   ProtocolVec protocols(get_nprocs());
 
    pc::balancer::priority balancer(protocols.size());
 
-   pc::protocol::Config config(
+   protocol::Config config(
        "postgresql://postgres@localhost:5432/", balancer, &downCallback);
 
    {
@@ -89,8 +89,7 @@ int main()
       std::cout << "\nTable Created";
    }
 
-   for (ServerLearnProtocols::iterator it = protocols.begin(); it != protocols.end();
-        ++it)
+   for (ProtocolVec::iterator it = protocols.begin(); it != protocols.end(); ++it)
    {
       it->config        = &config;
       it->balancerIndex = (it - protocols.begin());
