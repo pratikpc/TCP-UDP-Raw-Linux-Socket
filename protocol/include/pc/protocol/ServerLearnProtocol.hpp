@@ -21,6 +21,7 @@ namespace pc
          typedef std::tr1::unordered_map<int /*Socket*/, ClientInfo> ClientInfos;
          typedef DataQueue<pollfd>::QueueVec::iterator               QueueIterator;
          typedef deadliner::MostRecentTimestamps                     MostRecentTimestamps;
+         typedef std::tr1::unordered_set<int /*socket*/>             UniqueSockets;
 
          ClientInfos        clientInfos;
          network::TCPPoll   tcpPoll;
@@ -29,99 +30,124 @@ namespace pc
          MostRecentTimestamps mostRecentTimestamps;
          pc::threads::Mutex   mostRecentTimestampsMutex;
 
-         void closeConnection(QueueIterator it)
+         template <typename Iterable>
+         void closeSocketConnections(Iterable const& socketsToRemove)
          {
-            int socket = it->fd;
-            close(socket);
+            if (socketsToRemove.empty())
+               return;
+            // Remove all socket based connections
+            // From polls
             {
                pc::threads::MutexGuard guard(pollsMutex);
-               // Check if the socket exists first of all
-               // If it does not
-               // Do nothing
-               if (clientInfos.find(socket) == clientInfos.end())
-                  return;
+               for (QueueIterator it = tcpPoll.dataQueue.out.begin();
+                    it != tcpPoll.dataQueue.out.end();
+                    ++it)
+               {
+                  int const socket = it->fd;
+                  // Check if the socket exists first of all
+                  // If it does not
+                  // Do nothing
+                  if (socketsToRemove.find(socket) == socketsToRemove.end())
+                     continue;
+                  clientInfos.erase(socket);
 
-               std::size_t indexErase = it - tcpPoll.dataQueue.out.begin();
-               config->balancer->decPriority(balancerIndex,
-                                             clientInfos[socket].deadline.MaxCount());
-               clientInfos.erase(socket);
-               // Delete current element
-               tcpPoll -= indexErase;
+                  std::size_t const indexErase = it - tcpPoll.dataQueue.out.begin();
+                  // Delete current element
+                  tcpPoll -= indexErase;
+
+                  config->balancer->decPriority(balancerIndex,
+                                                clientInfos[socket].deadline.MaxCount());
+               }
             }
+
+            // Close all sockets
+            // Remove them from timestamp
+            // Call callback
+            for (typename Iterable::const_iterator it = socketsToRemove.begin();
+                 it != socketsToRemove.end();
+                 ++it)
             {
-               pc::threads::MutexGuard guard(mostRecentTimestampsMutex);
-               mostRecentTimestamps.remove(socket);
+               int socket = *it;
+               ::close(socket);
+               {
+                  pc::threads::MutexGuard guard(mostRecentTimestampsMutex);
+                  mostRecentTimestamps.remove(socket);
+               }
+               // Notify user when a client goes down
+               config->downCallback(balancerIndex);
             }
-            // Notify user when a File Descriptor goes down
-            config->downCallback(balancerIndex);
          }
-         NetworkSendPacket executeCallback(int socket, NetworkPacket const& readPacket)
+
+         NetworkSendPacket executeCallbackLockByPolls(int                  socket,
+                                                      NetworkPacket const& readPacket)
          {
             NetworkSendPacket packet =
                 clientInfos[socket].callback(readPacket, clientInfos[socket]);
             ++clientInfos[socket].deadline;
-            {
-               pc::threads::MutexGuard guard(mostRecentTimestampsMutex);
-               // Add socket and iterator to current index
-               // Makes removal easy
-               mostRecentTimestamps.insert(socket);
-            }
             return packet;
          }
-         void executeCallback(QueueIterator it)
+         network::TCPResult executeCallbackLockByPolls(int socket)
          {
-            if (!clientInfos[it->fd].hasClientId())
-            {
-               return setupConnection(it, clientInfos[it->fd]);
-            }
+            if (!clientInfos[socket].hasClientId())
+               return setupConnection(socket, clientInfos[socket]);
             network::buffer buffer(UINT16_MAX);
-            NetworkPacket   readPacket = NetworkPacket::Read(*it, buffer, 0);
-            {
-               pc::threads::MutexGuard guard(pollsMutex);
-               clientInfos[it->fd].scheduleTermination = false;
-            }
-
+            NetworkPacket   readPacket = NetworkPacket::Read(socket, buffer, 0);
+            clientInfos[socket].scheduleTermination = false;
+            network::TCPResult result;
             if (readPacket.command == Commands::MajorErrors::SocketClosed)
-               return closeConnection(it);
+            {
+               result.SocketClosed = true;
+               return result;
+            }
             if (readPacket.command != Commands::Send)
-               return;
-            NetworkSendPacket const packet = executeCallback(it->fd, readPacket);
+            {
+               result.NoOfBytes = 0;
+               return result;
+            }
+            NetworkSendPacket const packet =
+                executeCallbackLockByPolls(socket, readPacket);
             if (packet.command == Commands::Send)
             {
-               ++clientInfos[it->fd].deadline;
-               if (!WritePacket(packet, it))
-                  closeConnection(it);
+               ++clientInfos[socket].deadline;
+               return WritePacket(packet, socket);
             }
+            return result;
          }
 
-         bool WritePacket(NetworkPacket const& packet, QueueIterator it)
+         network::TCPResult WritePacket(NetworkPacket const& packet, int const socket)
          {
-            network::TCPResult result = packet.Write(*it, timeout);
-            return !result.IsFailure();
+            return packet.Write(socket, timeout);
          }
 
-         void setupConnection(QueueIterator it, ClientInfo& clientInfo)
+         network::TCPResult setupConnection(int const socket, ClientInfo& clientInfo)
          {
-            network::buffer data(40);
-            NetworkPacket   ackAck = NetworkPacket::Read(*it, data, timeout);
+            network::TCPResult result;
+            network::buffer    data(40);
+            NetworkPacket      ackAck = NetworkPacket::Read(socket, data, timeout);
             if (ackAck.command != Commands::Setup::Ack)
-               throw std::runtime_error(Commands::Setup::Ack +
-                                        " not received. Protocol violated");
-            NetworkPacket const ackSyn(Commands::Setup::Syn);
-            if (!WritePacket(ackSyn, it))
-               throw std::runtime_error(Commands::Setup::Syn +
-                                        " not sent. Protocol violated");
+            {
+               result.SocketClosed = true;
+               return result;
+            }
+            network::TCPResult const ackSynResult =
+                WritePacket(NetworkPacket(Commands::Setup::Syn), socket);
+            if (ackSynResult.IsFailure())
+               return ackSynResult;
 
-            NetworkPacket const clientId = NetworkPacket::Read(*it, data, timeout);
+            NetworkPacket const clientId = NetworkPacket::Read(socket, data, timeout);
             if (clientId.command != Commands::Setup::ClientID)
-               throw std::runtime_error(Commands::Setup::ClientID +
-                                        " not received. Protocol violated");
+            {
+               network::TCPResult result;
+               result.SocketClosed = true;
+               return result;
+            }
             clientInfo.clientId = std::string(clientId.data);
 
-            NetworkPacket const join(Commands::Setup::Join);
-            if (!WritePacket(join, it))
-               throw std::runtime_error(Commands::Setup::Join +
-                                        " not sent. Protocol violated");
+            NetworkPacket const      join(Commands::Setup::Join);
+            network::TCPResult const joinResult =
+                WritePacket(NetworkPacket(Commands::Setup::Join), socket);
+            if (joinResult.IsFailure())
+               return joinResult;
             {
                // As the balancer element is common
                // and shared across protocols
@@ -138,6 +164,7 @@ namespace pc
                                                  newDeadlineMaxCount);
                clientInfo.changeMaxCount(newDeadlineMaxCount);
             }
+            return result;
          }
 
        public:
@@ -162,8 +189,6 @@ namespace pc
             }
             {
                pc::threads::MutexGuard guard(mostRecentTimestampsMutex);
-               // Add socket and iterator to current index
-               // Makes removal easy
                mostRecentTimestamps.insert(socket);
             }
          }
@@ -172,13 +197,14 @@ namespace pc
          {
             std::time_t const now = timer::seconds();
 
-            std::tr1::unordered_set<int /*socket*/> socketsToRemove;
+            UniqueSockets socketsSelected;
 
             if (mostRecentTimestamps.size() == 0)
                return;
             {
-               // pc::threads::MutexGuard guard(mostRecentTimestampsMutex);
-               for (MostRecentTimestamps::iterator it = mostRecentTimestamps.begin();
+               pc::threads::MutexGuard guard(mostRecentTimestampsMutex);
+               for (MostRecentTimestamps::const_iterator it =
+                        mostRecentTimestamps.begin();
                     it != mostRecentTimestamps.end();
                     ++it)
                {
@@ -186,32 +212,33 @@ namespace pc
                   // Input is sorted by ascending order
                   if ((now - it->second /*Time then*/) < timeout)
                      break;
-                  bool terminate = clientInfos[socket].scheduleTermination;
-
-                  // If this is not the cycle to terminate
-                  if (terminate)
-                     socketsToRemove.insert(socket);
-                  // It is enabled
-                  // So if we end up here again
-                  // It means that the Health Check was not reset during
-                  // So no message came
-                  // Hence kill
-                  else
-                     // Schedule termination
-                     clientInfos[socket].scheduleTermination = true;
+                  socketsSelected.insert(socket);
                }
             }
-            if (!socketsToRemove.empty())
-               for (QueueIterator it = tcpPoll.dataQueue.out.begin();
-                    it != tcpPoll.dataQueue.out.end();
-                    ++it)
+            for (UniqueSockets::const_iterator it = socketsSelected.begin();
+                 it != socketsSelected.end();
+                 ++it)
+            {
+               int const socket    = *it;
+               bool      terminate = false;
                {
-                  int socket = it->fd;
-                  if (socketsToRemove.find(socket) != socketsToRemove.end())
-                     closeConnection(it);
+                  pc::threads::MutexGuard guard(pollsMutex);
+                  terminate = clientInfos[socket].scheduleTermination;
                }
+               // If this is not the cycle to terminate
+               if (!terminate)
+               {
+                  {
+                     pc::threads::MutexGuard guard(pollsMutex);
+                     clientInfos[socket].scheduleTermination = true;
+                  }
+                  // Remove from the list
+                  // Because all selected sockets will be terminated
+                  it = socketsSelected.erase(it);
+               }
+            }
+            closeSocketConnections(socketsSelected);
          }
-
          std::size_t size() const
          {
             return tcpPoll.size();
@@ -225,20 +252,46 @@ namespace pc
             if (tcpPoll.poll(timeout) == 0)
                // Timeout
                return;
-            for (QueueIterator it = tcpPoll.dataQueue.out.begin();
-                 it != tcpPoll.dataQueue.out.end();
-                 ++it)
+            UniqueSockets socketsToRemove;
+            UniqueSockets socketsWithSuccess;
             {
-               if (it->revents & POLLHUP || it->revents & POLLNVAL ||
-                   clientInfos[it->fd].deadlineBreach())
-                  return closeConnection(it);
-               if (it->revents & POLLIN)
+               pc::threads::MutexGuard lock(pollsMutex);
+               for (QueueIterator it = tcpPoll.dataQueue.out.begin();
+                    it != tcpPoll.dataQueue.out.end();
+                    ++it)
                {
-                  if (!pc::network::TCP::containsDataToRead(it->fd))
-                     return closeConnection(it);
-                  executeCallback(it);
+                  int const socket = it->fd;
+                  if (it->revents & POLLHUP || it->revents & POLLNVAL ||
+                      clientInfos[socket].deadlineBreach())
+                     socketsToRemove.insert(socket);
+                  else if (it->revents & POLLIN)
+                  {
+                     if (pc::network::TCP::containsDataToRead(socket))
+                     {
+                        network::TCPResult result = executeCallbackLockByPolls(socket);
+                        if (result.SocketClosed)
+                           socketsToRemove.insert(socket);
+                        // If not failure, this operation was a success
+                        else if (!result.IsFailure())
+                           socketsWithSuccess.insert(socket);
+                     }
+                     else
+                        socketsToRemove.insert(socket);
+                  }
                }
             }
+            // Upon success
+            // Add to sockets with success
+            {
+               pc::threads::MutexGuard guard(mostRecentTimestampsMutex);
+               for (UniqueSockets::const_iterator it = socketsWithSuccess.begin();
+                    it != socketsWithSuccess.end();
+                    ++it)
+                  // Add socket and iterator to current index
+                  // Makes removal easy
+                  mostRecentTimestamps.insert(*it /*socket*/);
+            }
+            closeSocketConnections(socketsToRemove);
          }
       };
    } // namespace protocol
