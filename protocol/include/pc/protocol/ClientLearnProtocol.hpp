@@ -40,9 +40,15 @@ namespace pc
                return NetworkPacket(Commands::DeadlineCrossed);
             NetworkPacket packet = NetworkPacket::Read(server, buffer, timeout);
             ++deadline;
+            if (packet.command == Commands::HeartBeat)
+            {
+               NetworkPacket heartBeatReply(Commands::Blank);
+               Write(heartBeatReply);
+               return Read(buffer);
+            }
             return packet;
          }
-         network::Result Write(NetworkSendPacket const& packet)
+         network::Result Write(NetworkPacket const& packet)
          {
             if (deadline)
             {

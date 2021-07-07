@@ -97,6 +97,11 @@ namespace pc
                result.SocketClosed = true;
                return result;
             }
+            if (readPacket.command == Commands::Blank)
+            {
+               result.Ignore = true;
+               return result;
+            }
             if (readPacket.command != Commands::Send)
             {
                result.Ignore = true;
@@ -116,14 +121,16 @@ namespace pc
          {
             return packet.Write(socket, timeout);
          }
-
-         network::TCPResult setupConnection(int const socket, ClientInfo& clientInfo)
+         network::Result SendHeartbeat(int const socket)
          {
+            NetworkPacket packet(Commands::HeartBeat);
+            return WritePacket(packet, socket);
+         }
          network::Result setupConnection(int const socket, ClientInfo& clientInfo)
          {
             network::Result result;
-            network::buffer    data(40);
-            NetworkPacket      ackAck = NetworkPacket::Read(socket, data, timeout);
+            network::buffer data(40);
+            NetworkPacket   ackAck = NetworkPacket::Read(socket, data, timeout);
             if (ackAck.command != Commands::Setup::Ack)
             {
                result.SocketClosed = true;
@@ -143,7 +150,6 @@ namespace pc
             }
             clientInfo.clientId = std::string(clientId.data);
 
-            NetworkPacket const      join(Commands::Setup::Join);
             network::Result const joinResult =
                 WritePacket(NetworkPacket(Commands::Setup::Join), socket);
             if (joinResult.IsFailure())
@@ -211,9 +217,10 @@ namespace pc
                   socketsSelected.insert(socket);
                }
             }
+            if (socketsSelected.empty())
+               return;
             for (UniqueSockets::const_iterator it = socketsSelected.begin();
-                 it != socketsSelected.end();
-                 ++it)
+                 it != socketsSelected.end();)
             {
                int const socket    = *it;
                bool      terminate = false;
@@ -227,11 +234,14 @@ namespace pc
                   {
                      pc::threads::MutexGuard guard(pollsMutex);
                      clientInfos[socket].scheduleTermination = true;
+                     clientInfos[socket].sendHeartbeat       = true;
                   }
                   // Remove from the list
                   // Because all selected sockets will be terminated
                   it = socketsSelected.erase(it);
                }
+               else
+                  ++it;
             }
             closeSocketConnections(socketsSelected);
          }
@@ -267,14 +277,25 @@ namespace pc
                         if (result.SocketClosed)
                            socketsToRemove.insert(socket);
                         // If not failure, this operation was a success
-                        else if (!result.IsFailure())
+                        else if (result.IsSuccess())
                         {
                            socketsWithSuccess.insert(socket);
                            clientInfos[socket].scheduleTermination = false;
+                           clientInfos[socket].sendHeartbeat       = false;
                         }
                      }
                      else
+                        // A closed socket is always empty
                         socketsToRemove.insert(socket);
+                  }
+                  // Send heartbeat to client
+                  if (clientInfos[socket].sendHeartbeat)
+                  {
+                     network::Result result = SendHeartbeat(socket);
+                     if (result.SocketClosed)
+                        socketsToRemove.insert(socket);
+                     // If the Result is a success
+                     clientInfos[socket].sendHeartbeat = result.IsSuccess();
                   }
                }
             }

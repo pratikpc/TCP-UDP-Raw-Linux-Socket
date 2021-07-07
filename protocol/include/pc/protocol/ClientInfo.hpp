@@ -17,6 +17,7 @@ namespace pc
          pc::deadliner::Deadline deadline;
          ClientResponseCallback  callback;
          bool                    scheduleTermination;
+         bool                    sendHeartbeat;
 
          static ClientInfo createClientInfo(int socket, ClientResponseCallback callback)
          {
@@ -25,6 +26,7 @@ namespace pc
             clientInfo.socket              = socket;
             clientInfo.clientId            = "";
             clientInfo.scheduleTermination = false;
+            clientInfo.sendHeartbeat       = false;
             return clientInfo;
          }
 

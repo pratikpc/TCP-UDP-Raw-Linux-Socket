@@ -11,6 +11,8 @@ namespace pc
          std::string const Send            = "SEND";
          std::string const DeadlineCrossed = "DEDC";
          std::string const Empty           = "EMTY";
+         std::string const HeartBeat       = "HART";
+         std::string const Blank           = "BLNK";
          namespace Setup
          {
             std::string const Ack      = "ACKA";
