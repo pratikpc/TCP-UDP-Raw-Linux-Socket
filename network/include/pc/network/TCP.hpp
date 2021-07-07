@@ -86,7 +86,9 @@ namespace pc
                throw std::runtime_error("Unable to read data");
             return opt;
          }
-         static bool HandleError(TCPResult& result, std::size_t& asyncFailCounter)
+         static bool HandleError(TCPResult&   result,
+                                 std::size_t& asyncFailCounter,
+                                 std::size_t& majorFailCount)
          {
             int const errorCode = errno;
             // If this is not a socket then this is a very very major error
@@ -113,6 +115,9 @@ namespace pc
                   sleep(5);
                   // Reset counter
                   asyncFailCounter = 0;
+                  // Every time counter resets
+                  // We consider it a major failure
+                  ++majorFailCount;
                }
                return true;
             }
@@ -135,7 +140,8 @@ namespace pc
                // And then retrying to get the
                // same data
                sleep(5);
-               // Helps us ignore the break statement
+               // We consider the occurence of this to be a major failure
+               ++majorFailCount;
                return true;
             }
             if ( // If socket is invalid
@@ -173,6 +179,7 @@ namespace pc
          {
             std::size_t total            = 0;
             std::size_t asyncFailCounter = 0;
+            std::size_t majorFailCounter = 0;
             TCPResult   result;
             // Async recv might not recv all values
             // We are interested in
@@ -196,8 +203,15 @@ namespace pc
                }
                if (recv == -1)
                {
-                  if (!TCP::HandleError(result, asyncFailCounter))
+                  if (!TCP::HandleError(result, asyncFailCounter, majorFailCounter))
                      break;
+                  // If too many failures
+                  // End loop
+                  if (majorFailCounter >= 5)
+                  {
+                     result.SocketClosed = true;
+                     break;
+                  }
                }
                else
                { // We do not want to add the -1 in case AWAITABLE
@@ -238,6 +252,7 @@ namespace pc
          {
             std::size_t total            = 0;
             std::size_t asyncFailCounter = 0;
+            std::size_t majorFailCounter = 0;
             TCPResult   result;
 
             // Send might not send all values
@@ -246,8 +261,15 @@ namespace pc
                ssize_t const sent = ::send(socket, msg, len, flags);
                if (sent == -1)
                {
-                  if (!TCP::HandleError(result, asyncFailCounter))
+                  if (!TCP::HandleError(result, asyncFailCounter, majorFailCounter))
                      break;
+                  // If too many failures
+                  // End loop
+                  if (majorFailCounter >= 5)
+                  {
+                     result.SocketClosed = true;
+                     break;
+                  }
                }
                else
                   total += sent;
