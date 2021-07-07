@@ -84,13 +84,13 @@ namespace pc
             ++clientInfos[socket].deadline;
             return packet;
          }
-         network::TCPResult executeCallbackLockByPolls(int socket)
+         network::Result executeCallbackLockByPolls(int socket)
          {
             if (!clientInfos[socket].hasClientId())
                return setupConnection(socket, clientInfos[socket]);
             network::buffer    buffer(UINT16_MAX);
             NetworkPacket      readPacket = NetworkPacket::Read(socket, buffer, 0);
-            network::TCPResult result;
+            network::Result result;
 
             if (readPacket.command == Commands::MajorErrors::SocketClosed)
             {
@@ -112,14 +112,16 @@ namespace pc
             return result;
          }
 
-         network::TCPResult WritePacket(NetworkPacket const& packet, int const socket)
+         network::Result WritePacket(NetworkPacket const& packet, int const socket)
          {
             return packet.Write(socket, timeout);
          }
 
          network::TCPResult setupConnection(int const socket, ClientInfo& clientInfo)
          {
-            network::TCPResult result;
+         network::Result setupConnection(int const socket, ClientInfo& clientInfo)
+         {
+            network::Result result;
             network::buffer    data(40);
             NetworkPacket      ackAck = NetworkPacket::Read(socket, data, timeout);
             if (ackAck.command != Commands::Setup::Ack)
@@ -127,7 +129,7 @@ namespace pc
                result.SocketClosed = true;
                return result;
             }
-            network::TCPResult const ackSynResult =
+            network::Result const ackSynResult =
                 WritePacket(NetworkPacket(Commands::Setup::Syn), socket);
             if (ackSynResult.IsFailure())
                return ackSynResult;
@@ -135,14 +137,14 @@ namespace pc
             NetworkPacket const clientId = NetworkPacket::Read(socket, data, timeout);
             if (clientId.command != Commands::Setup::ClientID)
             {
-               network::TCPResult result;
+               network::Result result;
                result.SocketClosed = true;
                return result;
             }
             clientInfo.clientId = std::string(clientId.data);
 
             NetworkPacket const      join(Commands::Setup::Join);
-            network::TCPResult const joinResult =
+            network::Result const joinResult =
                 WritePacket(NetworkPacket(Commands::Setup::Join), socket);
             if (joinResult.IsFailure())
                return joinResult;
@@ -261,7 +263,7 @@ namespace pc
                   {
                      if (pc::network::TCP::containsDataToRead(socket))
                      {
-                        network::TCPResult result = executeCallbackLockByPolls(socket);
+                        network::Result result = executeCallbackLockByPolls(socket);
                         if (result.SocketClosed)
                            socketsToRemove.insert(socket);
                         // If not failure, this operation was a success

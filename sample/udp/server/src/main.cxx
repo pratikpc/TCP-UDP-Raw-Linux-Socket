@@ -18,8 +18,8 @@ int main()
    pc::network::buffer recv(100);
    while (1)
    {
-      udp.recv(recv);
-      if (!recv)
+      pc::network::Result result = udp.recv(recv);
+      if (result.IsFailure())
          break;
       std::cout << "Client said : " << recv.data() << "\n";
    }

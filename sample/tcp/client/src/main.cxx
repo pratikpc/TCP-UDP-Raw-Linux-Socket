@@ -17,9 +17,8 @@ int main()
    pc::network::buffer recv(100);
    while (true)
    {
-      tcp.recv(recv);
-      if (!recv)
-         // Gracefull disconnection
+      pc::network::Result result = tcp.recv(recv);
+      if (result.SocketClosed)
          break;
       std::cout << "\nServer said : " << recv.data();
       std::cout << "\nSay: ";

@@ -6,7 +6,7 @@ namespace pc
 {
    namespace network
    {
-      struct TCPResult
+      struct Result
       {
          std::size_t NoOfBytes;
 
@@ -18,8 +18,12 @@ namespace pc
          {
             return NoOfBytes == 0 || SocketClosed || PollFailure || DeadlineFailure;
          }
+         bool isSuccess() const
+         {
+            return !IsFailure();
+         }
 
-         TCPResult() :
+         Result() :
              NoOfBytes(0), SocketClosed(false), PollFailure(false), DeadlineFailure(false)
          {
          }

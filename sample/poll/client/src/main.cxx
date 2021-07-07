@@ -47,7 +47,7 @@ void* func(void* clientIndexPtr)
       std::cout << "Message sending " << i << " at " << protocol.clientId << std::endl;
       pc::protocol::NetworkSendPacket packet("Hi server from " + protocol.clientId);
 
-      pc::network::TCPResult result = protocol.Write(packet);
+      pc::network::Result result = protocol.Write(packet);
       if (result.DeadlineFailure)
       {
          sleep(2);

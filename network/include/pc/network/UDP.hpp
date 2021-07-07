@@ -1,8 +1,10 @@
 #pragma once
 
+#include <pc/network/Result.hpp>
 #include <pc/network/Socket.hpp>
 #include <pc/network/ip.hpp>
 #include <pc/network/types.hpp>
+
 #include <sys/socket.h>
 
 #include <vector>
@@ -20,7 +22,7 @@ namespace pc
             o.socket = -1;
          }
 
-         network::buffer recv(network::buffer& buffer, int flags = 0) const
+         Result recv(network::buffer& buffer, int flags = 0) const
          {
             sockaddr_storage their_addr;
             socklen_t        addr_len = sizeof(their_addr);
@@ -30,13 +32,14 @@ namespace pc
                                  flags,
                                  (sockaddr*)&their_addr,
                                  &addr_len);
-            if (opt == -1)
-               throw std::runtime_error("Unable to read data");
-            if (opt == 0)
-               buffer.setDoesNotHaveValue();
+            Result           result;
+            if (opt <= 0)
+            {
+               result.SocketClosed = true;
+            }
             else
-               buffer.setHasValue();
-            return buffer;
+               result.NoOfBytes = opt;
+            return result;
          }
          // template <typename T>
          // T recv(int flags = 0)

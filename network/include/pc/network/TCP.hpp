@@ -1,7 +1,7 @@
 #pragma once
 
+#include <pc/network/Result.hpp>
 #include <pc/network/Socket.hpp>
-#include <pc/network/TCPResult.hpp>
 #include <pc/network/types.hpp>
 
 #include <cerrno>
@@ -86,7 +86,7 @@ namespace pc
                throw std::runtime_error("Unable to read data");
             return opt;
          }
-         static bool HandleError(TCPResult&   result,
+         static bool HandleError(Result&      result,
                                  std::size_t& asyncFailCounter,
                                  std::size_t& majorFailCount)
          {
@@ -172,15 +172,15 @@ namespace pc
             }
             return false;
          }
-         static TCPResult recvOnly(int const         socket,
-                                   network::buffer&  buffer,
-                                   std::size_t const size,
-                                   int const         flags = 0)
+         static Result recvOnly(int const         socket,
+                                network::buffer&  buffer,
+                                std::size_t const size,
+                                int const         flags = 0)
          {
             std::size_t total            = 0;
             std::size_t asyncFailCounter = 0;
             std::size_t majorFailCounter = 0;
-            TCPResult   result;
+            Result      result;
             // Async recv might not recv all values
             // We are interested in
             while (total < size)
@@ -219,41 +219,31 @@ namespace pc
                }
             }
             result.NoOfBytes = total;
-            if (total == 0)
-               // If empty
-               buffer.setDoesNotHaveValue();
-            else
-               buffer.setHasValue();
             return result;
          }
-         static TCPResult
-             recv(int const socket, network::buffer& buffer, int const flags = 0)
-         {
-            return TCP::recvOnly(socket, buffer, buffer, flags);
-         }
-         TCPResult recvOnly(network::buffer&  buffer,
-                            std::size_t const size,
-                            int const         flags = 0)
+         Result recvOnly(network::buffer&  buffer,
+                         std::size_t const size,
+                         int const         flags = 0)
          {
             return TCP::recvOnly(socket, buffer, size, flags);
          }
-         TCPResult recv(network::buffer& buffer, int const flags = 0)
+         Result recv(network::buffer& buffer, int const flags = 0)
          {
-            return TCP::recv(socket, buffer, flags);
+            return TCP::recvOnly(socket, buffer, buffer.size(), flags);
          }
-         TCPResult send(std::string const& data, int const flags = 0)
+         Result send(std::string const& data, int const flags = 0)
          {
             return TCP::sendRaw(socket, data.data(), data.size(), flags);
          }
-         static TCPResult sendRaw(int const    socket,
-                                  const char*  msg,
-                                  size_t const len,
-                                  int const    flags = 0)
+         static Result sendRaw(int const    socket,
+                               const char*  msg,
+                               size_t const len,
+                               int const    flags = 0)
          {
             std::size_t total            = 0;
             std::size_t asyncFailCounter = 0;
             std::size_t majorFailCounter = 0;
-            TCPResult   result;
+            Result      result;
 
             // Send might not send all values
             while (total < len)
@@ -277,7 +267,7 @@ namespace pc
             result.NoOfBytes = total;
             return result;
          }
-         static TCPResult
+         static Result
              sendRaw(int const socket, std::string const& data, int const flags = 0)
          {
             return sendRaw(socket, data.data(), data.size(), flags);

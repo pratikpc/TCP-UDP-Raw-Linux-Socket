@@ -42,11 +42,11 @@ namespace pc
             ++deadline;
             return packet;
          }
-         network::TCPResult Write(NetworkSendPacket const& packet)
+         network::Result Write(NetworkSendPacket const& packet)
          {
             if (deadline)
             {
-               network::TCPResult result;
+               network::Result result;
                result.DeadlineFailure = true;
                return result;
             }

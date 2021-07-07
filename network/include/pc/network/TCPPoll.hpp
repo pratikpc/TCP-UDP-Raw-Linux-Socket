@@ -26,7 +26,7 @@ namespace pc
             dataQueue.Add(poll);
             return *this;
          }
-         TCPPoll& removeAtIndex(std::size_t index)
+         TCPPoll& removeAtIndex(std::size_t const index)
          {
             dataQueue.RemoveAtIndex(index);
             return *this;
@@ -73,14 +73,14 @@ namespace pc
          {
             return TCPPoll::poll(dataQueue.data(), dataQueue.size(), timeout);
          }
-         static TCPResult readOnly(::pollfd    poll,
-                                   buffer&     buffer,
-                                   std::size_t size,
-                                   std::size_t timeout)
+         static Result readOnly(::pollfd    poll,
+                                buffer&     buffer,
+                                std::size_t size,
+                                std::size_t timeout)
          {
             return TCPPoll::readOnly(poll.fd, buffer, size, timeout);
          }
-         static TCPResult
+         static Result
              readOnly(int fd, buffer& buffer, std::size_t size, std::size_t timeout)
          {
             ::pollfd poll;
@@ -90,37 +90,36 @@ namespace pc
             int const ret = TCPPoll::poll(poll, timeout);
             if (ret == 0 || !(poll.revents & POLLIN))
             {
-               buffer = false;
-               TCPResult recvData;
+               Result recvData;
                recvData.PollFailure = true;
                return recvData;
             }
             return network::TCP::recvOnly(poll.fd, buffer, size, MSG_DONTWAIT);
          }
-         static TCPResult read(pollfd poll, buffer& buffer, std::size_t timeout)
+         static Result read(pollfd poll, buffer& buffer, std::size_t timeout)
          {
             return TCPPoll::readOnly(poll, buffer, buffer.size(), timeout);
          }
-         static TCPResult read(int socket, buffer& buffer, std::size_t timeout)
+         static Result read(int socket, buffer& buffer, std::size_t timeout)
          {
             pollfd poll;
             poll.fd = socket;
             return TCPPoll::read(poll, buffer, timeout);
          }
-         static TCPResult
+         static Result
              write(pollfd poll, std::string const& out, std::size_t const timeout)
          {
             poll.events   = POLLOUT;
             int const ret = TCPPoll::poll(poll, timeout);
             if (ret == 0 || !(poll.revents & POLLOUT))
             {
-               TCPResult result;
+               Result result;
                result.PollFailure = true;
                return result;
             }
             return network::TCP::sendRaw(poll.fd, out, MSG_DONTWAIT);
          }
-         static TCPResult write(int socket, std::string const& out, std::size_t timeout)
+         static Result write(int socket, std::string const& out, std::size_t timeout)
          {
             pollfd poll;
             poll.fd = socket;

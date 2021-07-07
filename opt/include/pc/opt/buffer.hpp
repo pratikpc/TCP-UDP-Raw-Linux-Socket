@@ -13,37 +13,13 @@ namespace pc
          std::size_t sizeV;
 
        public:
-         bool hasValue;
-
-       public:
-         Buffer(std::size_t size = 0) : arr(new T[size]), sizeV(size), hasValue(false) {}
+         Buffer(std::size_t size) : arr(new T[size]), sizeV(size) {}
          ~Buffer()
          {
             if (arr != NULL)
                delete[] arr;
          }
-         operator bool() const
-         {
-            return arr != NULL && hasValue;
-         }
 
-         operator std::size_t() const
-         {
-            return size();
-         }
-         Buffer<T>& setIfHasValue(bool const value)
-         {
-            hasValue = value;
-            return *this;
-         }
-         Buffer<T>& setHasValue()
-         {
-            return setIfHasValue(true);
-         }
-         Buffer<T>& setDoesNotHaveValue()
-         {
-            return setIfHasValue(false);
-         }
          std::size_t size() const
          {
             return sizeV;

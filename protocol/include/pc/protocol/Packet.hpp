@@ -24,7 +24,7 @@ namespace pc
          {
             return command.size() + data.size();
          }
-         RawPacket(network::buffer const& buffer, network::TCPResult recvData)
+         RawPacket(network::buffer const& buffer, network::Result recvData)
          {
             if (recvData.IsFailure())
             {
@@ -60,7 +60,7 @@ namespace pc
          static RawPacket<N>
              Read(int const socket, network::buffer& buffer, std::size_t const timeout)
          {
-            network::TCPResult recvData =
+            network::Result recvData =
                 network::TCPPoll::readOnly(socket, buffer, N, timeout);
             if (!recvData.IsFailure())
             {
@@ -80,11 +80,11 @@ namespace pc
             }
             return RawPacket(buffer, recvData);
          }
-         network::TCPResult Write(::pollfd poll, std::size_t timeout) const
+         network::Result Write(::pollfd poll, std::size_t timeout) const
          {
             return Write(poll.fd, timeout);
          }
-         network::TCPResult Write(int const socket, std::size_t timeout) const
+         network::Result Write(int const socket, std::size_t timeout) const
          {
             std::size_t const packetSize = size();
             // Convert packet to string array
