@@ -12,31 +12,31 @@ namespace pc
    {
 
     public:
-      typedef std::list<std::pair<Key, Value> /* */> Iterator;
-      typedef typename Iterator::iterator            iterator;
-      typedef typename Iterator::const_iterator      const_iterator;
-      typedef std::tr1::unordered_map<Key, iterator> Mapper;
+      typedef std::list<std::pair<Key, Value> /* */> List;
+      typedef typename List::iterator                iterator;
+      typedef typename List::const_iterator          const_iterator;
+      typedef std::tr1::unordered_map<Key, iterator> Map;
 
     private:
-      Iterator iterate;
-      Mapper   mapper;
+      List list;
+      Map  mapper;
 
     public:
       iterator begin()
       {
-         return iterate.begin();
+         return list.begin();
       }
       const_iterator begin() const
       {
-         return iterate.begin();
+         return list.begin();
       }
       const_iterator end()
       {
-         return iterate.end();
+         return list.end();
       }
       const_iterator end() const
       {
-         return iterate.end();
+         return list.end();
       }
 
       bool contains(Key const key) const
@@ -46,38 +46,38 @@ namespace pc
 
       std::size_t size() const
       {
-         return iterate.size();
+         return list.size();
       }
 
-      void insert(Key const key, Value const value)
+      void insert(Key const key, Value const& value)
       {
          // If already present
          // Remove
          if (contains(key))
          {
-            typename Iterator::iterator removeExistingIt = mapper[key];
-            iterate.erase(removeExistingIt);
+            typename List::iterator removeExistingIt = mapper[key];
+            list.erase(removeExistingIt);
          }
-         iterate.push_back(std::make_pair(key, value));
-         iterator newItemIt = iterate.end();
+         list.push_back(std::make_pair(key, value));
+         iterator newItemIt = list.end();
          std::advance(newItemIt, -1);
          mapper[key] = newItemIt;
       }
 
       iterator removeAndIterate(iterator it)
       {
-         typename Mapper::iterator removeExistingMapperIt = mapper.find(it->first);
+         typename Map::iterator removeExistingMapperIt = mapper.find(it->first);
          if (removeExistingMapperIt != mapper.end())
             mapper.erase(removeExistingMapperIt);
-         it = iterate.erase(it);
+         it = list.erase(it);
          return it;
       }
       void remove(Key const key)
       {
-         typename Mapper::iterator mapperIt = mapper.find(key);
+         typename Map::iterator mapperIt = mapper.find(key);
          if (mapperIt == mapper.end())
             return;
-         iterate.erase(mapperIt->second);
+         list.erase(mapperIt->second);
          mapper.erase(mapperIt);
       }
    };
