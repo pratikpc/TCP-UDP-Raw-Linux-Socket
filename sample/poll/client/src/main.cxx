@@ -35,33 +35,48 @@ void* func(void* clientIndexPtr)
    std::string const clientId = "CLIENT-" + pc::lexical_cast(clientIndex);
    std::cout << std::endl << "ClientId = " << clientId;
 
-   pc::protocol::ClientLearnProtocol protocol(server, clientId);
+   try
+   {
+      pc::protocol::ClientLearnProtocol protocol(server, clientId);
+      protocol.timeout           = 10;
       pc::network::Result result = protocol.SetupConnection();
       if (result.IsFailure())
-
-      pc::network::Result result = protocol.Write(packet);
-      if (result.DeadlineFailure)
+         throw std::runtime_error("Setup failed");
+      pc::network::buffer             buffer(200);
+      pc::protocol::NetworkSendPacket packet(
+          repeat("Hi server from " + protocol.clientId, 10));
+      for (std::size_t i = 0; true; i++)
       {
-         sleep(2);
-         continue;
+         std::cout << "Message sending " << i << " at " << protocol.clientId << std::endl;
+         pc::protocol::NetworkSendPacket packet("Hi server from " + protocol.clientId);
+         result = protocol.Write(packet);
+         if (result.DeadlineFailure)
+         {
+            sleep(2);
+            continue;
+         }
+         if (result.IsFailure())
+            break;
+         pc::protocol::NetworkPacket responsePacket = protocol.Read(buffer);
+         if (responsePacket.command == pc::protocol::Commands::MajorErrors::SocketClosed)
+            break;
+         else if (responsePacket.command == pc::protocol::Commands::Send)
+            std::cout << "Server says: " << responsePacket.data.size() << " : "
+                      << responsePacket.data << " at " << protocol.clientId << std::endl;
+         else
+         {
+            std::cout << std::endl
+                      << "No communication at " << protocol.clientId << " at "
+                      << responsePacket.command;
+            sleep(2);
+         }
+         usleep(4 * 1000 * 1000 / 25);
+         // sleep(32);
       }
-      if (result.IsFailure())
-         break;
-      pc::protocol::NetworkPacket responsePacket = protocol.Read(buffer);
-      if (responsePacket.command == pc::protocol::Commands::MajorErrors::SocketClosed)
-         break;
-      else if (responsePacket.command == pc::protocol::Commands::Send)
-         std::cout << "Server says: " << responsePacket.data.size() << " : "
-                   << responsePacket.data << " at " << protocol.clientId << std::endl;
-      else
-      {
-         std::cout << std::endl
-                   << "No communication at " << protocol.clientId << " at "
-                   << responsePacket.command;
-         sleep(2);
-      }
-      usleep(4 * 1000 * 1000 / 25);
-      // sleep(32);
+   }
+   catch (std::exception const& ex)
+   {
+      std::cerr << ex.what() << std::endl;
    }
    std::cout << "Iteration over " << clientId << std::endl;
    return NULL;
