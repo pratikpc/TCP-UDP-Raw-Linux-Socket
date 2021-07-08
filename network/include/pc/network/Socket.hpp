@@ -35,7 +35,7 @@ namespace pc
          ~Socket()
          {
             // Do not close if socket in invalid state
-            if (socket != -1)
+            if (!invalid())
                ::close(socket);
          }
       };
