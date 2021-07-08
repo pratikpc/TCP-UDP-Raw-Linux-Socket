@@ -20,6 +20,8 @@ namespace pc
          bool terminate;
          bool read;
          bool write;
+
+         ClientPollResult() : terminate(false), read(false), write(false) {}
       };
       class ClientInfo
       {
