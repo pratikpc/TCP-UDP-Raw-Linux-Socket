@@ -41,7 +41,8 @@ namespace pc
          }
 
          template <typename Sockets>
-         MostRecentTimestamps& updateFor(Sockets const& sockets)
+         MostRecentTimestamps& updateFor(Sockets const& sockets,
+                                         std::time_t    time = timer::seconds())
          {
             pc::threads::MutexGuard guard(mostRecentTimestampsMutex);
             for (typename Sockets::const_iterator it = sockets.begin();
@@ -49,14 +50,15 @@ namespace pc
                  ++it)
                // Add socket and iterator to current index
                // Makes removal easy
-               timestamps.insert(*it, timer::seconds());
+               timestamps.insert(*it, time);
             return *this;
          }
 
-         MostRecentTimestamps& updateSingle(int socket)
+         MostRecentTimestamps& updateSingle(int         socket,
+                                            std::time_t time = timer::seconds())
          {
             pc::threads::MutexGuard guard(mostRecentTimestampsMutex);
-            timestamps.insert(socket, timer::seconds());
+            timestamps.insert(socket, time);
             return *this;
          }
          iterator removeAndIterate(iterator it)
@@ -79,6 +81,10 @@ namespace pc
                sockets.insert(socket);
             }
             return sockets;
+         }
+         MostRecentTimestamps& Reset(int socket)
+         {
+            return updateSingle(socket, 0);
          }
          template <typename Sockets>
          MostRecentTimestamps& remove(Sockets const& sockets)
