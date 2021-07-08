@@ -28,7 +28,6 @@ namespace pc
          pc::threads::Mutex pollsMutex;
 
          MostRecentTimestamps mostRecentTimestamps;
-         pc::threads::Mutex   mostRecentTimestampsMutex;
 
          template <typename Iterable>
          void closeSocketConnections(Iterable const& socketsToRemove)
@@ -60,18 +59,9 @@ namespace pc
             // Close all sockets
             // Remove them from timestamp
             // Call callback
-            for (typename Iterable::const_iterator it = socketsToRemove.begin();
-                 it != socketsToRemove.end();
-                 ++it)
-            {
-               int socket = *it;
-               {
-                  pc::threads::MutexGuard guard(mostRecentTimestampsMutex);
-                  mostRecentTimestamps.remove(socket);
-               }
-               // Notify user when a client goes down
-               config->downCallback(balancerIndex);
-            }
+            mostRecentTimestamps.remove(socketsToRemove);
+            // Notify user when a client goes down
+            config->downCallback(balancerIndex);
          }
 
        public:
@@ -89,34 +79,15 @@ namespace pc
                config->balancer->incPriority(balancerIndex,
                                              clientInfos[socket].DeadlineMaxCount());
             }
-            {
-               pc::threads::MutexGuard guard(mostRecentTimestampsMutex);
-               mostRecentTimestamps.updateFor(socket);
-            }
+            mostRecentTimestamps.updateSingle(socket);
          }
 
          void execHealthCheck()
          {
-            std::time_t const now = timer::seconds();
-
-            UniqueSockets socketsSelected;
-
             if (mostRecentTimestamps.size() == 0)
                return;
-            {
-               pc::threads::MutexGuard guard(mostRecentTimestampsMutex);
-               for (MostRecentTimestamps::const_iterator it =
-                        mostRecentTimestamps.begin();
-                    it != mostRecentTimestamps.end();
-                    ++it)
-               {
-                  int socket = it->first;
-                  // Input is sorted by ascending order
-                  if ((now - it->second /*Time then*/) < timeout)
-                     break;
-                  socketsSelected.insert(socket);
-               }
-            }
+            UniqueSockets socketsSelected =
+                mostRecentTimestamps.getSocketsLessThanTimestamp<UniqueSockets>(timeout);
             if (socketsSelected.empty())
                return;
             for (UniqueSockets::const_iterator it = socketsSelected.begin();
@@ -173,15 +144,7 @@ namespace pc
             }
             // Upon success
             // Update timestamps
-            {
-               pc::threads::MutexGuard guard(mostRecentTimestampsMutex);
-               for (UniqueSockets::const_iterator it = socketsWithReadSuccess.begin();
-                    it != socketsWithReadSuccess.end();
-                    ++it)
-                  // Add socket and iterator to current index
-                  // Makes removal easy
-                  mostRecentTimestamps.updateFor(*it /*socket*/);
-            }
+            mostRecentTimestamps.updateFor(socketsWithReadSuccess);
             // Upon termination
             closeSocketConnections(socketsToTerminate);
          }
