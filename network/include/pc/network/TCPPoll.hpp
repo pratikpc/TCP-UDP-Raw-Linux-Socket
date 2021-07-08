@@ -22,7 +22,12 @@ namespace pc
          TCPPoll addSocketToPoll(int socket)
          {
             ::pollfd poll;
-            poll.fd = socket;
+            poll.fd     = socket;
+            poll.events = POLLIN | POLLOUT;
+            return addToPoll(poll);
+         }
+         TCPPoll addToPoll(::pollfd const& poll)
+         {
             dataQueue.Add(poll);
             return *this;
          }
