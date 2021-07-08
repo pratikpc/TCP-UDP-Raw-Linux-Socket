@@ -214,6 +214,9 @@ namespace pc
 
          bool TerminateThisCycleOrNext()
          {
+            // The next cycle
+            // When this was to be terminated
+            // Just happened
             if (terminateOnNextCycle || terminateNow)
             {
                // Terminate now
