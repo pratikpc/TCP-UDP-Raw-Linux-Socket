@@ -106,7 +106,7 @@ namespace pc
                for (const_iterator it = clientInfos.begin(); it != clientInfos.end();
                     ++it)
                {
-                  ::pollfd pollAdd;
+                  pollfd pollAdd;
                   pollAdd.fd     = it->first;
                   pollAdd.events = POLLIN | POLLOUT;
                   polls.push_back(pollAdd);

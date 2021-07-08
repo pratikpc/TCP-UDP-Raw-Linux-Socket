@@ -70,8 +70,9 @@ void* func(void* clientIndexPtr)
                       << responsePacket.command;
             sleep(2);
          }
-         usleep(4 * 1000 * 1000 / 25);
-         // sleep(32);
+         // usleep(4 * 1000 * 1000 / 25);
+         if ((i + 1) % 10 == 0)
+            sleep(32);
       }
    }
    catch (std::exception const& ex)

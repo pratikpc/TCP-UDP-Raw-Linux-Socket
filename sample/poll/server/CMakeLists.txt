@@ -34,3 +34,7 @@ target_compile_options(${PROJECT_NAME}
   -Wextra
   -Wpedantic
 )
+target_compile_definitions(${PROJECT_NAME}
+ PRIVATE
+  PC_PROFILE
+)

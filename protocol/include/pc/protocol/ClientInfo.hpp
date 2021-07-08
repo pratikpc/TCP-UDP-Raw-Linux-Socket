@@ -10,15 +10,39 @@
 #include <queue>
 #include <string>
 
+#ifdef PC_PROFILE
+#   include <pc/timer/timer.hpp>
+#endif
+
 namespace pc
 {
    namespace protocol
    {
+#ifdef PC_PROFILE
+      timespec operator-(timespec const& a, timespec const& b)
+      {
+         timespec result;
+         result.tv_sec  = a.tv_sec - b.tv_sec;
+         result.tv_nsec = a.tv_nsec - b.tv_nsec;
+         if (result.tv_nsec < 0)
+         {
+            --result.tv_sec;
+            result.tv_nsec += 1000000000L;
+         }
+         return result;
+      }
+#   include <ostream>
+      std::ostream& operator<<(std::ostream& os, timespec const& display)
+      {
+         return os << display.tv_sec << " sec " << display.tv_nsec << " nsec";
+      }
+#endif
       class ClientInfo
       {
-
-         typedef std::queue<NetworkPacket> ReadPacketVec;
-         typedef std::queue<NetworkPacket> WritePacketVec;
+         typedef std::queue<NetworkPacket> PacketVec;
+#ifdef PC_PROFILE
+         typedef std::queue<timespec> TimeVec;
+#endif
          typedef pc::threads::Atomic<bool> AtomicBool;
 
          int socket;
@@ -31,10 +55,15 @@ namespace pc
          ClientResponseCallback  callback;
          AtomicBool              terminateOnNextCycle;
          AtomicBool              terminateNow;
-         ReadPacketVec           packetsToRead;
-         pc::threads::Mutex      packetsToReadMutex;
-         WritePacketVec          packetsToWrite;
-         pc::threads::Mutex      packetsToWriteMutex;
+         PacketVec               packetsToRead;
+         pc::threads::Mutex      readMutex;
+         PacketVec               packetsToWrite;
+         pc::threads::Mutex      writeMutex;
+
+#ifdef PC_PROFILE
+         TimeVec writeTimeVec;
+         TimeVec readTimeVec;
+#endif
 
        public:
          ClientInfo(int socket, ClientResponseCallback callback) :
@@ -47,10 +76,10 @@ namespace pc
          {
             if (packetsToRead.empty())
                return;
-            WritePacketVec tempWriteVec;
+            PacketVec tempWriteVec;
             {
                // Add to a temporary vector for writes
-               pc::threads::MutexGuard guard(packetsToReadMutex);
+               pc::threads::MutexGuard guard(readMutex);
                while (!packetsToRead.empty())
                {
                   NetworkSendPacket writePacket = callback(packetsToRead.front(), *this);
@@ -61,17 +90,22 @@ namespace pc
             }
             {
                // Add to write vector
-               pc::threads::MutexGuard guard(packetsToWriteMutex);
-               // If Write Vector is empty, simply copy
+               pc::threads::MutexGuard guard(writeMutex);
+// If Write Vector is empty, simply copy
+#ifndef PC_PROFILE
                if (packetsToWrite.empty())
                   packetsToWrite = tempWriteVec;
                else
+#endif
                   // Else, add all elems from tempWriteVec to end of write vector
                   while (!tempWriteVec.empty())
                   {
                      NetworkPacket writePacket = tempWriteVec.front();
                      tempWriteVec.pop();
                      packetsToWrite.push(writePacket);
+#ifdef PC_PROFILE
+                     writeTimeVec.push(timer::now());
+#endif
                   }
             }
          }
@@ -157,22 +191,50 @@ namespace pc
             else if (packet.command == Commands::Send)
             {
                terminateOnNextCycle = false;
-               pc::threads::MutexGuard guard(packetsToReadMutex);
+               pc::threads::MutexGuard guard(readMutex);
                packetsToRead.push(packet);
+#ifdef PC_PROFILE
+               readTimeVec.push(timer::now());
+#endif
             }
          }
 
          void WritePackets(std::time_t timeout)
          {
-            pc::threads::MutexGuard guard(packetsToWriteMutex);
+            pc::threads::MutexGuard guard(writeMutex);
+            std::vector<timespec>   differences;
             while (!packetsToWrite.empty())
             {
-               NetworkPacket   writePacket = packetsToWrite.front();
-               network::Result result      = writePacket.Write(socket, timeout);
+               NetworkPacket writePacket = packetsToWrite.front();
+#ifdef PC_PROFILE
+               timespec const startTimeSend = timer::now();
+#endif
+               network::Result result = writePacket.Write(socket, timeout);
                if (result.SocketClosed)
                   return Terminate();
                packetsToWrite.pop();
+#ifdef PC_PROFILE
+               timespec const writeTimeLast    = writeTimeVec.front();
+               timespec const overAllWriteTime = (timer::now() - writeTimeLast);
+               differences.push_back(overAllWriteTime);
+               timespec const thisPacketLocalWrite = (timer::now() - startTimeSend);
+               differences.push_back(thisPacketLocalWrite);
+               writeTimeVec.pop();
+#endif
             }
+#ifdef PC_PROFILE
+            for (std::vector<timespec>::const_iterator it = differences.begin();
+                 it != differences.end();)
+            {
+               std::cout << "Overall (add to queue to pop and write) took " << *it
+                         << " write time"
+                         << " to send " << std::endl;
+               ++it;
+               std::cout << "It took Packet.Write (simply sending) " << *it << " time"
+                         << std::endl;
+               ++it;
+            }
+#endif
          }
 
          ClientPollResult OnPoll(::pollfd const& poll, std::time_t timeout)
@@ -190,15 +252,15 @@ namespace pc
                result.terminate = true;
                return result;
             }
-            if (poll.revents & POLLIN)
-            {
-               this->ReadPacket(timeout);
-               result.read = true;
-            }
             if (poll.revents & POLLOUT)
             {
                this->WritePackets(0);
                result.write = true;
+            }
+            if (poll.revents & POLLIN)
+            {
+               this->ReadPacket(timeout);
+               result.read = true;
             }
             return result;
          }
@@ -220,7 +282,7 @@ namespace pc
 
             // Send heartbeat
             {
-               pc::threads::MutexGuard guard(packetsToWriteMutex);
+               pc::threads::MutexGuard guard(writeMutex);
                // Add heartbeat packet to write queue
                packetsToWrite.push(NetworkPacket(Commands::HeartBeat));
             }
