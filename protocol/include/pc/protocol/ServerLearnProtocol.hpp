@@ -19,7 +19,7 @@ namespace pc
       class ServerLearnProtocol : public LearnProtocol
       {
          typedef std::tr1::unordered_map<int /*Socket*/, ClientInfo> ClientInfos;
-         typedef DataQueue<pollfd>::QueueVec::iterator               QueueIterator;
+         typedef network::TCPPoll::const_iterator                    PollConstIterator;
          typedef deadliner::MostRecentTimestamps                     MostRecentTimestamps;
          typedef std::tr1::unordered_set<int /*socket*/>             UniqueSockets;
 
@@ -134,7 +134,7 @@ namespace pc
             UniqueSockets socketsToTerminate;
 
             // Check poll results
-            for (QueueIterator it = tcpPoll.begin(); it != tcpPoll.end(); ++it)
+            for (PollConstIterator it = tcpPoll.begin(); it != tcpPoll.end(); ++it)
             {
                ::pollfd const   poll   = *it;
                ClientPollResult result = clientInfos[poll.fd].OnPoll(poll, timeout);

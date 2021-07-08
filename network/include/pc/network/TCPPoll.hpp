@@ -14,7 +14,9 @@ namespace pc
       class TCPPoll
       {
        public:
-         typedef pc::DataQueue<pollfd> PollFdQueue;
+         typedef pc::DataQueue<pollfd>       PollFdQueue;
+         typedef PollFdQueue::iterator       iterator;
+         typedef PollFdQueue::const_iterator const_iterator;
 
          PollFdQueue dataQueue;
 
