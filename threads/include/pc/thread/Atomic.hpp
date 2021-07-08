@@ -11,20 +11,22 @@ namespace pc
    {
       // We need C++11
       // for Real Atomic Bool
-      class AtomicBool
+      template <typename T>
+      class Atomic
       {
+       protected:
          mutable pc::threads::Mutex mutex;
 
-         bool value;
+         T value;
 
        public:
-         AtomicBool(bool value = false) : value(value) {}
-         operator bool() const
+         Atomic(T value = T()) : value(value) {}
+         operator T() const
          {
             pc::threads::MutexGuard guard(mutex);
             return value;
          }
-         AtomicBool& operator=(bool const newValue)
+         Atomic& operator=(T const newValue)
          {
             pc::threads::MutexGuard guard(mutex);
             value = newValue;

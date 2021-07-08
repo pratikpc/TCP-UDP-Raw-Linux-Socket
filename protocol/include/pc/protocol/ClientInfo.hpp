@@ -3,7 +3,7 @@
 #include <pc/deadliner/Deadline.hpp>
 #include <pc/protocol/Packet.hpp>
 #include <pc/protocol/types.hpp>
-#include <pc/thread/AtomicBool.hpp>
+#include <pc/thread/Atomic.hpp>
 #include <pc/thread/Mutex.hpp>
 #include <pc/thread/MutexGuard.hpp>
 
@@ -26,6 +26,7 @@ namespace pc
 
          typedef std::queue<NetworkPacket> ReadPacketVec;
          typedef std::queue<NetworkPacket> WritePacketVec;
+         typedef pc::threads::Atomic<bool> AtomicBool;
 
          int socket;
 
@@ -35,8 +36,8 @@ namespace pc
        private:
          pc::deadliner::Deadline deadline;
          ClientResponseCallback  callback;
-         pc::threads::AtomicBool terminateOnNextCycle;
-         pc::threads::AtomicBool terminateNow;
+         AtomicBool              terminateOnNextCycle;
+         AtomicBool              terminateNow;
          ReadPacketVec           packetsToRead;
          pc::threads::Mutex      packetsToReadMutex;
          WritePacketVec          packetsToWrite;
