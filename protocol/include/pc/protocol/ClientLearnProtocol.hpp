@@ -70,7 +70,6 @@ namespace pc
             NetworkPacket   ackSyn = NetworkPacket::Read(server, data, timeout);
             if (ackSyn.command != Commands::Setup::Syn)
             {
-               std::cerr << Commands::Setup::Syn << " not received. Protocol violated";
                result.SocketClosed = true;
                return result;
             }
@@ -82,7 +81,6 @@ namespace pc
             if (join.command != Commands::Setup::Join)
             {
                result.SocketClosed = true;
-               std::cerr << Commands::Setup::Join << " not received. Protocol violated";
                return result;
             }
             return result;

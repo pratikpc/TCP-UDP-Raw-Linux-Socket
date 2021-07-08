@@ -32,11 +32,14 @@ protocol::NetworkSendPacket pollCallback(protocol::NetworkPacket const& packet,
    return responsePacket;
 }
 
-void* execPoll(void* arg)
+void* PollAndExecute(void* arg)
 {
    Protocol& poll = *((Protocol*)arg);
    while (true)
-      poll.poll();
+   {
+      poll.Poll();
+      poll.Execute();
+   }
    return NULL;
 }
 
@@ -94,7 +97,7 @@ int main()
       it->config        = &config;
       it->balancerIndex = (it - protocols.begin());
       it->timeout       = 10;
-      pc::threads::Thread(&execPoll, &(*it)).detach();
+      pc::threads::Thread(&PollAndExecute, &(*it)).detach();
    }
    pc::threads::Thread(&execHealthCheck, &protocols).detach();
 
@@ -108,7 +111,7 @@ int main()
       std::size_t currentBalance = *balancer;
       protocols[currentBalance].Add(child.socket, pollCallback);
       std::cout << std::endl
-                << "Connected to " << child.socket << " on " << currentBalance
+                << "Connected to " << child.socket << " socket on " << currentBalance
                 << " thread : Balancer" << balancer;
       child.invalidate();
    }

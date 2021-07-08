@@ -47,14 +47,13 @@ namespace pc
                   // Do nothing
                   if (socketsToRemove.find(socket) == socketsToRemove.end())
                      continue;
+                  config->balancer->decPriority(balancerIndex,
+                                                clientInfos[socket].DeadlineMaxCount());
                   clientInfos.erase(socket);
 
                   std::size_t const indexErase = it - tcpPoll.begin();
                   // Delete current element
                   tcpPoll.removeAtIndex(indexErase);
-
-                  config->balancer->decPriority(balancerIndex,
-                                                clientInfos[socket].deadline.MaxCount());
                }
             }
 
@@ -66,7 +65,6 @@ namespace pc
                  ++it)
             {
                int socket = *it;
-               ::close(socket);
                {
                   pc::threads::MutexGuard guard(mostRecentTimestampsMutex);
                   mostRecentTimestamps.remove(socket);
@@ -74,103 +72,6 @@ namespace pc
                // Notify user when a client goes down
                config->downCallback(balancerIndex);
             }
-         }
-
-         NetworkSendPacket executeCallbackLockByPolls(int                  socket,
-                                                      NetworkPacket const& readPacket)
-         {
-            NetworkSendPacket packet =
-                clientInfos[socket].callback(readPacket, clientInfos[socket]);
-            ++clientInfos[socket].deadline;
-            return packet;
-         }
-         network::Result executeCallbackLockByPolls(int socket)
-         {
-            if (!clientInfos[socket].hasClientId())
-               return setupConnection(socket, clientInfos[socket]);
-            network::buffer    buffer(UINT16_MAX);
-            NetworkPacket      readPacket = NetworkPacket::Read(socket, buffer, 0);
-            network::Result result;
-
-            if (readPacket.command == Commands::MajorErrors::SocketClosed)
-            {
-               result.SocketClosed = true;
-               return result;
-            }
-            if (readPacket.command == Commands::Blank)
-            {
-               result.Ignore = true;
-               return result;
-            }
-            if (readPacket.command != Commands::Send)
-            {
-               result.Ignore = true;
-               return result;
-            }
-            NetworkSendPacket const packet =
-                executeCallbackLockByPolls(socket, readPacket);
-            if (packet.command == Commands::Send)
-            {
-               ++clientInfos[socket].deadline;
-               return WritePacket(packet, socket);
-            }
-            return result;
-         }
-
-         network::Result WritePacket(NetworkPacket const& packet, int const socket)
-         {
-            return packet.Write(socket, timeout);
-         }
-         network::Result SendHeartbeat(int const socket)
-         {
-            NetworkPacket packet(Commands::HeartBeat);
-            return WritePacket(packet, socket);
-         }
-         network::Result setupConnection(int const socket, ClientInfo& clientInfo)
-         {
-            network::Result result;
-            network::buffer data(40);
-            NetworkPacket   ackAck = NetworkPacket::Read(socket, data, timeout);
-            if (ackAck.command != Commands::Setup::Ack)
-            {
-               result.SocketClosed = true;
-               return result;
-            }
-            network::Result const ackSynResult =
-                WritePacket(NetworkPacket(Commands::Setup::Syn), socket);
-            if (ackSynResult.IsFailure())
-               return ackSynResult;
-
-            NetworkPacket const clientId = NetworkPacket::Read(socket, data, timeout);
-            if (clientId.command != Commands::Setup::ClientID)
-            {
-               network::Result result;
-               result.SocketClosed = true;
-               return result;
-            }
-            clientInfo.clientId = std::string(clientId.data);
-
-            network::Result const joinResult =
-                WritePacket(NetworkPacket(Commands::Setup::Join), socket);
-            if (joinResult.IsFailure())
-               return joinResult;
-            {
-               // As the balancer element is common
-               // and shared across protocols
-               // Make the balancer updation guard
-               // static
-               static pc::threads::Mutex balancerPriorityUpdationMutex;
-               pc::threads::MutexGuard   guard(balancerPriorityUpdationMutex);
-               std::size_t               newDeadlineMaxCount =
-                   config->ExtractDeadlineMaxCountFromDatabase(clientInfo.clientId);
-               config->balancer->setPriority(balancerIndex,
-                                             // Update priority for given element
-                                             (*config->balancer)[balancerIndex] -
-                                                 clientInfo.deadline.MaxCount() +
-                                                 newDeadlineMaxCount);
-               clientInfo.changeMaxCount(newDeadlineMaxCount);
-            }
-            return result;
          }
 
        public:
@@ -186,8 +87,7 @@ namespace pc
                tcpPoll.addSocketToPoll(socket);
                clientInfos[socket] = clientInfo;
                config->balancer->incPriority(balancerIndex,
-                                             clientInfos[socket].deadline.MaxCount());
-               ++clientInfos[socket].deadline;
+                                             clientInfos[socket].DeadlineMaxCount());
             }
             {
                pc::threads::MutexGuard guard(mostRecentTimestampsMutex);
@@ -222,24 +122,17 @@ namespace pc
             for (UniqueSockets::const_iterator it = socketsSelected.begin();
                  it != socketsSelected.end();)
             {
-               int const socket    = *it;
-               bool      terminate = false;
+               int const socket       = *it;
+               bool      terminateNow = false;
                {
                   pc::threads::MutexGuard guard(pollsMutex);
-                  terminate = clientInfos[socket].scheduleTermination;
+                  terminateNow = clientInfos[socket].TerminateThisCycleOrNext();
                }
                // If this is not the cycle to terminate
-               if (!terminate)
-               {
-                  {
-                     pc::threads::MutexGuard guard(pollsMutex);
-                     clientInfos[socket].scheduleTermination = true;
-                     clientInfos[socket].sendHeartbeat       = true;
-                  }
+               if (!terminateNow)
                   // Remove from the list
                   // Because all selected sockets will be terminated
                   it = socketsSelected.erase(it);
-               }
                else
                   ++it;
             }
@@ -249,7 +142,14 @@ namespace pc
          {
             return tcpPoll.size();
          }
-         void poll()
+         void Execute()
+         {
+            pc::threads::MutexGuard lock(pollsMutex);
+            for (ClientInfos::iterator it = clientInfos.begin(); it != clientInfos.end();
+                 ++it)
+               it->second.executeCallbacks();
+         }
+         void Poll()
          {
             {
                pc::threads::MutexGuard lock(pollsMutex);
@@ -258,59 +158,32 @@ namespace pc
             if (tcpPoll.poll(timeout) == 0)
                // Timeout
                return;
-            UniqueSockets socketsToRemove;
-            UniqueSockets socketsWithSuccess;
+            UniqueSockets socketsWithReadSuccess;
+            UniqueSockets socketsToTerminate;
+
             // Check poll results
+            for (QueueIterator it = tcpPoll.begin(); it != tcpPoll.end(); ++it)
             {
-               pc::threads::MutexGuard lock(pollsMutex);
-               for (QueueIterator it = tcpPoll.begin(); it != tcpPoll.end(); ++it)
-               {
-                  int const socket = it->fd;
-                  if (it->revents & POLLHUP || it->revents & POLLNVAL ||
-                      clientInfos[socket].deadlineBreach())
-                     socketsToRemove.insert(socket);
-                  else if (it->revents & POLLIN)
-                  {
-                     if (pc::network::TCP::containsDataToRead(socket))
-                     {
-                        network::Result result = executeCallbackLockByPolls(socket);
-                        if (result.SocketClosed)
-                           socketsToRemove.insert(socket);
-                        // If not failure, this operation was a success
-                        else if (result.IsSuccess())
-                        {
-                           socketsWithSuccess.insert(socket);
-                           clientInfos[socket].scheduleTermination = false;
-                           clientInfos[socket].sendHeartbeat       = false;
-                        }
-                     }
-                     else
-                        // A closed socket is always empty
-                        socketsToRemove.insert(socket);
-                  }
-                  // Send heartbeat to client
-                  if (clientInfos[socket].sendHeartbeat)
-                  {
-                     network::Result result = SendHeartbeat(socket);
-                     if (result.SocketClosed)
-                        socketsToRemove.insert(socket);
-                     // If the Result is a success
-                     clientInfos[socket].sendHeartbeat = result.IsSuccess();
-                  }
-               }
+               ::pollfd const   poll   = *it;
+               ClientPollResult result = clientInfos[poll.fd].OnPoll(poll, timeout);
+               if (result.read)
+                  socketsWithReadSuccess.insert(poll.fd);
+               if (result.terminate)
+                  socketsToTerminate.insert(poll.fd);
             }
             // Upon success
             // Update timestamps
             {
                pc::threads::MutexGuard guard(mostRecentTimestampsMutex);
-               for (UniqueSockets::const_iterator it = socketsWithSuccess.begin();
-                    it != socketsWithSuccess.end();
+               for (UniqueSockets::const_iterator it = socketsWithReadSuccess.begin();
+                    it != socketsWithReadSuccess.end();
                     ++it)
                   // Add socket and iterator to current index
                   // Makes removal easy
                   mostRecentTimestamps.updateFor(*it /*socket*/);
             }
-            closeSocketConnections(socketsToRemove);
+            // Upon termination
+            closeSocketConnections(socketsToTerminate);
          }
       };
    } // namespace protocol
