@@ -62,7 +62,7 @@ namespace pc
             // Call callback
             mostRecentTimestamps.remove(socketsToRemove);
             // Notify user when a client goes down
-            config->downCallback(balancerIndex);
+            config->downCallback(balancerIndex, socketsToRemove.size());
          }
 
        public:

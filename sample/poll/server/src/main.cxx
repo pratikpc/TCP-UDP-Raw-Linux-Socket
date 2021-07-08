@@ -54,9 +54,9 @@ void* execHealthCheck(void* arg)
    }
 }
 
-void downCallback(std::size_t const idx)
+void downCallback(std::size_t const idx, std::size_t count)
 {
-   std::cout << "One client went down at " << idx << " balancer" << std::endl;
+   std::cout << count << " client went down at " << idx << " balancer" << std::endl;
 }
 
 int main()

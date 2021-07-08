@@ -14,7 +14,7 @@ namespace pc
    {
       struct Config
       {
-         typedef void(DownCallback)(std::size_t const);
+         typedef void(DownCallback)(std::size_t const, std::size_t const);
          typedef balancer::priority balancerT;
          typedef pqpp::Connection   DBConnection;
 
