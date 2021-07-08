@@ -7,10 +7,8 @@
 #include <pc/thread/Atomic.hpp>
 #include <pc/thread/Mutex.hpp>
 #include <pc/thread/MutexGuard.hpp>
-
 #include <queue>
 #include <string>
-#include <vector>
 
 namespace pc
 {
@@ -39,13 +37,10 @@ namespace pc
          pc::threads::Mutex      packetsToWriteMutex;
 
        public:
-         static ClientInfo createClientInfo(int socket, ClientResponseCallback callback)
+         ClientInfo(int socket, ClientResponseCallback callback) :
+             socket(socket), callback(callback)
          {
-            ClientInfo clientInfo;
-            clientInfo.callback = callback;
-            clientInfo.socket   = socket;
-            ++clientInfo.deadline;
-            return clientInfo;
+            ++deadline;
          }
 
          void executeCallbacks()
@@ -245,7 +240,7 @@ namespace pc
             return *this;
          }
 
-         std::ptrdiff_t DeadlineMaxCount()
+         std::ptrdiff_t DeadlineMaxCount() const
          {
             return deadline.MaxCount();
          }
