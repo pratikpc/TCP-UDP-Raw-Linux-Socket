@@ -11,70 +11,10 @@ namespace pc
 {
    namespace network
    {
-      class TCPPoll
+      namespace TCPPoll
       {
-       public:
-         typedef pc::DataQueue<pollfd>       PollFdQueue;
-         typedef PollFdQueue::iterator       iterator;
-         typedef PollFdQueue::const_iterator const_iterator;
 
-         PollFdQueue dataQueue;
-
-       public:
-         TCPPoll addSocketToPoll(int socket)
-         {
-            ::pollfd poll;
-            poll.fd     = socket;
-            poll.events = POLLIN | POLLOUT;
-            return addToPoll(poll);
-         }
-         TCPPoll addToPoll(::pollfd const& poll)
-         {
-            dataQueue.Add(poll);
-            return *this;
-         }
-         template <typename Iterable>
-         TCPPoll& remove(Iterable const& socketsToRemove)
-         {
-            for (PollFdQueue::const_iterator it = begin(); it != end(); ++it)
-            {
-               int const socket = it->fd;
-               // Check if the socket exists first of all
-               // If it does not
-               // Do nothing
-               if (socketsToRemove.find(socket) == socketsToRemove.end())
-               {
-                  continue;
-               }
-               std::size_t const indexErase = it - begin();
-               // Delete current element
-               removeAtIndex(indexErase);
-            }
-            return *this;
-         }
-         TCPPoll& removeAtIndex(std::size_t const index)
-         {
-            dataQueue.RemoveAtIndex(index);
-            return *this;
-         }
-         PollFdQueue::const_iterator begin() const
-         {
-            return dataQueue.begin();
-         }
-         PollFdQueue::iterator begin()
-         {
-            return dataQueue.begin();
-         }
-         PollFdQueue::const_iterator end() const
-         {
-            return dataQueue.end();
-         }
-         PollFdQueue::iterator end()
-         {
-            return dataQueue.end();
-         }
-
-         static int poll(pollfd* polls, std::size_t size, std::size_t timeout)
+         int poll(pollfd* polls, std::size_t size, std::size_t timeout)
          {
             if (size == 0)
             {
@@ -86,28 +26,21 @@ namespace pc
                throw std::runtime_error("Poll failed");
             return rv;
          }
-         static int poll(pollfd& poll, std::size_t timeout)
+         int poll(std::vector<pollfd>& polls, std::size_t timeout)
+         {
+            return TCPPoll::poll(polls.data(), polls.size(), timeout);
+         }
+         int poll(pollfd& poll, std::size_t timeout)
          {
             return TCPPoll::poll(&poll, 1, timeout);
          }
          template <std::size_t size>
-         static int poll(pollfd (&data)[size], std::size_t timeout)
+         int poll(pollfd (&data)[size], std::size_t timeout)
          {
             return TCPPoll::poll(data, size, timeout);
          }
-         int poll(std::size_t timeout)
-         {
-            return TCPPoll::poll(dataQueue.data(), dataQueue.size(), timeout);
-         }
-         static Result readOnly(::pollfd    poll,
-                                buffer&     buffer,
-                                std::size_t size,
-                                std::size_t timeout)
-         {
-            return TCPPoll::readOnly(poll.fd, buffer, size, timeout);
-         }
-         static Result
-             readOnly(int fd, buffer& buffer, std::size_t size, std::size_t timeout)
+
+         Result readOnly(int fd, buffer& buffer, std::size_t size, std::size_t timeout)
          {
             ::pollfd poll;
             poll.fd     = fd;
@@ -122,18 +55,24 @@ namespace pc
             }
             return network::TCP::recvOnly(poll.fd, buffer, size, MSG_DONTWAIT);
          }
-         static Result read(pollfd poll, buffer& buffer, std::size_t timeout)
+         Result readOnly(::pollfd    poll,
+                         buffer&     buffer,
+                         std::size_t size,
+                         std::size_t timeout)
+         {
+            return TCPPoll::readOnly(poll.fd, buffer, size, timeout);
+         }
+         Result read(pollfd poll, buffer& buffer, std::size_t timeout)
          {
             return TCPPoll::readOnly(poll, buffer, buffer.size(), timeout);
          }
-         static Result read(int socket, buffer& buffer, std::size_t timeout)
+         Result read(int socket, buffer& buffer, std::size_t timeout)
          {
             pollfd poll;
             poll.fd = socket;
             return TCPPoll::read(poll, buffer, timeout);
          }
-         static Result
-             write(pollfd poll, std::string const& out, std::size_t const timeout)
+         Result write(pollfd poll, std::string const& out, std::size_t const timeout)
          {
             poll.events   = POLLOUT;
             int const ret = TCPPoll::poll(poll, timeout);
@@ -145,22 +84,12 @@ namespace pc
             }
             return network::TCP::sendRaw(poll.fd, out, MSG_DONTWAIT);
          }
-         static Result write(int socket, std::string const& out, std::size_t timeout)
+         Result write(int socket, std::string const& out, std::size_t timeout)
          {
             pollfd poll;
             poll.fd = socket;
             return TCPPoll::write(poll, out, timeout);
          }
-
-         std::size_t size() const
-         {
-            return dataQueue.size();
-         }
-
-         void PerformUpdate()
-         {
-            return dataQueue.PerformUpdate();
-         }
-      };
-   } // namespace network
+      } // namespace TCPPoll
+   }    // namespace network
 } // namespace pc

@@ -8,6 +8,7 @@
 
 #include <pc/deadliner/MostRecentTimestamps.hpp>
 #include <pc/network/TCPPoll.hpp>
+#include <pc/protocol/ClientInfos.hpp>
 #include <pc/protocol/ClientPollResult.hpp>
 #include <pc/protocol/Config.hpp>
 #include <pc/protocol/LearnProtocol.hpp>
@@ -18,15 +19,11 @@ namespace pc
    {
       class ServerLearnProtocol : public LearnProtocol
       {
-         typedef std::tr1::unordered_map<int /*Socket*/, ClientInfo> ClientInfos;
-         typedef network::TCPPoll::const_iterator                    PollConstIterator;
-         typedef deadliner::MostRecentTimestamps                     MostRecentTimestamps;
-         typedef std::tr1::unordered_set<int /*socket*/>             UniqueSockets;
+         typedef ClientInfos::PollConstIterator          PollConstIterator;
+         typedef deadliner::MostRecentTimestamps         MostRecentTimestamps;
+         typedef std::tr1::unordered_set<int /*socket*/> UniqueSockets;
 
-         ClientInfos        clientInfos;
-         network::TCPPoll   tcpPoll;
-         pc::threads::Mutex pollsMutex;
-
+         ClientInfos          clientInfos;
          MostRecentTimestamps mostRecentTimestamps;
 
          void closeSocketConnections(UniqueSockets& socketsToRemove)
@@ -35,28 +32,7 @@ namespace pc
                return;
             // Remove all socket based connections
             // From polls
-            {
-               pc::threads::MutexGuard guard(pollsMutex);
-               for (UniqueSockets::iterator it = socketsToRemove.begin();
-                    it != socketsToRemove.end();)
-               {
-                  int const socket = *it;
-                  // Check if the socket exists first of all
-                  if (clientInfos.find(socket) != clientInfos.end())
-                  {
-                     clientInfos.erase(socket);
-                     config->balancer->decPriority(
-                         balancerIndex, clientInfos[socket].DeadlineMaxCount());
-                     ++it;
-                  }
-                  // If it does not
-                  // Remove from Sockets to remove list
-                  else
-                     it = socketsToRemove.erase(it);
-               }
-               tcpPoll.remove(socketsToRemove);
-            }
-
+            clientInfos.close(socketsToRemove, config->balancer, balancerIndex);
             // Close all sockets
             // Remove them from timestamp
             // Call callback
@@ -71,15 +47,9 @@ namespace pc
 
          void Add(int const socket, ClientResponseCallback callback)
          {
-            ClientInfo clientInfo = ClientInfo::createClientInfo(socket, callback);
-            {
-               // Protect this during multithreaded access
-               pc::threads::MutexGuard lock(pollsMutex);
-               tcpPoll.addSocketToPoll(socket);
-               clientInfos[socket] = clientInfo;
-               config->balancer->incPriority(balancerIndex,
-                                             clientInfos[socket].DeadlineMaxCount());
-            }
+            clientInfos.insert(socket, callback);
+            config->balancer->incPriority(balancerIndex,
+                                          clientInfos.get(socket).DeadlineMaxCount());
             mostRecentTimestamps.updateSingle(socket);
          }
 
@@ -91,53 +61,31 @@ namespace pc
                 mostRecentTimestamps.getSocketsLessThanTimestamp<UniqueSockets>(timeout);
             if (socketsSelected.empty())
                return;
-            for (UniqueSockets::const_iterator it = socketsSelected.begin();
-                 it != socketsSelected.end();)
-            {
-               int const socket       = *it;
-               bool      terminateNow = false;
-               {
-                  pc::threads::MutexGuard guard(pollsMutex);
-                  terminateNow = clientInfos[socket].TerminateThisCycleOrNext();
-               }
-               // If this is not the cycle to terminate
-               if (!terminateNow)
-                  // Remove from the list
-                  // Because all selected sockets will be terminated
-                  it = socketsSelected.erase(it);
-               else
-                  ++it;
-            }
+            clientInfos.FilterSocketsToTerminate(socketsSelected);
             closeSocketConnections(socketsSelected);
          }
          std::size_t size() const
          {
-            return tcpPoll.size();
+            return clientInfos.size();
          }
          void Execute()
          {
-            pc::threads::MutexGuard lock(pollsMutex);
-            for (ClientInfos::iterator it = clientInfos.begin(); it != clientInfos.end();
-                 ++it)
-               it->second.executeCallbacks();
+            return clientInfos.Execute();
          }
          void Poll()
          {
-            {
-               pc::threads::MutexGuard lock(pollsMutex);
-               tcpPoll.PerformUpdate();
-            }
-            if (tcpPoll.poll(timeout) == 0)
+            std::vector<pollfd>& polls = clientInfos.Polls();
+            if (network::TCPPoll::poll(polls, timeout) == 0)
                // Timeout
                return;
             UniqueSockets socketsWithReadSuccess;
             UniqueSockets socketsToTerminate;
 
             // Check poll results
-            for (PollConstIterator it = tcpPoll.begin(); it != tcpPoll.end(); ++it)
+            for (PollConstIterator it = polls.begin(); it != polls.end(); ++it)
             {
                ::pollfd const   poll   = *it;
-               ClientPollResult result = clientInfos[poll.fd].OnPoll(poll, timeout);
+               ClientPollResult result = clientInfos.OnPoll(poll, timeout);
                if (result.read)
                   socketsWithReadSuccess.insert(poll.fd);
                if (result.terminate)
