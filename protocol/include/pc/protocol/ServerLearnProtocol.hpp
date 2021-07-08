@@ -8,7 +8,7 @@
 
 #include <pc/deadliner/MostRecentTimestamps.hpp>
 #include <pc/network/TCPPoll.hpp>
-#include <pc/protocol/ClientInfo.hpp>
+#include <pc/protocol/ClientPollResult.hpp>
 #include <pc/protocol/Config.hpp>
 #include <pc/protocol/LearnProtocol.hpp>
 

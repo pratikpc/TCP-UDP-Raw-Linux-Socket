@@ -1,6 +1,7 @@
 #pragma once
 
 #include <pc/deadliner/Deadline.hpp>
+#include <pc/protocol/ClientPollResult.hpp>
 #include <pc/protocol/Packet.hpp>
 #include <pc/protocol/types.hpp>
 #include <pc/thread/Atomic.hpp>
@@ -15,14 +16,6 @@ namespace pc
 {
    namespace protocol
    {
-      struct ClientPollResult
-      {
-         bool terminate;
-         bool read;
-         bool write;
-
-         ClientPollResult() : terminate(false), read(false), write(false) {}
-      };
       class ClientInfo
       {
 
