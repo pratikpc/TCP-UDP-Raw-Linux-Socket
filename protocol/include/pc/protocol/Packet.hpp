@@ -62,7 +62,7 @@ namespace pc
          {
             network::Result recvData =
                 network::TCPPoll::readOnly(socket, buffer, N, timeout);
-            if (!recvData.IsFailure())
+            if (recvData.IsSuccess())
             {
                // buffer[0] << 0 + buffer[1] << CHAR_BIT
                // Convert char array to integer
