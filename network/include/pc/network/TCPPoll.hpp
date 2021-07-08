@@ -31,6 +31,25 @@ namespace pc
             dataQueue.Add(poll);
             return *this;
          }
+         template <typename Iterable>
+         TCPPoll& remove(Iterable const& socketsToRemove)
+         {
+            for (PollFdQueue::const_iterator it = begin(); it != end(); ++it)
+            {
+               int const socket = it->fd;
+               // Check if the socket exists first of all
+               // If it does not
+               // Do nothing
+               if (socketsToRemove.find(socket) == socketsToRemove.end())
+               {
+                  continue;
+               }
+               std::size_t const indexErase = it - begin();
+               // Delete current element
+               removeAtIndex(indexErase);
+            }
+            return *this;
+         }
          TCPPoll& removeAtIndex(std::size_t const index)
          {
             dataQueue.RemoveAtIndex(index);

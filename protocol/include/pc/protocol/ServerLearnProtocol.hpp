@@ -29,8 +29,7 @@ namespace pc
 
          MostRecentTimestamps mostRecentTimestamps;
 
-         template <typename Iterable>
-         void closeSocketConnections(Iterable const& socketsToRemove)
+         void closeSocketConnections(UniqueSockets& socketsToRemove)
          {
             if (socketsToRemove.empty())
                return;
@@ -38,22 +37,24 @@ namespace pc
             // From polls
             {
                pc::threads::MutexGuard guard(pollsMutex);
-               for (QueueIterator it = tcpPoll.begin(); it != tcpPoll.end(); ++it)
+               for (UniqueSockets::iterator it = socketsToRemove.begin();
+                    it != socketsToRemove.end();)
                {
-                  int const socket = it->fd;
+                  int const socket = *it;
                   // Check if the socket exists first of all
+                  if (clientInfos.find(socket) != clientInfos.end())
+                  {
+                     clientInfos.erase(socket);
+                     config->balancer->decPriority(
+                         balancerIndex, clientInfos[socket].DeadlineMaxCount());
+                     ++it;
+                  }
                   // If it does not
-                  // Do nothing
-                  if (socketsToRemove.find(socket) == socketsToRemove.end())
-                     continue;
-                  config->balancer->decPriority(balancerIndex,
-                                                clientInfos[socket].DeadlineMaxCount());
-                  clientInfos.erase(socket);
-
-                  std::size_t const indexErase = it - tcpPoll.begin();
-                  // Delete current element
-                  tcpPoll.removeAtIndex(indexErase);
+                  // Remove from Sockets to remove list
+                  else
+                     it = socketsToRemove.erase(it);
                }
+               tcpPoll.remove(socketsToRemove);
             }
 
             // Close all sockets
