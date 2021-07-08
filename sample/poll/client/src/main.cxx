@@ -28,7 +28,7 @@ void* func(void* clientIndexPtr)
    std::string ipstr = ip;
    std::cout << std::endl << "IP = " << ipstr;
    pc::network::TCP server(ip.connect());
-   server.keepAlive();
+   // server.keepAlive();
 
    int const clientIndex = *((int*)clientIndexPtr);
 
