@@ -85,7 +85,7 @@ namespace pc
             for (PollConstIterator it = polls.begin(); it != polls.end(); ++it)
             {
                ::pollfd const   poll   = *it;
-               ClientPollResult result = clientInfos.OnPoll(poll, timeout);
+               ClientPollResult result = clientInfos.OnPoll(poll);
                if (result.read)
                   socketsWithReadSuccess.insert(poll.fd);
                if (result.terminate)

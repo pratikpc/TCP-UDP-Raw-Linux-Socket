@@ -138,7 +138,7 @@ namespace pc
                std::cout << "=================" << std::endl;
             }
          }
-         void ReadPacket(std::time_t timeout)
+         void ReadPacket()
          {
             if (!pc::network::TCP::containsDataToRead(socket))
                return Terminate();
@@ -176,7 +176,7 @@ namespace pc
             }
          }
 
-         void WritePackets(std::time_t timeout)
+         void WritePackets()
          {
 #ifdef PC_PROFILE
             std::vector<timespec> differences;
@@ -188,7 +188,7 @@ namespace pc
                while (!packetsToWrite.empty())
                {
                   NetworkPacket const&  writePacket = packetsToWrite.front();
-                  network::Result const result      = writePacket.Write(socket, timeout);
+                  network::Result const result      = writePacket.Write(socket, 0);
                   if (result.SocketClosed)
                      return Terminate();
 #ifdef PC_PROFILE
@@ -224,7 +224,7 @@ namespace pc
 #endif
          }
 
-         ClientPollResult OnPoll(::pollfd const& poll, std::time_t timeout)
+         ClientPollResult OnPoll(::pollfd const& poll)
          {
             ClientPollResult result;
             if (terminateNow)
@@ -241,12 +241,12 @@ namespace pc
             }
             if (poll.revents & POLLOUT)
             {
-               this->WritePackets(0);
+               this->WritePackets();
                result.write = true;
             }
             if (poll.revents & POLLIN)
             {
-               this->ReadPacket(timeout);
+               this->ReadPacket();
                result.read = true;
             }
             return result;
