@@ -1,6 +1,8 @@
 #pragma once
 
-#include <cstddef>
+#ifdef PC_PROFILE
+#   include <ctime>
+#endif
 
 namespace pc
 {
@@ -18,14 +20,16 @@ namespace pc
             ++index;
             return *this;
          }
+#ifdef PC_PROFILE
          operator T() const
          {
             return value;
          }
-         T val() const
+         Averager<Numeric>& operator+=(timespec time)
          {
-            T const value = *this;
-            return value;
+            return (*this += (time.tv_sec * 1.e6 + time.tv_nsec / 1.e3));
+         }
+#endif
          }
       };
    } // namespace opt
