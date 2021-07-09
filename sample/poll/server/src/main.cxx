@@ -70,6 +70,8 @@ int main()
    server.setReusable();
    server.listen();
    // server.keepAlive();
+   // server.disableNagel();
+
    ProtocolVec protocols(get_nprocs());
 
    pc::balancer::priority balancer(protocols.size());
@@ -106,6 +108,7 @@ int main()
       if (child.invalid())
          continue;
       // child.keepAlive();
+      // child.disableNagel();
       std::size_t currentBalance = *balancer;
       protocols[currentBalance].Add(child.socket, pollCallback);
       std::cout << std::endl

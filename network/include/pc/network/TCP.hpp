@@ -67,6 +67,11 @@ namespace pc
             int yes = 1;
             flag(SOL_SOCKET, SO_REUSEADDR, yes);
          }
+         void disableNagel()
+         {
+            int yes = 1;
+            flag(IPPROTO_TCP, TCP_NODELAY, yes);
+         }
 
          static bool containsDataToRead(int socket, int const flags = 0)
          {
