@@ -201,6 +201,8 @@ namespace pc
 #ifdef PC_PROFILE
             if (!differences.empty())
             {
+               std::ptrdiff_t avgReadWrite = 0;
+               std::size_t    index        = 1;
                for (std::vector<timespec>::const_iterator it = differences.begin();
                     it != differences.end();)
                {
@@ -209,8 +211,16 @@ namespace pc
                   std::cout << *it << " write" << std::endl;
                   ++it;
                   std::cout << *it << " read+write" << std::endl;
+                  avgReadWrite = ((avgReadWrite * (index - 1)) + (it->tv_sec * 1.e6) +
+                                  (it->tv_nsec / 1.e3)) /
+                                 index;
                   ++it;
                   std::cout << "=================" << std::endl;
+                  ++index;
+               }
+               std::cout << "Average read+write size= " << avgReadWrite << "us"
+                         << std::endl;
+               std::cout << "=================" << std::endl;
                std::cout << "=================" << std::endl;
             }
 #endif
