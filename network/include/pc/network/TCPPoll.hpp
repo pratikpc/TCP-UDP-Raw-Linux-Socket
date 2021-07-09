@@ -40,28 +40,31 @@ namespace pc
             return TCPPoll::poll(data, size, timeout);
          }
 
+         Result readOnly(::pollfd&   poll,
+                         buffer&     buffer,
+                         std::size_t size,
+                         std::size_t timeout)
+         {
+            if (timeout != 0)
+            {
+               int const ret = TCPPoll::poll(poll, timeout);
+               if (ret <= 0 || !(poll.revents & POLLIN))
+               {
+                  Result recvData;
+                  recvData.PollFailure = true;
+                  return recvData;
+               }
+            }
+            return network::TCP::recvOnly(poll.fd, buffer, size, MSG_DONTWAIT);
+         }
          Result readOnly(int fd, buffer& buffer, std::size_t size, std::size_t timeout)
          {
             ::pollfd poll;
             poll.fd     = fd;
             poll.events = POLLIN;
+            return readOnly(poll, buffer, size, timeout);
+         }
 
-            int const ret = TCPPoll::poll(poll, timeout);
-            if (ret == 0 || !(poll.revents & POLLIN))
-            {
-               Result recvData;
-               recvData.PollFailure = true;
-               return recvData;
-            }
-            return network::TCP::recvOnly(poll.fd, buffer, size, MSG_DONTWAIT);
-         }
-         Result readOnly(::pollfd    poll,
-                         buffer&     buffer,
-                         std::size_t size,
-                         std::size_t timeout)
-         {
-            return TCPPoll::readOnly(poll.fd, buffer, size, timeout);
-         }
          Result read(pollfd poll, buffer& buffer, std::size_t timeout)
          {
             return TCPPoll::readOnly(poll, buffer, buffer.size(), timeout);
@@ -72,15 +75,18 @@ namespace pc
             poll.fd = socket;
             return TCPPoll::read(poll, buffer, timeout);
          }
-         Result write(pollfd poll, std::string const& out, std::size_t const timeout)
+         Result write(pollfd& poll, std::string const& out, std::size_t const timeout)
          {
-            poll.events   = POLLOUT;
-            int const ret = TCPPoll::poll(poll, timeout);
-            if (ret == 0 || !(poll.revents & POLLOUT))
+            if (timeout != 0)
             {
-               Result result;
-               result.PollFailure = true;
-               return result;
+               poll.events   = POLLOUT;
+               int const ret = TCPPoll::poll(poll, timeout);
+               if (ret <= 0 || !(poll.revents & POLLOUT))
+               {
+                  Result result;
+                  result.PollFailure = true;
+                  return result;
+               }
             }
             return network::TCP::sendRaw(poll.fd, out, MSG_DONTWAIT);
          }
