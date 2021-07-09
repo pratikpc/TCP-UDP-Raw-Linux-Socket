@@ -26,6 +26,7 @@ namespace pc
          mutable timespec readWriteDiff;
          mutable timespec readTimeDiff;
          mutable timespec writeTimeDiff;
+         mutable timespec executeTimeDiff;
 #endif
          static std::size_t const SizeBytes = N;
 
