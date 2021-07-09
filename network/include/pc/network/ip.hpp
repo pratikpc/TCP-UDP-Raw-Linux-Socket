@@ -83,8 +83,8 @@ namespace pc
 
          int bind() const
          {
-            int socketFd = socket();
-            int yes;
+            int const socketFd = socket();
+            int const yes      = 1;
             if (::setsockopt(socketFd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1)
                throw std::runtime_error("Unable to set reusable");
             if (::bind(socketFd, ip->ai_addr, ip->ai_addrlen) == -1)
