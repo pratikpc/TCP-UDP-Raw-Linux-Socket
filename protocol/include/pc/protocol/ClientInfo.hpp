@@ -18,25 +18,6 @@ namespace pc
 {
    namespace protocol
    {
-#ifdef PC_PROFILE
-      timespec operator-(timespec const& a, timespec const& b)
-      {
-         timespec result;
-         result.tv_sec  = a.tv_sec - b.tv_sec;
-         result.tv_nsec = a.tv_nsec - b.tv_nsec;
-         if (result.tv_nsec < 0)
-         {
-            --result.tv_sec;
-            result.tv_nsec += 1000000000L;
-         }
-         return result;
-      }
-#   include <ostream>
-      std::ostream& operator<<(std::ostream& os, timespec const& display)
-      {
-         return os << display.tv_sec << " sec " << display.tv_nsec << " nsec";
-      }
-#endif
       class ClientInfo
       {
          typedef std::queue<NetworkPacket> PacketVec;
