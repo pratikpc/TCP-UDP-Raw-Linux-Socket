@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cfloat>
+
 #ifdef PC_PROFILE
 #   include <ctime>
 #endif
@@ -8,16 +10,26 @@ namespace pc
 {
    namespace opt
    {
-      template <typename T = double>
+      template <typename Numeric = double>
       struct Averager
       {
-         T           value;
+         Numeric     average;
+         Numeric     low;
+         Numeric     high;
          std::size_t index;
-         Averager(T value = 0, std::size_t index = 0) : value(value), index(index) {}
-         Averager& operator+=(T const incBy)
+
+         Averager(Numeric value = 0, std::size_t index = 0) :
+             average(value), low(DBL_MAX), high(DBL_MIN), index(index)
          {
-            value = ((value * index) + incBy) / (index + 1);
+         }
+         Averager& operator+=(Numeric const incBy)
+         {
+            average = ((average * index) + incBy) / (index + 1);
             ++index;
+            if (incBy < low)
+               low = incBy;
+            if (incBy > high)
+               high = incBy;
             return *this;
          }
 #ifdef PC_PROFILE
