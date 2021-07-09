@@ -4,6 +4,7 @@
 
 #ifdef PC_PROFILE
 #   include <ctime>
+#   include <ostream>
 #endif
 
 namespace pc
@@ -33,16 +34,16 @@ namespace pc
             return *this;
          }
 #ifdef PC_PROFILE
-         operator T() const
+         friend std::ostream& operator<<(std::ostream& os, Averager<Numeric> const& value)
          {
-            return value;
+            return os << "avg=" << value.average << " low=" << value.low
+                      << " high=" << value.high;
          }
          Averager<Numeric>& operator+=(timespec time)
          {
             return (*this += (time.tv_sec * 1.e6 + time.tv_nsec / 1.e3));
          }
 #endif
-         }
       };
    } // namespace opt
 } // namespace pc
