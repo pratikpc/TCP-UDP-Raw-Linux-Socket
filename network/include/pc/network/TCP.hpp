@@ -12,7 +12,9 @@
 
 #include <cassert>
 
-#include <cstring>
+#ifdef PC_PROFILE
+#   include <cstring>
+#endif
 
 namespace pc
 {
@@ -96,6 +98,9 @@ namespace pc
                                  std::size_t& majorFailCount)
          {
             int const errorCode = errno;
+#ifdef PC_PROFILE
+            std::cout << "HandleError " << std::strerror(errorCode) << std::endl;
+#endif
             // If this is not a socket then this is a very very major error
             assert(errorCode != ENOTSOCK);
             // If the socket has not been connected or listened to
