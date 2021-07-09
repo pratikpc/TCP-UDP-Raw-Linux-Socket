@@ -43,37 +43,38 @@ void* func(void* clientIndexPtr)
       pc::network::Result result = protocol.SetupConnection();
       if (result.IsFailure())
          throw std::runtime_error("Setup failed");
-      pc::network::buffer             buffer(200);
-      pc::protocol::NetworkSendPacket packet(
-          repeat("Hi server from " + protocol.clientId, 10));
+      pc::network::buffer buffer(UINT16_MAX);
       for (std::size_t i = 0; true; i++)
       {
          std::cout << "Message sending " << i << " at " << protocol.clientId << std::endl;
-         pc::protocol::NetworkSendPacket packet("Hi server from " + protocol.clientId);
+         pc::protocol::NetworkSendPacket packet(repeat(
+             "Hi server from " + protocol.clientId + " " + pc::lexical_cast(i), 8));
          result = protocol.Write(packet);
-         if (result.DeadlineFailure)
-         {
-            sleep(2);
-            continue;
-         }
          if (result.IsFailure())
             break;
+         usleep(1 * 1000 * 1000 / 100);
+      }
+      sleep(5);
+      for (std::size_t i = 0; true;)
+      {
          pc::protocol::NetworkPacket responsePacket = protocol.Read(buffer);
          if (responsePacket.command == pc::protocol::Commands::MajorErrors::SocketClosed)
             break;
          else if (responsePacket.command == pc::protocol::Commands::Send)
-            std::cout << "Server says: " << responsePacket.data.size() << " : "
-                      << responsePacket.data << " at " << protocol.clientId << std::endl;
+         {
+            std::cout << "Iter " << i << " Server says: " << responsePacket.data.size()
+                      << " : " << responsePacket.data << " at " << protocol.clientId
+                      << std::endl;
+            i++;
+         }
          else
          {
             std::cout << std::endl
-                      << "No communication at " << protocol.clientId << " at "
-                      << responsePacket.command;
-            sleep(2);
+                      << "Iter " << i << " No communication at " << protocol.clientId
+                      << " at " << responsePacket.command;
+            sleep(1);
          }
          // usleep(4 * 1000 * 1000 / 25);
-         if ((i + 1) % 10 == 0)
-            sleep(32);
       }
    }
    catch (std::exception const& ex)
@@ -87,7 +88,7 @@ void* func(void* clientIndexPtr)
 #include <pc/thread/Thread.hpp>
 int main()
 {
-   std::vector<int> count(10);
+   std::vector<int> count(2);
 
    std::vector<pc::threads::Thread> threads;
    for (std::size_t i = 0; i < count.size(); ++i)
