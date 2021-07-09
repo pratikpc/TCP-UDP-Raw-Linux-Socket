@@ -155,6 +155,13 @@ namespace pc
                terminateNow = true;
                ::close(socket);
                socket = -1;
+               std::cout << "Average read+write size= " << averageReadWriteTimeNs.val()
+                         << "us" << std::endl;
+               std::cout << "Average read size= " << averageReadTimeNs.val() << "us"
+                         << std::endl;
+               std::cout << "Average write size= " << averageWriteTimeNs.val() << "us"
+                         << std::endl;
+               std::cout << "=================" << std::endl;
             }
          }
          void ReadPacket(std::time_t timeout)
@@ -170,6 +177,11 @@ namespace pc
             network::buffer buffer(UINT16_MAX);
 
             NetworkPacket packet = NetworkPacket::Read(socket, buffer, 0);
+#ifdef PC_PROFILE
+            averageReadTimeNs +=
+                (packet.readTimeDiff.tv_sec * 1.e6 + packet.readTimeDiff.tv_nsec / 1.e3);
+            // std::cout << packet.readTimeDiff << " read" << std::endl;
+#endif
             if (packet.command == Commands::Blank)
             {
                terminateOnNextCycle = false;
@@ -189,39 +201,38 @@ namespace pc
 
          void WritePackets(std::time_t timeout)
          {
-            pc::threads::MutexGuard guard(writeMutex);
-            if (packetsToWrite.empty())
-               return;
+#ifdef PC_PROFILE
             std::vector<timespec> differences;
-            while (!packetsToWrite.empty())
             {
-               NetworkPacket const&  writePacket = packetsToWrite.front();
-               network::Result const result      = writePacket.Write(socket, timeout);
-               if (result.SocketClosed)
-                  return Terminate();
-#ifdef PC_PROFILE
-               // Only send commands have readTimeTaken and readWriteTime defined
-               if (writePacket.command == Commands::Send)
-               {
-                  timespec const readTimeTaken  = writePacket.readTimeDiff;
-                  timespec const writeTimeTaken = writePacket.writeTimeDiff;
-                  timespec const readWriteTime  = writePacket.readWriteDiff;
-                  differences.push_back(readTimeTaken);
-                  differences.push_back(writeTimeTaken);
-                  differences.push_back(readWriteTime);
-               }
 #endif
-               packetsToWrite.pop();
-            }
+               pc::threads::MutexGuard guard(writeMutex);
+               if (packetsToWrite.empty())
+                  return;
+               while (!packetsToWrite.empty())
+               {
+                  NetworkPacket const&  writePacket = packetsToWrite.front();
+                  network::Result const result      = writePacket.Write(socket, timeout);
+                  if (result.SocketClosed)
+                     return Terminate();
 #ifdef PC_PROFILE
+                  // Only send commands have readTimeTaken and readWriteTime defined
+                  if (writePacket.command == Commands::Send)
+                  {
+                     timespec const writeTimeTaken = writePacket.writeTimeDiff;
+                     timespec const readWriteTime  = writePacket.readWriteDiff;
+                     differences.push_back(writeTimeTaken);
+                     differences.push_back(readWriteTime);
+                  }
+#endif
+                  packetsToWrite.pop();
+               }
+#ifdef PC_PROFILE
+            }
             if (!differences.empty())
             {
                for (std::vector<timespec>::const_iterator it = differences.begin();
                     it != differences.end();)
                {
-                  // std::cout << *it << " read" << std::endl;
-                  averageReadTimeNs += (it->tv_sec * 1.e6 + it->tv_nsec / 1.e3);
-                  ++it;
                   // std::cout << *it << " write" << std::endl;
                   averageWriteTimeNs += (it->tv_sec * 1.e6 + it->tv_nsec / 1.e3);
                   ++it;
@@ -230,13 +241,6 @@ namespace pc
                   ++it;
                   // std::cout << "=================" << std::endl;
                }
-               std::cout << "Average read+write size= " << averageReadWriteTimeNs.val()
-                         << "us" << std::endl;
-               std::cout << "Average read size= " << averageReadTimeNs.val() << "us"
-                         << std::endl;
-               std::cout << "Average write size= " << averageWriteTimeNs.val() << "us"
-                         << std::endl;
-               std::cout << "=================" << std::endl;
             }
 #endif
          }
