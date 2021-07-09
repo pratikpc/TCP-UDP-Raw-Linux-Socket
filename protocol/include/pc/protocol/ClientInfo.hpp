@@ -104,54 +104,26 @@ namespace pc
                   }
             }
          }
-         network::Result setupConnection(std::time_t timeout)
-         {
-            network::Result result;
-            network::buffer data(40);
-            NetworkPacket   ackAck = NetworkPacket::Read(socket, data, timeout);
-            if (ackAck.command != Commands::Setup::Ack)
-            {
-               result.SocketClosed = true;
-               return result;
-            }
-            network::Result const ackSynResult =
-                NetworkPacket(Commands::Setup::Syn).Write(socket, timeout);
-            if (ackSynResult.IsFailure())
-               return ackSynResult;
 
-            NetworkPacket const clientId = NetworkPacket::Read(socket, data, timeout);
-            if (clientId.command != Commands::Setup::ClientID)
-            {
-               network::Result result;
-               result.SocketClosed = true;
-               return result;
-            }
-            this->clientId = std::string(clientId.data);
-
-            network::Result const joinResult =
-                NetworkPacket(Commands::Setup::Join).Write(socket, timeout);
-            if (joinResult.IsFailure())
-               return joinResult;
-
-            // TODO
-            // {
-            //    // As the balancer element is common
-            //    // and shared across protocols
-            //    // Make the balancer updation guard
-            //    // static
-            //    static pc::threads::Mutex balancerPriorityUpdationMutex;
-            //    pc::threads::MutexGuard   guard(balancerPriorityUpdationMutex);
-            //    std::size_t               newDeadlineMaxCount =
-            //        config->ExtractDeadlineMaxCountFromDatabase(clientInfo.clientId);
-            //    config->balancer->setPriority(balancerIndex,
-            //                                  // Update priority for given element
-            //                                  (*config->balancer)[balancerIndex] -
-            //                                      clientInfo.deadline.MaxCount() +
-            //                                      newDeadlineMaxCount);
-            //    clientInfo.changeMaxCount(newDeadlineMaxCount);
-            // }
-            return result;
-         }
+         // TODO
+         // {
+         //    // As the balancer element is common
+         //    // and shared across protocols
+         //    // Make the balancer updation guard
+         //    // static
+         //    static pc::threads::Mutex balancerPriorityUpdationMutex;
+         //    pc::threads::MutexGuard   guard(balancerPriorityUpdationMutex);
+         //    std::size_t               newDeadlineMaxCount =
+         //        config->ExtractDeadlineMaxCountFromDatabase(clientInfo.clientId);
+         //    config->balancer->setPriority(balancerIndex,
+         //                                  // Update priority for given element
+         //                                  (*config->balancer)[balancerIndex] -
+         //                                      clientInfo.deadline.MaxCount() +
+         //                                      newDeadlineMaxCount);
+         //    clientInfo.changeMaxCount(newDeadlineMaxCount);
+         // }
+         //    return result;
+         // }
          void Terminate()
          {
             if (socket != -1)
@@ -171,11 +143,6 @@ namespace pc
             if (!pc::network::TCP::containsDataToRead(socket))
                return Terminate();
             ++deadline;
-            if (clientId.empty())
-            {
-               setupConnection(timeout);
-               return;
-            }
             network::buffer buffer(UINT16_MAX);
 
             NetworkPacket packet = NetworkPacket::Read(socket, buffer, 0);
@@ -186,9 +153,18 @@ namespace pc
             if (packet.command == Commands::Blank)
             {
                terminateOnNextCycle = false;
-               return;
             }
-
+            else if (packet.command == Commands::Setup::Ack)
+            {
+               pc::threads::MutexGuard guard(writeMutex);
+               packetsToWrite.push(NetworkPacket(Commands::Setup::Syn));
+            }
+            else if (packet.command == Commands::Setup::ClientID)
+            {
+               clientId = packet.data;
+               pc::threads::MutexGuard guard(writeMutex);
+               packetsToWrite.push(NetworkPacket(Commands::Setup::Join));
+            }
             else if (packet.command == Commands::MajorErrors::SocketClosed)
                return Terminate();
 
