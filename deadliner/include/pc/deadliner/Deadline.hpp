@@ -18,7 +18,7 @@ namespace pc
       namespace
       {
 
-         std::ptrdiff_t operator-(timespec const& left, timespec const& right)
+         std::ptrdiff_t DifferenceInNanos(timespec const& left, timespec const& right)
          {
             timespec ret;
             // Note that in our case left sec > right sec always
@@ -74,7 +74,7 @@ namespace pc
             if (queue.rear != -1)
             {
                assert(curTime > queue.Last());
-               return ((curTime - queue.Last()) > maxHealthCheckTime);
+               return (DifferenceInNanos(curTime, queue.Last()) > maxHealthCheckTime);
             }
             return false;
          }
@@ -88,7 +88,7 @@ namespace pc
             if (queue)
             {
                assert(curTime > queue.First());
-               return ((curTime - queue.First()) <= maxTime);
+               return (DifferenceInNanos(curTime, queue.First()) <= maxTime);
             }
             return false;
          }
