@@ -5,6 +5,10 @@
 #include <pc/network/TCPPoll.hpp>
 #include <pc/protocol/Commands.hpp>
 
+#ifdef PC_PROFILE
+#   include <pc/timer/timer.hpp>
+#endif
+
 namespace pc
 {
    namespace protocol
@@ -12,6 +16,13 @@ namespace pc
       template <std::size_t N>
       class RawPacket
       {
+#ifdef PC_PROFILE
+       public:
+         mutable timespec readTimeStart;
+         mutable timespec readWriteDiff;
+         mutable timespec readTimeDiff;
+         mutable timespec writeTimeDiff;
+#endif
        public:
          // Command always of size 4
          std::string command;
@@ -24,7 +35,17 @@ namespace pc
          {
             return command.size() + data.size();
          }
-         RawPacket(network::buffer const& buffer, network::Result recvData)
+         RawPacket(network::buffer const& buffer,
+                   network::Result        recvData
+#ifdef PC_PROFILE
+                   ,
+                   timespec const& readTimeStart
+#endif
+                   )
+#ifdef PC_PROFILE
+             :
+             readTimeStart(readTimeStart)
+#endif
          {
             if (recvData.IsFailure())
             {
@@ -45,6 +66,9 @@ namespace pc
                          buffer.begin() + recvData.NoOfBytes,
                          data.begin());
             }
+#ifdef PC_PROFILE
+            readTimeDiff = timer::now() - readTimeStart;
+#endif
          }
 
        public:
@@ -60,6 +84,9 @@ namespace pc
          static RawPacket<N>
              Read(int const socket, network::buffer& buffer, std::size_t const timeout)
          {
+#ifdef PC_PROFILE
+            timespec const readTimeStart = timer::now();
+#endif
             network::Result recvData =
                 network::TCPPoll::readOnly(socket, buffer, N, timeout);
             if (recvData.IsSuccess())
@@ -78,7 +105,13 @@ namespace pc
                   assert(recvData.NoOfBytes == bytesToRead);
                }
             }
-            return RawPacket(buffer, recvData);
+            return RawPacket(buffer,
+                             recvData
+#ifdef PC_PROFILE
+                             ,
+                             readTimeStart
+#endif
+            );
          }
          network::Result Write(::pollfd poll, std::size_t timeout) const
          {
@@ -86,21 +119,28 @@ namespace pc
          }
          network::Result Write(int const socket, std::size_t timeout) const
          {
+#ifdef PC_PROFILE
+            timespec const writeTimeStart = timer::now();
+#endif
             std::size_t const packetSize = size();
             // Convert packet to string array
+            // Convert size to buffer
+            std::string sizeBuffer;
+            sizeBuffer.resize(N);
+            for (size_t i = 0; i < N; ++i)
             {
-               // Convert size to buffer
-               std::string sizeBuffer;
-               sizeBuffer.resize(N);
-               for (size_t i = 0; i < N; ++i)
-               {
-                  unsigned char value =
-                      ((unsigned char)packetSize >> (CHAR_BIT * (i))) & UCHAR_MAX;
-                  sizeBuffer[i] = value;
-               }
-               return network::TCPPoll::write(
-                   socket, sizeBuffer + command + data, timeout);
+               unsigned char value =
+                   ((unsigned char)packetSize >> (CHAR_BIT * (i))) & UCHAR_MAX;
+               sizeBuffer[i] = value;
             }
+            network::Result const result =
+                network::TCPPoll::write(socket, sizeBuffer + command + data, timeout);
+#ifdef PC_PROFILE
+            timespec const writeTimeEnd = timer::now();
+            writeTimeDiff               = writeTimeEnd - writeTimeStart;
+            readWriteDiff               = writeTimeEnd - readTimeStart;
+#endif
+            return result;
          }
       };
       template <std::size_t N>

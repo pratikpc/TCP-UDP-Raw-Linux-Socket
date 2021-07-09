@@ -41,11 +41,6 @@ namespace pc
          PacketVec               packetsToWrite;
          pc::threads::Mutex      writeMutex;
 
-#ifdef PC_PROFILE
-         TimeVec writeTimeVec;
-         TimeVec readTimeVec;
-#endif
-
        public:
          ClientInfo(int socket, ClientResponseCallback callback) :
              socket(socket), callback(callback)
@@ -63,7 +58,12 @@ namespace pc
                pc::threads::MutexGuard guard(readMutex);
                while (!packetsToRead.empty())
                {
-                  NetworkSendPacket writePacket = callback(packetsToRead.front(), *this);
+                  NetworkPacket const readPacket  = packetsToRead.front();
+                  NetworkSendPacket   writePacket = callback(readPacket, *this);
+#ifdef PC_PROFILE
+                  writePacket.readTimeDiff  = readPacket.readTimeDiff;
+                  writePacket.readTimeStart = readPacket.readTimeStart;
+#endif
                   packetsToRead.pop();
                   if (writePacket.command == Commands::Send)
                      tempWriteVec.push(writePacket);
@@ -72,21 +72,16 @@ namespace pc
             {
                // Add to write vector
                pc::threads::MutexGuard guard(writeMutex);
-// If Write Vector is empty, simply copy
-#ifndef PC_PROFILE
+               // If Write Vector is empty, simply copy
                if (packetsToWrite.empty())
                   packetsToWrite = tempWriteVec;
                else
-#endif
                   // Else, add all elems from tempWriteVec to end of write vector
                   while (!tempWriteVec.empty())
                   {
                      NetworkPacket writePacket = tempWriteVec.front();
                      tempWriteVec.pop();
                      packetsToWrite.push(writePacket);
-#ifdef PC_PROFILE
-                     writeTimeVec.push(timer::now());
-#endif
                   }
             }
          }
@@ -174,27 +169,29 @@ namespace pc
                terminateOnNextCycle = false;
                pc::threads::MutexGuard guard(readMutex);
                packetsToRead.push(packet);
-#ifdef PC_PROFILE
-               readTimeVec.push(timer::now());
-#endif
             }
          }
 
          void WritePackets(std::time_t timeout)
          {
             pc::threads::MutexGuard guard(writeMutex);
-            std::vector<timespec>   differences;
+            if (packetsToWrite.empty())
+               return;
+            std::vector<timespec> differences;
             while (!packetsToWrite.empty())
             {
-               NetworkPacket writePacket = packetsToWrite.front();
-#ifdef PC_PROFILE
-               timespec const startTimeSend = timer::now();
-#endif
-               network::Result result = writePacket.Write(socket, timeout);
+               NetworkPacket const&  writePacket = packetsToWrite.front();
+               network::Result const result      = writePacket.Write(socket, timeout);
                if (result.SocketClosed)
                   return Terminate();
-               packetsToWrite.pop();
 #ifdef PC_PROFILE
+               // Only send commands have readTimeTaken and readWriteTime defined
+                  timespec const readTimeTaken  = writePacket.readTimeDiff;
+                  timespec const writeTimeTaken = writePacket.writeTimeDiff;
+                  timespec const readWriteTime  = writePacket.readWriteDiff;
+                  differences.push_back(readTimeTaken);
+                  differences.push_back(writeTimeTaken);
+                  differences.push_back(readWriteTime);
                timespec const writeTimeLast    = writeTimeVec.front();
                timespec const overAllWriteTime = (timer::now() - writeTimeLast);
                differences.push_back(overAllWriteTime);
@@ -202,18 +199,22 @@ namespace pc
                differences.push_back(thisPacketLocalWrite);
                writeTimeVec.pop();
 #endif
+               packetsToWrite.pop();
             }
 #ifdef PC_PROFILE
-            for (std::vector<timespec>::const_iterator it = differences.begin();
-                 it != differences.end();)
+            if (!differences.empty())
             {
-               std::cout << "Overall (add to queue to pop and write) took " << *it
-                         << " write time"
-                         << " to send " << std::endl;
-               ++it;
-               std::cout << "It took Packet.Write (simply sending) " << *it << " time"
-                         << std::endl;
-               ++it;
+               for (std::vector<timespec>::const_iterator it = differences.begin();
+                    it != differences.end();)
+               {
+                  std::cout << *it << " read" << std::endl;
+                  ++it;
+                  std::cout << *it << " write" << std::endl;
+                  ++it;
+                  std::cout << *it << " read+write" << std::endl;
+                  ++it;
+                  std::cout << "=================" << std::endl;
+               std::cout << "=================" << std::endl;
             }
 #endif
          }
