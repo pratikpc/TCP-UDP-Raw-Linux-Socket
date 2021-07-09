@@ -66,11 +66,9 @@ int main()
    ip.load("", "9900");
 
    std::string ipstr = ip;
-   std::cout << "IP = " << ipstr;
-   std::cout << "\n Hostname = " << ip.hostName();
-   pc::network::TCP tcp(ip.bind());
-   tcp.setReusable();
-   tcp.listen();
+   pc::network::TCP server(ip.bind());
+   server.setReusable();
+   server.listen();
    ProtocolVec protocols(get_nprocs());
 
    pc::balancer::priority balancer(protocols.size());
@@ -103,8 +101,7 @@ int main()
 
    while (true)
    {
-      std::cout << std::endl << "Try to connect";
-      pc::network::TCP child(tcp.accept());
+      pc::network::TCP child(server.accept());
       if (child.invalid())
          continue;
       // child.keepAlive();
