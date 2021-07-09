@@ -58,7 +58,15 @@ namespace pc
          std::ptrdiff_t maxTime;
          std::ptrdiff_t maxHealthCheckTime;
 
-         Deadline(std::size_t    maxCount           = 25,
+         Deadline(std::size_t maxCount =
+         // Set a very high deadline during testing
+#ifdef PC_PROTOCOL
+                      1000
+         // When not testing deadline should be sufficiently low
+#else
+                      25
+#endif
+                  ,
                   std::ptrdiff_t maxTime            = 10 * 1.e9,
                   std::ptrdiff_t maxHealthCheckTime = 30 * 1.e9) :
              queue(maxCount),
