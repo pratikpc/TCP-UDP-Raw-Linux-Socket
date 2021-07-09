@@ -16,6 +16,10 @@ namespace pc
       template <std::size_t N>
       class RawPacket
       {
+       public:
+         // Command always of size 4
+         std::string command;
+         std::string data;
 #ifdef PC_PROFILE
        public:
          mutable timespec readTimeStart;
@@ -23,11 +27,6 @@ namespace pc
          mutable timespec readTimeDiff;
          mutable timespec writeTimeDiff;
 #endif
-       public:
-         // Command always of size 4
-         std::string command;
-         std::string data;
-
          static std::size_t const SizeBytes = N;
 
        private:
@@ -74,6 +73,10 @@ namespace pc
        public:
          RawPacket(std::string const& command, std::string const& data = "") :
              command(command), data(data)
+#ifdef PC_PROFILE
+             ,
+             readTimeStart(), readWriteDiff(), readTimeDiff(), writeTimeDiff()
+#endif
          {
          }
          static RawPacket<N>
