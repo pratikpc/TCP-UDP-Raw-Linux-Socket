@@ -186,18 +186,15 @@ namespace pc
                   return Terminate();
 #ifdef PC_PROFILE
                // Only send commands have readTimeTaken and readWriteTime defined
+               if (writePacket.command == Commands::Send)
+               {
                   timespec const readTimeTaken  = writePacket.readTimeDiff;
                   timespec const writeTimeTaken = writePacket.writeTimeDiff;
                   timespec const readWriteTime  = writePacket.readWriteDiff;
                   differences.push_back(readTimeTaken);
                   differences.push_back(writeTimeTaken);
                   differences.push_back(readWriteTime);
-               timespec const writeTimeLast    = writeTimeVec.front();
-               timespec const overAllWriteTime = (timer::now() - writeTimeLast);
-               differences.push_back(overAllWriteTime);
-               timespec const thisPacketLocalWrite = (timer::now() - startTimeSend);
-               differences.push_back(thisPacketLocalWrite);
-               writeTimeVec.pop();
+               }
 #endif
                packetsToWrite.pop();
             }
