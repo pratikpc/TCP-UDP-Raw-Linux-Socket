@@ -87,7 +87,14 @@ namespace pc
                  it != socketsSelected.end();)
             {
                int const socket       = *it;
-               bool      terminateNow = get(socket).TerminateThisCycleOrNext();
+               bool      terminateNow = false;
+               {
+                  iterator it = clientInfos.find(socket);
+                  if (it == clientInfos.end())
+                     terminateNow = false;
+                  else
+                     terminateNow = it->second.TerminateThisCycleOrNext();
+               }
                // If this is not the cycle to terminate
                if (!terminateNow)
                   // Remove from the list
