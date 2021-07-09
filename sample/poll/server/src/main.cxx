@@ -69,6 +69,7 @@ int main()
    pc::network::TCP server(ip.bind());
    server.setReusable();
    server.listen();
+   // server.keepAlive();
    ProtocolVec protocols(get_nprocs());
 
    pc::balancer::priority balancer(protocols.size());
