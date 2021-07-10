@@ -66,13 +66,15 @@ int main()
    ip.load("", "9900");
 
    std::string ipstr = ip;
+   std::cout << "IP = " << ipstr << std::endl;
+   std::cout << "Hostname = " << ip.hostName() << std::endl;
    pc::network::TCP server(ip.bind());
    server.setReusable();
    server.listen();
    // server.keepAlive();
    server.disableNagel();
 
-   ProtocolVec protocols(get_nprocs());
+   ProtocolVec protocols(/*get_nprocs()*/ 2);
 
    pc::balancer::priority balancer(protocols.size());
 
@@ -90,7 +92,7 @@ int main()
          std::cerr << "Failed to create table\n";
          return EXIT_FAILURE;
       }
-      std::cout << "\nTable Created";
+      std::cout << "Table Created\n";
    }
 
    for (ProtocolVec::iterator it = protocols.begin(); it != protocols.end(); ++it)
@@ -100,10 +102,11 @@ int main()
       it->timeout       = 10;
       pc::threads::Thread(&PollAndExecute, &(*it)).detach();
    }
-   pc::threads::Thread(&execHealthCheck, &protocols).detach();
+   pc::threads::Thread healthCheckThread(&execHealthCheck, &protocols);
 
    while (true)
    {
+      std::cout << "Try to connect" << std::endl;
       pc::network::TCP child(server.accept());
       if (child.invalid())
          continue;
@@ -111,10 +114,10 @@ int main()
       child.disableNagel();
       std::size_t currentBalance = *balancer;
       protocols[currentBalance].Add(child.socket, pollCallback);
-      std::cout << std::endl
-                << "Connected to " << child.socket << " socket on " << currentBalance
-                << " thread : Balancer" << balancer;
+      std::cout << "Connected to " << child.socket << " socket on " << currentBalance
+                << " thread : Balancer" << balancer << std::endl;
       child.invalidate();
    }
+   healthCheckThread.join();
    return EXIT_SUCCESS;
 }

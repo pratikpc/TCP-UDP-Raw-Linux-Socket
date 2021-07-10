@@ -48,7 +48,7 @@ void* func(void* clientIndexPtr)
       {
          std::cout << "Message sending " << i << " at " << protocol.clientId << std::endl;
          pc::protocol::NetworkSendPacket packet(repeat(
-             "Hi server from " + protocol.clientId + " " + pc::lexical_cast(i), 8));
+             "Hi server from " + protocol.clientId + " " + pc::lexical_cast(i), 1));
          result = protocol.Write(packet);
          if (result.IsFailure())
             break;
