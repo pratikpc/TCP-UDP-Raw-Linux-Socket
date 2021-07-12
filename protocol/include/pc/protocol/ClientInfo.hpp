@@ -205,6 +205,7 @@ namespace pc
                      differences.push_back(writePacket.readWriteDiff);
                   }
 #endif
+                  timeout = 0;
                   packetsToWrite.pop();
                }
 #ifdef PC_PROFILE
