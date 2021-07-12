@@ -115,7 +115,7 @@ namespace pc
 
                recvData =
                    network::TCPPoll::readOnly(socket, buffer, bytesToRead, timeout);
-               if (!recvData.IsFailure())
+               if (recvData.IsSuccess())
                {
                   assert(recvData.NoOfBytes == bytesToRead);
                }
