@@ -69,6 +69,10 @@ namespace pc
             int yes = 1;
             flag(SOL_SOCKET, SO_REUSEADDR, yes);
          }
+         void speedUp()
+         {
+            disableNagel();
+         }
          void disableNagel()
          {
             int yes = 1;

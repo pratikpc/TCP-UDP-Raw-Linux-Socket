@@ -29,7 +29,7 @@ void* func(void* clientIndexPtr)
    std::cout << std::endl << "IP = " << ipstr;
    pc::network::TCP server(ip.connect());
    // server.keepAlive();
-   server.disableNagel();
+   server.speedUp();
 
    int const clientIndex = *((int*)clientIndexPtr);
 

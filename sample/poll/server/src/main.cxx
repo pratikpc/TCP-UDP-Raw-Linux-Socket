@@ -70,9 +70,9 @@ int main()
    std::cout << "Hostname = " << ip.hostName() << std::endl;
    pc::network::TCP server(ip.bind());
    server.setReusable();
-   server.listen();
    // server.keepAlive();
-   server.disableNagel();
+   server.speedUp();
+   server.listen();
 
    ProtocolVec protocols(/*get_nprocs()*/ 2);
 
@@ -111,7 +111,7 @@ int main()
       if (child.invalid())
          continue;
       // child.keepAlive();
-      child.disableNagel();
+      child.speedUp();
       std::size_t currentBalance = *balancer;
       protocols[currentBalance].Add(child.socket, pollCallback);
       std::cout << "Connected to " << child.socket << " socket on " << currentBalance
