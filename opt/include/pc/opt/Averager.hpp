@@ -17,27 +17,31 @@ namespace pc
          Numeric     average;
          Numeric     low;
          Numeric     high;
-         std::size_t index;
-
-         Averager(Numeric value = 0, std::size_t index = 0) :
-             average(value), low(DBL_MAX), high(DBL_MIN), index(index)
+         std::size_t count;
+         std::size_t NoOfClosesToHigh;
+         Averager(Numeric value = 0, std::size_t count = 0) :
+             average(value), low(DBL_MAX), high(DBL_MIN), count(count),
+             NoOfClosesToHigh(0)
          {
          }
          Averager& operator+=(Numeric const incBy)
          {
-            average = ((average * index) + incBy) / (index + 1);
-            ++index;
+            average = ((average * count) + incBy) / (count + 1);
+            ++count;
             if (incBy < low)
                low = incBy;
             if (incBy > high)
                high = incBy;
+            if (incBy >= 0.8 * high)
+               ++NoOfClosesToHigh;
             return *this;
          }
 #ifdef PC_PROFILE
          friend std::ostream& operator<<(std::ostream& os, Averager<Numeric> const& value)
          {
             return os << "avg=" << value.average << " low=" << value.low
-                      << " high=" << value.high;
+                      << " high=" << value.high << " closesHigh="
+                      << (((value.NoOfClosesToHigh * 1.0) / value.count) * 100.0);
          }
          Averager<Numeric>& operator+=(timespec time)
          {
