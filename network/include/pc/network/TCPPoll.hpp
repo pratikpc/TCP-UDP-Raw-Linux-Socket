@@ -60,11 +60,14 @@ namespace pc
          template <typename Buffer>
          Result readOnly(int fd, Buffer& buffer, std::size_t size, std::size_t timeout)
          {
-         {
-            ::pollfd poll;
-            poll.fd     = fd;
-            poll.events = POLLIN;
-            return readOnly(poll, buffer, size, timeout);
+            if (timeout != 0)
+            {
+               ::pollfd poll;
+               poll.fd     = fd;
+               poll.events = POLLIN;
+               return readOnly(poll, buffer, size, timeout);
+            }
+            return network::TCP::recvOnly(fd, buffer, size, MSG_DONTWAIT);
          }
 
          template <typename Buffer>
@@ -99,10 +102,13 @@ namespace pc
          template <typename Data>
          Result write(int socket, Data const& out, std::size_t timeout)
          {
-         {
-            pollfd poll;
-            poll.fd = socket;
-            return TCPPoll::write(poll, out, timeout);
+            if (timeout != 0)
+            {
+               pollfd poll;
+               poll.fd = socket;
+               return TCPPoll::write(poll, out, timeout);
+            }
+            return network::TCP::sendRaw(socket, out, MSG_DONTWAIT);
          }
       } // namespace TCPPoll
    }    // namespace network
