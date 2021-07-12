@@ -47,7 +47,7 @@ namespace pc
          pc::threads::Mutex      writeMutex;
 
 #ifdef PC_PROFILE
-         Averager averageReadWriteTime;
+         Averager averageIntraProcessingTime;
          Averager averageReadTime;
          Averager averageWriteTime;
          Averager averageExecuteTime;
@@ -59,7 +59,7 @@ namespace pc
              socket(socket), callback(callback), terminateOnNextCycle(), terminateNow()
 #ifdef PC_PROFILE
              ,
-             averageReadWriteTime(), averageReadTime(), averageWriteTime(),
+             averageIntraProcessingTime(), averageReadTime(), averageWriteTime(),
              averageExecuteTime(), averageBufferCopyTime()
 #endif
          {
@@ -80,9 +80,11 @@ namespace pc
                   timespec const      executeStart = timer::now();
                   NetworkSendPacket   writePacket  = callback(readPacket, *this);
 #ifdef PC_PROFILE
-                  writePacket.readTimeDiff    = readPacket.readTimeDiff;
-                  writePacket.readTimeStart   = readPacket.readTimeStart;
                   writePacket.executeTimeDiff = timer::now() - executeStart;
+                  writePacket.readTimeDiff    = readPacket.readTimeDiff;
+                  writePacket.intraProcessingTimeStart =
+                      readPacket.intraProcessingTimeStart;
+                  writePacket.readTimeStart = readPacket.readTimeStart;
 #endif
                   packetsToRead.pop();
                   if (writePacket.command == Commands::Send)
@@ -134,7 +136,8 @@ namespace pc
                socket = -1;
                std::cout << "For Client ID " << clientId << std::endl;
                std::cout << "Average exec time= " << averageExecuteTime << std::endl;
-               std::cout << "Average rdwr time= " << averageReadWriteTime << std::endl;
+               std::cout << "Average proc time= " << averageIntraProcessingTime
+                         << std::endl;
                std::cout << "Average read time= " << averageReadTime << std::endl;
                std::cout << "Average writ time= " << averageWriteTime << std::endl;
                std::cout << "Average bfcp time= " << averageBufferCopyTime << std::endl;
@@ -202,7 +205,7 @@ namespace pc
                   {
                      differences.push_back(writePacket.executeTimeDiff);
                      differences.push_back(writePacket.writeTimeDiff);
-                     differences.push_back(writePacket.readWriteDiff);
+                     differences.push_back(writePacket.intraProcessingTimeDiff);
                   }
 #endif
                   timeout = 0;
@@ -221,8 +224,8 @@ namespace pc
                   // std::cout << *it << " write" << std::endl;
                   averageWriteTime += *it;
                   ++it;
-                  // std::cout << *it << " read+write" << std::endl;
-                  averageReadWriteTime += *it;
+                  // std::cout << *it << " intra-proc" << std::endl;
+                  averageIntraProcessingTime += *it;
                   ++it;
                   // std::cout << "=================" << std::endl;
                }

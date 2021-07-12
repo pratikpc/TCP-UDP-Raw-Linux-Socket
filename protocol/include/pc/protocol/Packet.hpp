@@ -23,7 +23,8 @@ namespace pc
 #ifdef PC_PROFILE
        public:
          mutable timespec readTimeStart;
-         mutable timespec readWriteDiff;
+         mutable timespec intraProcessingTimeStart;
+         mutable timespec intraProcessingTimeDiff;
          mutable timespec readTimeDiff;
          mutable timespec writeTimeDiff;
          mutable timespec executeTimeDiff;
@@ -50,7 +51,9 @@ namespace pc
 #endif
          {
 #ifdef PC_PROFILE
-            readTimeDiff = timer::now() - readTimeStart;
+            timespec startTime       = timer::now();
+            intraProcessingTimeStart = startTime;
+            readTimeDiff             = startTime - readTimeStart;
 #endif
 
             if (recvData.IsFailure())
@@ -85,7 +88,7 @@ namespace pc
              command(command), data(data)
 #ifdef PC_PROFILE
              ,
-             readTimeStart(), readWriteDiff(), readTimeDiff(), writeTimeDiff()
+             readTimeStart(), intraProcessingTimeDiff(), readTimeDiff(), writeTimeDiff()
 #endif
          {
          }
@@ -134,6 +137,9 @@ namespace pc
          }
          network::Result Write(int const socket, std::size_t timeout) const
          {
+#ifdef PC_PROFILE
+            intraProcessingTimeDiff = timer::now() - intraProcessingTimeStart;
+#endif
             std::size_t const packetSize = size();
             // Convert packet to string array
             // Convert size to buffer
@@ -148,9 +154,7 @@ namespace pc
             network::Result const result =
                 network::TCPPoll::write(socket, sizeBuffer + command + data, timeout);
 #ifdef PC_PROFILE
-            timespec const writeTimeEnd = timer::now();
-            writeTimeDiff               = result.duration;
-            readWriteDiff               = writeTimeEnd - readTimeStart;
+            writeTimeDiff = result.duration;
 #endif
             return result;
          }
