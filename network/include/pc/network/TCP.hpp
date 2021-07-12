@@ -186,8 +186,9 @@ namespace pc
             }
             return false;
          }
+         template <typename Buffer>
          static Result recvOnly(int const         socket,
-                                network::buffer&  buffer,
+                                Buffer&           buffer,
                                 std::size_t const size,
                                 int const         flags = 0)
          {
@@ -235,17 +236,18 @@ namespace pc
             result.NoOfBytes = total;
             return result;
          }
-         Result recvOnly(network::buffer&  buffer,
-                         std::size_t const size,
-                         int const         flags = 0)
+         template <typename Buffer>
+         Result recvOnly(Buffer& buffer, std::size_t const size, int const flags = 0)
          {
             return TCP::recvOnly(socket, buffer, size, flags);
          }
-         Result recv(network::buffer& buffer, int const flags = 0)
+         template <typename Buffer>
+         Result recv(Buffer& buffer, int const flags = 0)
          {
             return TCP::recvOnly(socket, buffer, buffer.size(), flags);
          }
-         Result send(std::string const& data, int const flags = 0)
+         template <typename Data>
+         Result send(Data const& data, int const flags = 0)
          {
             return TCP::sendRaw(socket, data.data(), data.size(), flags);
          }
@@ -281,8 +283,8 @@ namespace pc
             result.NoOfBytes = total;
             return result;
          }
-         static Result
-             sendRaw(int const socket, std::string const& data, int const flags = 0)
+         template <typename Data>
+         static Result sendRaw(int const socket, Data const& data, int const flags = 0)
          {
             return sendRaw(socket, data.data(), data.size(), flags);
          }
