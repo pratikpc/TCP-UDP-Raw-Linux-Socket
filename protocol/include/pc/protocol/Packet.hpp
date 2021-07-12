@@ -27,6 +27,7 @@ namespace pc
          mutable timespec readTimeDiff;
          mutable timespec writeTimeDiff;
          mutable timespec executeTimeDiff;
+         mutable timespec bufferCopyTimeDiff;
 #endif
          static std::size_t const SizeBytes = N;
 
@@ -48,6 +49,10 @@ namespace pc
              readTimeStart(readTimeStart)
 #endif
          {
+#ifdef PC_PROFILE
+            readTimeDiff = timer::now() - readTimeStart;
+#endif
+
             if (recvData.IsFailure())
             {
                if (recvData.PollFailure)
@@ -57,6 +62,9 @@ namespace pc
                   command = Commands::MajorErrors::SocketClosed;
                return;
             }
+#ifdef PC_PROFILE
+            timespec const bufferCopyTimeStart = timer::now();
+#endif
             command.resize(4);
             assert(recvData.NoOfBytes >= command.size());
             std::copy(buffer.begin(), buffer.begin() + command.size(), command.begin());
@@ -68,7 +76,7 @@ namespace pc
                          data.begin());
             }
 #ifdef PC_PROFILE
-            readTimeDiff = timer::now() - readTimeStart;
+            bufferCopyTimeDiff = timer::now() - bufferCopyTimeStart;
 #endif
          }
 
