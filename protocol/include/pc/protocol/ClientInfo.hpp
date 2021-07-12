@@ -245,11 +245,6 @@ namespace pc
                result.terminate = true;
                return result;
             }
-            if (poll.revents & POLLOUT)
-            {
-               this->WritePackets();
-               result.write = true;
-            }
             if (poll.revents & POLLIN)
             {
                this->ReadPacket(buffer);
