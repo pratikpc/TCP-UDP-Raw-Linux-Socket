@@ -29,10 +29,11 @@ namespace pc
        private:
          ClientInfoMap          clientInfos;
          mutable threads::Mutex mutex;
-         PollVec                polls;
          bool                   updateIssued;
 
        public:
+         PollVec PollsIn;
+
          template <typename UniqueSockets>
          void close(UniqueSockets&     socketsToRemove,
                     Config::balancerT* balancer,
@@ -104,23 +105,22 @@ namespace pc
                   ++it;
             }
          }
-         PollVec& Polls()
+         void Update()
          {
             MutexGuard lock(mutex);
             if (updateIssued)
             {
-               polls.clear();
+               PollsIn.clear();
                for (const_iterator it = clientInfos.begin(); it != clientInfos.end();
                     ++it)
                {
                   pollfd pollAdd;
                   pollAdd.fd     = it->first;
                   pollAdd.events = POLLIN;
-                  polls.push_back(pollAdd);
+                  PollsIn.push_back(pollAdd);
                }
                updateIssued = false;
             }
-            return polls;
          }
 
          void Execute()

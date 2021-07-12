@@ -75,7 +75,8 @@ namespace pc
          template <typename Buffer>
          void Poll(Buffer& buffer)
          {
-            std::vector<pollfd>& polls = clientInfos.Polls();
+            clientInfos.Update();
+            std::vector<pollfd>& polls = clientInfos.PollsIn;
             if (network::TCPPoll::poll(polls, timeout) == 0)
                // Timeout
                return;
