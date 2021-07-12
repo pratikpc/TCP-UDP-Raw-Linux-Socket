@@ -98,6 +98,10 @@ namespace pc
             // Upon termination
             closeSocketConnections(socketsToTerminate);
          }
+         void Write()
+         {
+            return clientInfos.Write(timeout);
+         }
       };
    } // namespace protocol
 } // namespace pc

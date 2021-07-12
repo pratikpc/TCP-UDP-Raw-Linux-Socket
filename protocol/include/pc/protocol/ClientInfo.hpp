@@ -181,7 +181,7 @@ namespace pc
             averageBufferCopyTime += packet.bufferCopyTimeDiff;
          }
 
-         void WritePackets()
+         void WritePackets(std::time_t timeout)
          {
 #ifdef PC_PROFILE
             std::vector<timespec> differences;
@@ -193,7 +193,7 @@ namespace pc
                while (!packetsToWrite.empty())
                {
                   NetworkPacket const&  writePacket = packetsToWrite.front();
-                  network::Result const result      = writePacket.Write(socket, 0);
+                  network::Result const result      = writePacket.Write(socket, timeout);
                   if (result.SocketClosed)
                      return Terminate();
 #ifdef PC_PROFILE

@@ -115,7 +115,7 @@ namespace pc
                {
                   pollfd pollAdd;
                   pollAdd.fd     = it->first;
-                  pollAdd.events = POLLIN | POLLOUT;
+                  pollAdd.events = POLLIN;
                   polls.push_back(pollAdd);
                }
                updateIssued = false;
@@ -130,12 +130,19 @@ namespace pc
                it->second.executeCallbacks();
          }
 
+         void Write(std::time_t timeout)
+         {
+            pc::threads::MutexGuard lock(mutex);
+            for (iterator it = clientInfos.begin(); it != clientInfos.end(); ++it)
+               it->second.WritePackets(timeout);
+         }
+
          std::size_t size() const
          {
             MutexGuard lock(mutex);
             return clientInfos.size();
          }
-         template<typename Buffer>
+         template <typename Buffer>
          ClientPollResult OnReadPoll(::pollfd poll, Buffer& buffer)
          {
             MutexGuard lock(mutex);

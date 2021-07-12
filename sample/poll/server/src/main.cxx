@@ -42,6 +42,7 @@ void* PollAndExecute(void* arg)
    {
       poll.Poll(buffer);
       poll.Execute();
+      poll.Write();
    }
    return NULL;
 }
