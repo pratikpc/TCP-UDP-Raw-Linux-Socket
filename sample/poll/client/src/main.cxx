@@ -88,7 +88,7 @@ void* func(void* clientIndexPtr)
 #include <pc/thread/Thread.hpp>
 int main()
 {
-   std::vector<int> count(2);
+   std::vector<int> count(1);
 
    std::vector<pc::threads::Thread> threads;
    for (std::size_t i = 0; i < count.size(); ++i)

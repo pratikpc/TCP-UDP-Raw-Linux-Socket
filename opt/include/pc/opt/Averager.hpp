@@ -39,7 +39,7 @@ namespace pc
 #ifdef PC_PROFILE
          friend std::ostream& operator<<(std::ostream& os, Averager<Numeric> const& value)
          {
-            return os << "avg=" << value.average << " low=" << value.low
+            return os << std::setprecision(4) << "avg=" << value.average << " low=" << value.low
                       << " high=" << value.high << " closesHigh="
                       << (((value.NoOfClosesToHigh * 1.0) / value.count) * 100.0);
          }

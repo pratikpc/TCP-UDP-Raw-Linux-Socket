@@ -1,4 +1,5 @@
 #include <cstdlib>
+#include <iomanip>
 #include <iostream>
 #include <sstream>
 
@@ -78,7 +79,7 @@ int main()
    server.speedUp();
    server.listen();
 
-   ProtocolVec protocols(/*get_nprocs()*/ 2);
+   ProtocolVec protocols(/*get_nprocs()*/ 1);
 
    pc::balancer::priority balancer(protocols.size());
 

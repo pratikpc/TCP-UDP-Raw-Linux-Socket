@@ -11,13 +11,14 @@ void* childSocketExec(void* arg)
 {
    pc::network::TCP* child = (pc::network::TCP*)arg;
    std::cout << "Accepted " << child->socket << "\n";
-   pc::network::buffer    recv(1000);
+   pc::network::buffer recv(1000);
    pc::network::Result result;
+   std::string const   data("nokia tyre");
    while (true)
    {
       std::cout << "\nMessage: ";
       sleep(3);
-      child->send("nokia tyre");
+      child->send(data);
       result = child->recv(recv);
       if (result.IsFailure())
          break;
