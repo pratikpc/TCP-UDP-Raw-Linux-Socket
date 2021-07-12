@@ -29,6 +29,14 @@ namespace pc
              NoOfBytes(0), SocketClosed(false), PollFailure(false), DeadlineFailure(false), Ignore(false)
          {
          }
+         Result& JoinInto(Result const& other)
+         {
+            SocketClosed    = SocketClosed || other.SocketClosed;
+            PollFailure     = PollFailure || other.PollFailure;
+            DeadlineFailure = DeadlineFailure || other.DeadlineFailure;
+            Ignore          = Ignore || other.Ignore;
+            return *this;
+         }
       };
    } // namespace network
 } // namespace pc
