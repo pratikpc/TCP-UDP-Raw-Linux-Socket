@@ -47,10 +47,11 @@ namespace pc
          pc::threads::Mutex      writeMutex;
 
 #ifdef PC_PROFILE
-         Averager averageReadWriteTimeNs;
-         Averager averageReadTimeNs;
-         Averager averageWriteTimeNs;
-         Averager averageExecuteTimeNs;
+         Averager averageReadWriteTime;
+         Averager averageReadTime;
+         Averager averageWriteTime;
+         Averager averageExecuteTime;
+         Averager averageBufferCopyTime;
 #endif
 
        public:
@@ -58,8 +59,8 @@ namespace pc
              socket(socket), callback(callback), terminateOnNextCycle(), terminateNow()
 #ifdef PC_PROFILE
              ,
-             averageReadWriteTimeNs(), averageReadTimeNs(), averageWriteTimeNs(),
-             averageExecuteTimeNs()
+             averageReadWriteTime(), averageReadTime(), averageWriteTime(),
+             averageExecuteTime(), averageBufferCopyTime()
 #endif
          {
             ++deadline;
@@ -131,10 +132,12 @@ namespace pc
                terminateNow = true;
                ::close(socket);
                socket = -1;
-               std::cout << "Average exec time= " << averageExecuteTimeNs << std::endl;
-               std::cout << "Average rdwr time= " << averageReadWriteTimeNs << std::endl;
-               std::cout << "Average read time= " << averageReadTimeNs << std::endl;
-               std::cout << "Average writ time= " << averageWriteTimeNs << std::endl;
+               std::cout << "For Client ID " << clientId << std::endl;
+               std::cout << "Average exec time= " << averageExecuteTime << std::endl;
+               std::cout << "Average rdwr time= " << averageReadWriteTime << std::endl;
+               std::cout << "Average read time= " << averageReadTime << std::endl;
+               std::cout << "Average writ time= " << averageWriteTime << std::endl;
+               std::cout << "Average bfcp time= " << averageBufferCopyTime << std::endl;
                std::cout << "=================" << std::endl;
             }
          }
@@ -147,7 +150,7 @@ namespace pc
 
             NetworkPacket packet = NetworkPacket::Read(socket, buffer, 0);
 #ifdef PC_PROFILE
-            averageReadTimeNs += packet.readTimeDiff;
+            averageReadTime += packet.readTimeDiff;
             // std::cout << packet.readTimeDiff << " read" << std::endl;
 #endif
             if (packet.command == Commands::Blank)
@@ -174,6 +177,7 @@ namespace pc
                pc::threads::MutexGuard guard(readMutex);
                packetsToRead.push(packet);
             }
+            averageBufferCopyTime += packet.bufferCopyTimeDiff;
          }
 
          void WritePackets()
@@ -210,13 +214,13 @@ namespace pc
                     it != differences.end();)
                {
                   // std::cout << *it << " execute" << std::endl;
-                  averageExecuteTimeNs += *it;
+                  averageExecuteTime += *it;
                   ++it;
                   // std::cout << *it << " write" << std::endl;
-                  averageWriteTimeNs += *it;
+                  averageWriteTime += *it;
                   ++it;
                   // std::cout << *it << " read+write" << std::endl;
-                  averageReadWriteTimeNs += *it;
+                  averageReadWriteTime += *it;
                   ++it;
                   // std::cout << "=================" << std::endl;
                }
