@@ -2,7 +2,6 @@
 
 #include <pc/network/Result.hpp>
 #include <pc/network/Socket.hpp>
-#include <pc/network/types.hpp>
 
 #include <cerrno>
 #include <netinet/in.h>

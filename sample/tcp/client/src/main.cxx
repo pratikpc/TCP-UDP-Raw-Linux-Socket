@@ -1,6 +1,7 @@
 #include <iostream>
 
 #include <pc/network/TCP.hpp>
+#include <pc/network/types.hpp>
 #include <pc/network/ip.hpp>
 
 #include <cstdlib>

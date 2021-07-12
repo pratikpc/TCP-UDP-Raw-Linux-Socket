@@ -3,6 +3,7 @@
 
 #include <pc/network/TCP.hpp>
 #include <pc/network/ip.hpp>
+#include <pc/network/types.hpp>
 
 #include <pc/thread/Thread.hpp>
 
