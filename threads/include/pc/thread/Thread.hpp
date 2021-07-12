@@ -26,6 +26,16 @@ namespace pc
          {
             other.cancellable = false;
          }
+         bool StickToCore(std::size_t const core)
+         {
+            assert(core_id < ProcessorCount());
+
+            cpu_set_t cpuset;
+            CPU_ZERO(&cpuset);
+            CPU_SET(core, &cpuset);
+
+            return pthread_setaffinity_np(threadId, sizeof(cpu_set_t), &cpuset) == 0;
+         }
          bool detach()
          {
             cancellable = false;

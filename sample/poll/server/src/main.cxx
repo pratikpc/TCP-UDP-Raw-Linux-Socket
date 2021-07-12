@@ -103,10 +103,12 @@ int main()
       it->config        = &config;
       it->balancerIndex = (it - protocols.begin());
       it->timeout       = 10;
-      pc::threads::Thread(&PollAndExecute, &(*it)).detach();
+      pc::threads::Thread thread(&PollAndExecute, &(*it));
+      thread.StickToCore(2);
+      thread.detach();
    }
    pc::threads::Thread healthCheckThread(&execHealthCheck, &protocols);
-
+   healthCheckThread.StickToCore(1);
    while (true)
    {
       std::cout << "Try to connect" << std::endl;
