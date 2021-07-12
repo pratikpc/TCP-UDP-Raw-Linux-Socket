@@ -5,7 +5,6 @@
 #include <poll.h>
 
 #include <pc/network/TCP.hpp>
-#include <pc/network/types.hpp>
 
 namespace pc
 {
@@ -40,8 +39,9 @@ namespace pc
             return TCPPoll::poll(data, size, timeout);
          }
 
+         template <typename Buffer>
          Result readOnly(::pollfd&   poll,
-                         buffer&     buffer,
+                         Buffer&     buffer,
                          std::size_t size,
                          std::size_t timeout)
          {
@@ -57,7 +57,9 @@ namespace pc
             }
             return network::TCP::recvOnly(poll.fd, buffer, size, MSG_DONTWAIT);
          }
-         Result readOnly(int fd, buffer& buffer, std::size_t size, std::size_t timeout)
+         template <typename Buffer>
+         Result readOnly(int fd, Buffer& buffer, std::size_t size, std::size_t timeout)
+         {
          {
             ::pollfd poll;
             poll.fd     = fd;
@@ -65,17 +67,21 @@ namespace pc
             return readOnly(poll, buffer, size, timeout);
          }
 
-         Result read(pollfd poll, buffer& buffer, std::size_t timeout)
+         template <typename Buffer>
+         Result read(pollfd poll, Buffer& buffer, std::size_t timeout)
          {
             return TCPPoll::readOnly(poll, buffer, buffer.size(), timeout);
          }
-         Result read(int socket, buffer& buffer, std::size_t timeout)
+         template <typename Buffer>
+         Result read(int socket, Buffer& buffer, std::size_t timeout)
          {
             pollfd poll;
             poll.fd = socket;
             return TCPPoll::read(poll, buffer, timeout);
          }
-         Result write(pollfd& poll, std::string const& out, std::size_t const timeout)
+
+         template <typename Data>
+         Result write(pollfd& poll, Data const& out, std::size_t const timeout)
          {
             if (timeout != 0)
             {
@@ -90,7 +96,9 @@ namespace pc
             }
             return network::TCP::sendRaw(poll.fd, out, MSG_DONTWAIT);
          }
-         Result write(int socket, std::string const& out, std::size_t timeout)
+         template <typename Data>
+         Result write(int socket, Data const& out, std::size_t timeout)
+         {
          {
             pollfd poll;
             poll.fd = socket;

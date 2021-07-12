@@ -4,6 +4,7 @@
 
 #include <pc/network/TCP.hpp>
 #include <pc/network/ip.hpp>
+#include <pc/network/types.hpp>
 #include <pc/protocol/ServerLearnProtocol.hpp>
 
 #include <pc/thread/Thread.hpp>
@@ -34,10 +35,12 @@ protocol::NetworkSendPacket pollCallback(protocol::NetworkPacket const& packet,
 
 void* PollAndExecute(void* arg)
 {
+   using namespace pc::network;
    Protocol& poll = *((Protocol*)arg);
+   buffer    buffer(UINT16_MAX);
    while (true)
    {
-      poll.Poll();
+      poll.Poll(buffer);
       poll.Execute();
    }
    return NULL;

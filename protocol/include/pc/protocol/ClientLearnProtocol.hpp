@@ -33,7 +33,8 @@ namespace pc
          {
             assert(!this->server.invalid());
          }
-         NetworkPacket Read(network::buffer& buffer)
+         template <typename Buffer>
+         NetworkPacket Read(Buffer& buffer)
          {
             // If deadline crossed, sleep
             if (deadline)
@@ -59,15 +60,16 @@ namespace pc
             ++deadline;
             return packet.Write(server, timeout);
          }
-         network::Result SetupConnection()
+
+         template <typename Buffer>
+         network::Result SetupConnection(Buffer& buffer)
          {
             NetworkPacket const ackAck(Commands::Setup::Ack);
 
             network::Result result = Write(ackAck);
             if (result.IsFailure())
                return result;
-            network::buffer data(40);
-            NetworkPacket   ackSyn = NetworkPacket::Read(server, data, timeout);
+            NetworkPacket ackSyn = NetworkPacket::Read(server, buffer, timeout);
             if (ackSyn.command != Commands::Setup::Syn)
             {
                result.SocketClosed = true;
@@ -77,7 +79,7 @@ namespace pc
             result = clientIdSend.Write(server, timeout);
             if (result.IsFailure())
                return result;
-            NetworkPacket join = NetworkPacket::Read(server, data, timeout);
+            NetworkPacket join = NetworkPacket::Read(server, buffer, timeout);
             if (join.command != Commands::Setup::Join)
             {
                result.SocketClosed = true;

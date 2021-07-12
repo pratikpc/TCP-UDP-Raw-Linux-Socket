@@ -35,8 +35,9 @@ namespace pc
          {
             return command.size() + data.size();
          }
-         RawPacket(network::buffer const& buffer,
-                   network::Result        recvData
+         template <typename Buffer>
+         RawPacket(Buffer const&   buffer,
+                   network::Result recvData
 #ifdef PC_PROFILE
                    ,
                    timespec const& readTimeStart
@@ -80,13 +81,15 @@ namespace pc
 #endif
          {
          }
+         template <typename Buffer>
          static RawPacket<N>
-             Read(::pollfd const poll, network::buffer& buffer, std::size_t const timeout)
+             Read(::pollfd const poll, Buffer& buffer, std::size_t const timeout)
          {
             return RawPacket<N>::Read(poll.fd, buffer, timeout);
          }
+         template <typename Buffer>
          static RawPacket<N>
-             Read(int const socket, network::buffer& buffer, std::size_t const timeout)
+             Read(int const socket, Buffer& buffer, std::size_t const timeout)
          {
 #ifdef PC_PROFILE
             timespec const readTimeStart = timer::now();

@@ -72,7 +72,8 @@ namespace pc
          {
             return clientInfos.Execute();
          }
-         void Poll()
+         template <typename Buffer>
+         void Poll(Buffer& buffer)
          {
             std::vector<pollfd>& polls = clientInfos.Polls();
             if (network::TCPPoll::poll(polls, timeout) == 0)
@@ -85,7 +86,7 @@ namespace pc
             for (PollConstIterator it = polls.begin(); it != polls.end(); ++it)
             {
                ::pollfd const   poll   = *it;
-               ClientPollResult result = clientInfos.OnPoll(poll);
+               ClientPollResult result = clientInfos.OnReadPoll(poll, buffer);
                if (result.read)
                   socketsWithReadSuccess.insert(poll.fd);
                if (result.terminate)

@@ -1,13 +1,12 @@
+#include <cstdlib>
+#include <ctime>
 #include <iostream>
+#include <sstream>
 
 #include <pc/network/TCP.hpp>
 #include <pc/network/ip.hpp>
-
+#include <pc/network/types.hpp>
 #include <pc/protocol/ClientLearnProtocol.hpp>
-
-#include <cstdlib>
-#include <ctime>
-#include <sstream>
 
 #include <pc/lexical_cast.hpp>
 
@@ -39,11 +38,12 @@ void* func(void* clientIndexPtr)
    try
    {
       pc::protocol::ClientLearnProtocol protocol(server, clientId);
-      protocol.timeout           = 10;
-      pc::network::Result result = protocol.SetupConnection();
+      protocol.timeout = 10;
+      pc::network::buffer buffer(UINT16_MAX);
+
+      pc::network::Result result = protocol.SetupConnection(buffer);
       if (result.IsFailure())
          throw std::runtime_error("Setup failed");
-      pc::network::buffer buffer(UINT16_MAX);
       for (std::size_t i = 0; true; i++)
       {
          std::cout << "Message sending " << i << " at " << protocol.clientId << std::endl;

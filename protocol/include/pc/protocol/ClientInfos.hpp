@@ -135,7 +135,8 @@ namespace pc
             MutexGuard lock(mutex);
             return clientInfos.size();
          }
-         ClientPollResult OnPoll(::pollfd poll)
+         template<typename Buffer>
+         ClientPollResult OnReadPoll(::pollfd poll, Buffer& buffer)
          {
             MutexGuard lock(mutex);
             iterator   it = clientInfos.find(poll.fd);
@@ -145,7 +146,7 @@ namespace pc
                result.terminate = true;
                return result;
             }
-            return it->second.OnPoll(poll);
+            return it->second.OnReadPoll(poll, buffer);
          }
       };
    } // namespace protocol

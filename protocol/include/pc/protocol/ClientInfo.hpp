@@ -141,12 +141,13 @@ namespace pc
                std::cout << "=================" << std::endl;
             }
          }
-         void ReadPacket()
+
+         template <typename Buffer>
+         void ReadPacket(Buffer& buffer)
          {
             if (!pc::network::TCP::containsDataToRead(socket))
                return Terminate();
             ++deadline;
-            network::buffer buffer(UINT16_MAX);
 
             NetworkPacket packet = NetworkPacket::Read(socket, buffer, 0);
 #ifdef PC_PROFILE
@@ -228,7 +229,8 @@ namespace pc
 #endif
          }
 
-         ClientPollResult OnPoll(::pollfd const& poll)
+         template <typename Buffer>
+         ClientPollResult OnReadPoll(::pollfd const& poll, Buffer& buffer)
          {
             ClientPollResult result;
             if (terminateNow)
@@ -250,7 +252,7 @@ namespace pc
             }
             if (poll.revents & POLLIN)
             {
-               this->ReadPacket();
+               this->ReadPacket(buffer);
                result.read = true;
             }
             return result;
