@@ -12,8 +12,6 @@
 
 #include <pc/balancer/priority.hpp>
 
-#include <sys/sysinfo.h>
-
 namespace protocol = pc::protocol;
 typedef protocol::ServerLearnProtocol Protocol;
 typedef std::vector<Protocol>         ProtocolVec;
@@ -79,7 +77,7 @@ int main()
    server.speedUp();
    server.listen();
 
-   ProtocolVec protocols(/*get_nprocs()*/ 1);
+   ProtocolVec protocols(/*pc::threads::ProcessorCount()*/ 1);
 
    pc::balancer::priority balancer(protocols.size());
 

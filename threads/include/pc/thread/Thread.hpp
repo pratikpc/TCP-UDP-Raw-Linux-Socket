@@ -1,11 +1,16 @@
 #pragma once
 
 #include <pthread.h>
+#include <sys/sysinfo.h>
 
 namespace pc
 {
    namespace threads
    {
+      int ProcessorCount()
+      {
+         return get_nprocs();
+      }
       class Thread
       {
          pthread_t    threadId;
