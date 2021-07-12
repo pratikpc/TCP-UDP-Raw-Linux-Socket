@@ -230,6 +230,11 @@ namespace pc
 #endif
          }
 
+         bool CheckSocket(::pollfd const& poll)
+         {
+            return poll.revents & POLLHUP || poll.revents & POLLNVAL || deadlineBreach();
+         }
+
          template <typename Buffer>
          ClientPollResult OnReadPoll(::pollfd const& poll, Buffer& buffer)
          {
@@ -239,9 +244,8 @@ namespace pc
                result.terminate = true;
                return result;
             }
-            if (poll.revents & POLLHUP || poll.revents & POLLNVAL || deadlineBreach())
+            if (CheckSocket(poll))
             {
-               // Terminate on next health check
                Terminate();
                result.terminate = true;
                return result;
