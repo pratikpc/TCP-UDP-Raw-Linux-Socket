@@ -26,6 +26,21 @@ timespec operator-(timespec const& a, timespec const& b)
    }
    return result;
 }
+timespec operator+(timespec const& a, timespec const& b)
+{
+   timespec result;
+   result.tv_sec  = a.tv_sec + b.tv_sec;
+   result.tv_nsec = a.tv_nsec + b.tv_nsec;
+   if (result.tv_nsec >= 1000000000L)
+   {
+      ++result.tv_sec;
+      result.tv_nsec -= 1000000000L;
+   }
+   return result;
+}
+#endif
+
+#ifdef PC_PROFILE
 #   include <ostream>
 std::ostream& operator<<(std::ostream& os, timespec const& display)
 {
