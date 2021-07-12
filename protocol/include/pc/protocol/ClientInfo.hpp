@@ -52,6 +52,7 @@ namespace pc
          Averager averageWriteTime;
          Averager averageExecuteTime;
          Averager averageBufferCopyTime;
+         Averager averageAccumulatedTime;
 #endif
 
        public:
@@ -141,6 +142,7 @@ namespace pc
                std::cout << "Average read time= " << averageReadTime << std::endl;
                std::cout << "Average writ time= " << averageWriteTime << std::endl;
                std::cout << "Average bfcp time= " << averageBufferCopyTime << std::endl;
+               std::cout << "Average sumt time= " << averageAccumulatedTime << std::endl;
                std::cout << "=================" << std::endl;
             }
          }
@@ -206,6 +208,9 @@ namespace pc
                      differences.push_back(writePacket.executeTimeDiff);
                      differences.push_back(writePacket.writeTimeDiff);
                      differences.push_back(writePacket.intraProcessingTimeDiff);
+                     differences.push_back(writePacket.intraProcessingTimeDiff +
+                                           writePacket.executeTimeDiff +
+                                           writePacket.writeTimeDiff);
                   }
 #endif
                   timeout = 0;
@@ -226,6 +231,9 @@ namespace pc
                   ++it;
                   // std::cout << *it << " intra-proc" << std::endl;
                   averageIntraProcessingTime += *it;
+                  ++it;
+                  // std::cout << *it << " accumulated-time" << std::endl;
+                  averageAccumulatedTime += *it;
                   ++it;
                   // std::cout << "=================" << std::endl;
                }
