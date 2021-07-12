@@ -123,9 +123,6 @@ namespace pc
          }
          network::Result Write(int const socket, std::size_t timeout) const
          {
-#ifdef PC_PROFILE
-            timespec const writeTimeStart = timer::now();
-#endif
             std::size_t const packetSize = size();
             // Convert packet to string array
             // Convert size to buffer
@@ -141,7 +138,7 @@ namespace pc
                 network::TCPPoll::write(socket, sizeBuffer + command + data, timeout);
 #ifdef PC_PROFILE
             timespec const writeTimeEnd = timer::now();
-            writeTimeDiff               = writeTimeEnd - writeTimeStart;
+            writeTimeDiff               = result.duration;
             readWriteDiff               = writeTimeEnd - readTimeStart;
 #endif
             return result;

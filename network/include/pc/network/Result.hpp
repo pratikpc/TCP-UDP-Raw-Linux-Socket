@@ -14,6 +14,9 @@ namespace pc
          bool PollFailure;
          bool DeadlineFailure;
          bool Ignore;
+#ifdef PC_PROFILE
+         timespec duration;
+#endif
 
          bool IsFailure() const
          {
@@ -26,7 +29,12 @@ namespace pc
          }
 
          Result() :
-             NoOfBytes(0), SocketClosed(false), PollFailure(false), DeadlineFailure(false), Ignore(false)
+             NoOfBytes(0), SocketClosed(false), PollFailure(false),
+             DeadlineFailure(false), Ignore(false)
+#ifdef PC_PROFILE
+             ,
+             duration()
+#endif
          {
          }
          Result& JoinInto(Result const& other)

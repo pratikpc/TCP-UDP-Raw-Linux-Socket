@@ -13,6 +13,7 @@
 
 #ifdef PC_PROFILE
 #   include <cstring>
+#   include <pc/timer/timer.hpp>
 #endif
 
 namespace pc
@@ -195,6 +196,9 @@ namespace pc
             std::size_t asyncFailCounter = 0;
             std::size_t majorFailCounter = 0;
             Result      result;
+#ifdef PC_PROFILE
+            timespec start = timer::now();
+#endif
             // Async recv might not recv all values
             // We are interested in
             while (total < size)
@@ -233,6 +237,9 @@ namespace pc
                }
             }
             result.NoOfBytes = total;
+#ifdef PC_PROFILE
+            result.duration = timer::now() - start;
+#endif
             return result;
          }
          template <typename Buffer>
@@ -263,7 +270,13 @@ namespace pc
             // Send might not send all values
             while (total < len)
             {
+#ifdef PC_PROFILE
+               timespec start = timer::now();
+#endif
                ssize_t const sent = ::send(socket, msg, len, flags);
+#ifdef PC_PROFILE
+               result.duration = timer::now() - start;
+#endif
                if (sent == -1)
                {
                   if (!TCP::HandleError(result, asyncFailCounter, majorFailCounter))
