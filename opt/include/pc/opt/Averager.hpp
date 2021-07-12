@@ -32,16 +32,17 @@ namespace pc
                low = incBy;
             if (incBy > high)
                high = incBy;
-            if (incBy >= 0.8 * high)
+            if (incBy >= 0.5 * high)
                ++NoOfClosesToHigh;
             return *this;
          }
 #ifdef PC_PROFILE
          friend std::ostream& operator<<(std::ostream& os, Averager<Numeric> const& value)
          {
-            return os << std::setprecision(4) << "avg=" << value.average << " low=" << value.low
-                      << " high=" << value.high << " closesHigh="
-                      << (((value.NoOfClosesToHigh * 1.0) / value.count) * 100.0);
+            return os << std::setprecision(4) << "avg=" << value.average
+                      << " low=" << value.low << " high=" << value.high << " closesHigh="
+                      << (((value.NoOfClosesToHigh * 1.0) / value.count) * 100.0)
+                      << " closeCount=" << value.NoOfClosesToHigh;
          }
          Averager<Numeric>& operator+=(timespec time)
          {
