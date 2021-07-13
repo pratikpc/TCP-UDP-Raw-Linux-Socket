@@ -1,10 +1,10 @@
 #pragma once
 
 #include <cstdlib>
-#include <string>
 #include <sstream>
+#include <string>
 
-#include <pc/templates.hpp>
+#include <pc/stl/templates.hpp>
 
 namespace pc
 {
@@ -25,7 +25,7 @@ namespace pc
    }
 
    template <typename T>
-   typename enable_if<!is_same<T, std::string>::value, std::string>::type
+   typename stl::enable_if<!stl::is_same<T, std::string>::value, std::string>::type
        lexical_cast(T value)
    {
       std::ostringstream stream;
