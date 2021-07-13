@@ -30,7 +30,7 @@ namespace pc
 
          operator pollfd() const
          {
-            pollfd poll;
+            ::pollfd poll;
             poll.fd = socket;
             return poll;
          }
@@ -92,7 +92,11 @@ namespace pc
                                 std::size_t const size,
                                 int const         flags = 0)
          {
-            ssize_t opt = ::recv(socket, input, size, flags);
+#ifndef PC_NETWORK_MOCK
+            ssize_t const opt = ::recv(socket, input, size, flags);
+#else
+            ssize_t const opt = size;
+#endif
             if (opt == -1)
                throw std::runtime_error("Unable to read data");
             return opt;
@@ -203,8 +207,12 @@ namespace pc
             // We are interested in
             while (total < size)
             {
+#ifndef PC_NETWORK_MOCK
                ssize_t const recv =
                    ::recv(socket, buffer.data() + total, size - total, flags);
+#else
+               ssize_t const recv = size;
+#endif
                if (recv == 0)
                   break;
                // If this is not Async
@@ -273,7 +281,12 @@ namespace pc
 #ifdef PC_PROFILE
                timespec start = timer::now();
 #endif
+
+#ifndef PC_NETWORK_MOCK
                ssize_t const sent = ::send(socket, msg, len, flags);
+#else
+               ssize_t const sent = len;
+#endif
 #ifdef PC_PROFILE
                result.duration = timer::now() - start;
 #endif
@@ -305,7 +318,11 @@ namespace pc
                                           size_t const len,
                                           int const    flags = 0)
          {
-            std::ptrdiff_t const sent = ::send(socket, msg, len, flags);
+#ifndef PC_NETWORK_MOCK
+            ssize_t const sent = ::send(socket, msg, len, flags);
+#else
+            ssize_t const sent = len;
+#endif
             if (sent == -1)
                throw std::invalid_argument("Unable to send");
             return sent;

@@ -37,4 +37,5 @@ target_compile_options(${PROJECT_NAME}
 target_compile_definitions(${PROJECT_NAME}
  PRIVATE
   PC_PROFILE
+  PC_NETWORK_MOCK
 )

@@ -37,6 +37,11 @@ void* PollAndExecute(void* arg)
    using namespace pc::network;
    Protocol& poll = *((Protocol*)arg);
    buffer    buffer(UINT16_MAX);
+#ifdef PC_NETWORK_MOCK
+   pc::protocol::NetworkPacket packet(pc::protocol::Commands::Send,
+                                      repeat("Hi this is PC. Start working", 10));
+   strcpy(buffer.data(), (packet.command + packet.data).c_str());
+#endif
    while (true)
    {
       poll.Poll(buffer);

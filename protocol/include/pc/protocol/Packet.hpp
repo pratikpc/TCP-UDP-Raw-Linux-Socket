@@ -113,11 +113,16 @@ namespace pc
             {
                // buffer[0] << 0 + buffer[1] << CHAR_BIT
                // Convert char array to integer
+#ifndef PC_NETWORK_MOCK
                std::size_t bytesToRead = 0;
                for (std::size_t i = 0; i < N; ++i)
                   bytesToRead |= (((unsigned char)buffer[i]) << (CHAR_BIT * i));
+#else
+               // Assume buffer contains 20 bytes at least
+               // When mocking
+               std::size_t bytesToRead = 20;
+#endif
                assert(buffer.size() > bytesToRead);
-
                recvData =
                    network::TCPPoll::readOnly(socket, buffer, bytesToRead, timeout);
                if (recvData.IsSuccess())

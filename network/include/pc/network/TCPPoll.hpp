@@ -20,9 +20,15 @@ namespace pc
                sleep(timeout);
                return 0; // Timeout
             }
+#ifndef PC_NETWORK_MOCK
             int const rv = ::poll(polls, size, timeout * 1000);
             if (rv == -1)
                throw std::runtime_error("Poll failed");
+#else
+            int const rv = size;
+            for (std::size_t i = 0; i < size; ++i)
+               polls[i].revents = polls[i].events;
+#endif
             return rv;
          }
          int poll(std::vector<pollfd>& polls, std::size_t timeout)

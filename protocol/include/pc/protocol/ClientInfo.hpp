@@ -140,7 +140,7 @@ namespace pc
 #ifdef PC_PROFILE
                std::cout << "For Client ID " << clientId << std::endl;
                std::cout << "Average exec time= " << averageExecuteTime << std::endl;
-               std::cout << "Average proc time= " << averageIntraProcessingTime
+               std::cout << "Average intr time= " << averageIntraProcessingTime
                          << std::endl;
                std::cout << "Average read time= " << averageReadTime << std::endl;
                std::cout << "Average writ time= " << averageWriteTime << std::endl;
