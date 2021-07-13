@@ -183,7 +183,8 @@ namespace pc
          network::Result Write(int const socket, std::size_t timeout) const
          {
 #ifdef PC_PROFILE
-            intraProcessingTimeDiff = timer::now() - intraProcessingTimeStart;
+            intraProcessingTimeDiff =
+                timer::now() - intraProcessingTimeStart - executeTimeDiff;
 #endif
             network::Result const result =
                 network::TCPPoll::write(socket, Marshall(), timeout);
