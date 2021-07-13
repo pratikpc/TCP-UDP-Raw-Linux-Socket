@@ -70,11 +70,6 @@ namespace pc
              readTimeDiff(readTimeDiff)
 #endif
          {
-#ifdef PC_PROFILE
-            timespec startTime       = timer::now();
-            intraProcessingTimeStart = startTime;
-#endif
-
             if (recvData.IsFailure())
             {
                if (recvData.PollFailure)
@@ -98,7 +93,9 @@ namespace pc
                          data.begin());
             }
 #ifdef PC_PROFILE
-            bufferCopyTimeDiff = timer::now() - bufferCopyTimeStart;
+            timespec nowTime         = timer::now();
+            intraProcessingTimeStart = nowTime;
+            bufferCopyTimeDiff       = nowTime - bufferCopyTimeStart;
 #endif
          }
 
