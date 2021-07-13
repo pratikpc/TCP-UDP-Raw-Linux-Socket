@@ -215,7 +215,8 @@ namespace pc
                      differences.push_back(writePacket.intraProcessingTimeDiff);
                      differences.push_back(writePacket.intraProcessingTimeDiff +
                                            writePacket.executeTimeDiff +
-                                           writePacket.writeTimeDiff);
+                                           writePacket.writeTimeDiff +
+                                           writePacket.readTimeDiff);
                   }
 #endif
                   timeout = 0;
