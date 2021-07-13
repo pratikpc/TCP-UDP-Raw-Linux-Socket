@@ -87,7 +87,6 @@ namespace pc
                   writePacket.readTimeDiff    = readPacket.readTimeDiff;
                   writePacket.intraProcessingTimeStart =
                       readPacket.intraProcessingTimeStart;
-                  writePacket.readTimeStart = readPacket.readTimeStart;
 #endif
                   packetsToRead.pop();
                   if (writePacket.command == Commands::Send)

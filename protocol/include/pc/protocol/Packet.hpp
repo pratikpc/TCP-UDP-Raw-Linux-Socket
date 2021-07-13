@@ -22,7 +22,6 @@ namespace pc
          std::string data;
 #ifdef PC_PROFILE
        public:
-         mutable timespec readTimeStart;
          mutable timespec readTimeDiff;
          mutable timespec intraProcessingTimeStart;
          mutable timespec intraProcessingTimeDiff;
@@ -42,18 +41,17 @@ namespace pc
                    network::Result recvData
 #ifdef PC_PROFILE
                    ,
-                   timespec const& readTimeStart
+                   timespec const& readTimeDiff
 #endif
                    )
 #ifdef PC_PROFILE
              :
-             readTimeStart(readTimeStart)
+             readTimeDiff(readTimeDiff)
 #endif
          {
 #ifdef PC_PROFILE
             timespec startTime       = timer::now();
             intraProcessingTimeStart = startTime;
-            readTimeDiff             = startTime - readTimeStart;
 #endif
 
             if (recvData.IsFailure())
@@ -88,9 +86,8 @@ namespace pc
              command(command), data(data)
 #ifdef PC_PROFILE
              ,
-             readTimeStart(), readTimeDiff(), intraProcessingTimeStart(),
-             intraProcessingTimeDiff(), writeTimeDiff(), executeTimeDiff(),
-             bufferCopyTimeDiff()
+             readTimeDiff(), intraProcessingTimeStart(), intraProcessingTimeDiff(),
+             writeTimeDiff(), executeTimeDiff(), bufferCopyTimeDiff()
 #endif
          {
          }
@@ -104,11 +101,11 @@ namespace pc
          static RawPacket<N>
              Read(int const socket, Buffer& buffer, std::size_t const timeout)
          {
-#ifdef PC_PROFILE
-            timespec const readTimeStart = timer::now();
-#endif
             network::Result recvData =
                 network::TCPPoll::readOnly(socket, buffer, N, timeout);
+#ifdef PC_PROFILE
+            timespec readTimeDiff = recvData.duration;
+#endif
             if (recvData.IsSuccess())
             {
                // buffer[0] << 0 + buffer[1] << CHAR_BIT
@@ -125,6 +122,9 @@ namespace pc
                assert(buffer.size() > bytesToRead);
                recvData =
                    network::TCPPoll::readOnly(socket, buffer, bytesToRead, timeout);
+#ifdef PC_PROFILE
+               readTimeDiff = readTimeDiff + recvData.duration;
+#endif
                if (recvData.IsSuccess())
                {
                   assert(recvData.NoOfBytes == bytesToRead);
@@ -134,7 +134,7 @@ namespace pc
                              recvData
 #ifdef PC_PROFILE
                              ,
-                             readTimeStart
+                             readTimeDiff
 #endif
             );
          }
