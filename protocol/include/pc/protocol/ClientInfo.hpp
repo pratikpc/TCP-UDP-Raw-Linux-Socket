@@ -77,9 +77,11 @@ namespace pc
                pc::threads::MutexGuard guard(readMutex);
                while (!packetsToRead.empty())
                {
-                  NetworkPacket const readPacket   = packetsToRead.front();
-                  timespec const      executeStart = timer::now();
-                  NetworkSendPacket   writePacket  = callback(readPacket, *this);
+                  NetworkPacket const readPacket = packetsToRead.front();
+#ifdef PC_PROFILE
+                  timespec const executeStart = timer::now();
+#endif
+                  NetworkSendPacket writePacket = callback(readPacket, *this);
 #ifdef PC_PROFILE
                   writePacket.executeTimeDiff = timer::now() - executeStart;
                   writePacket.readTimeDiff    = readPacket.readTimeDiff;
@@ -135,6 +137,7 @@ namespace pc
                terminateNow = true;
                ::close(socket);
                socket = -1;
+#ifdef PC_PROFILE
                std::cout << "For Client ID " << clientId << std::endl;
                std::cout << "Average exec time= " << averageExecuteTime << std::endl;
                std::cout << "Average proc time= " << averageIntraProcessingTime
@@ -144,6 +147,7 @@ namespace pc
                std::cout << "Average bfcp time= " << averageBufferCopyTime << std::endl;
                std::cout << "Average sumt time= " << averageAccumulatedTime << std::endl;
                std::cout << "=================" << std::endl;
+#endif
             }
          }
 
@@ -183,7 +187,9 @@ namespace pc
                pc::threads::MutexGuard guard(readMutex);
                packetsToRead.push(packet);
             }
+#ifdef PC_PROFILE
             averageBufferCopyTime += packet.bufferCopyTimeDiff;
+#endif
          }
 
          void WritePackets(std::time_t timeout)
