@@ -14,11 +14,15 @@ namespace pc
        public:
          MutexGuard(Mutex& p_mutex) : mutex(p_mutex.mutex)
          {
+#ifndef PC_GAIN_SPEED_BY_GUARD_DISABLE
             pthread_mutex_lock(&mutex);
+#endif
          }
          ~MutexGuard()
          {
+#ifndef PC_GAIN_SPEED_BY_GUARD_DISABLE
             pthread_mutex_unlock(&mutex);
+#endif
          }
       };
    } // namespace threads
