@@ -15,6 +15,23 @@ namespace pc
 {
    namespace protocol
    {
+      numeric::Integral<2>::type NetworkToHost(numeric::Integral<2>::type value)
+      {
+         return ntohs(value);
+      }
+      numeric::Integral<4>::type NetworkToHost(numeric::Integral<4>::type value)
+      {
+         return ntohl(value);
+      }
+      numeric::Integral<2>::type HostToNetwork(numeric::Integral<2>::type value)
+      {
+         return htons(value);
+      }
+      numeric::Integral<4>::type HostToNetwork(numeric::Integral<4>::type value)
+      {
+         return htonl(value);
+      }
+
       template <std::size_t N>
       class RawPacket
       {
@@ -118,6 +135,7 @@ namespace pc
                PacketSize bytesToRead = 0;
                for (std::size_t i = 0; i < N; ++i)
                   bytesToRead |= (((unsigned char)buffer[i]) << (CHAR_BIT * i));
+               bytesToRead = NetworkToHost(bytesToRead);
 #else
                // Assume buffer contains 20 bytes at least
                // When mocking
@@ -149,7 +167,7 @@ namespace pc
 
          std::string Marshall() const
          {
-            PacketSize const packetSize = size();
+            PacketSize const packetSize = HostToNetwork(size());
             // Convert packet to string array
             // Convert size to buffer
             std::string sizeBuffer;
@@ -157,7 +175,7 @@ namespace pc
             for (size_t i = 0; i < N; ++i)
             {
                unsigned char value =
-                   ((unsigned char)packetSize >> (CHAR_BIT * (i))) & UCHAR_MAX;
+                   ((unsigned char)((packetSize >> (CHAR_BIT * i))) & UCHAR_MAX);
                sizeBuffer[i] = value;
             }
             return sizeBuffer + command + data;
