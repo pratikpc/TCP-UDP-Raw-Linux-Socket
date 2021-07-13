@@ -56,8 +56,12 @@ namespace pc
 #endif
 
        public:
-         ClientInfo(int socket, ClientResponseCallback callback) :
-             socket(socket), callback(callback), terminateOnNextCycle(), terminateNow()
+         ClientInfo(int                    socket,
+                    ClientResponseCallback callback,
+                    std::size_t const      DeadlineMaxCount = DEADLINE_MAX_COUNT_DEFAULT) :
+             socket(socket),
+             deadline(DeadlineMaxCount), callback(callback), terminateOnNextCycle(),
+             terminateNow()
 #ifdef PC_PROFILE
              ,
              averageIntraProcessingTime(), averageReadTime(), averageWriteTime(),
@@ -194,7 +198,6 @@ namespace pc
          void WritePackets(std::time_t timeout)
          {
 #ifdef PC_PROFILE
-            std::vector<timespec> differences;
             {
 #endif
                pc::threads::MutexGuard guard(writeMutex);
@@ -210,39 +213,19 @@ namespace pc
                   // Only send commands have readTimeTaken and readWriteTime defined
                   if (writePacket.command == Commands::Send)
                   {
-                     differences.push_back(writePacket.executeTimeDiff);
-                     differences.push_back(writePacket.writeTimeDiff);
-                     differences.push_back(writePacket.intraProcessingTimeDiff);
-                     differences.push_back(writePacket.intraProcessingTimeDiff +
-                                           writePacket.executeTimeDiff +
-                                           writePacket.writeTimeDiff +
-                                           writePacket.readTimeDiff);
+                     averageExecuteTime += writePacket.executeTimeDiff;
+                     averageWriteTime += writePacket.writeTimeDiff;
+                     averageIntraProcessingTime += writePacket.intraProcessingTimeDiff;
+                     averageAccumulatedTime +=
+                         (writePacket.intraProcessingTimeDiff +
+                          writePacket.executeTimeDiff + writePacket.writeTimeDiff +
+                          writePacket.readTimeDiff);
                   }
 #endif
                   timeout = 0;
                   packetsToWrite.pop();
                }
 #ifdef PC_PROFILE
-            }
-            if (!differences.empty())
-            {
-               for (std::vector<timespec>::const_iterator it = differences.begin();
-                    it != differences.end();)
-               {
-                  // std::cout << *it << " execute" << std::endl;
-                  averageExecuteTime += *it;
-                  ++it;
-                  // std::cout << *it << " write" << std::endl;
-                  averageWriteTime += *it;
-                  ++it;
-                  // std::cout << *it << " intra-proc" << std::endl;
-                  averageIntraProcessingTime += *it;
-                  ++it;
-                  // std::cout << *it << " accumulated-time" << std::endl;
-                  averageAccumulatedTime += *it;
-                  ++it;
-                  // std::cout << "=================" << std::endl;
-               }
             }
 #endif
          }
