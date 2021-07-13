@@ -7,12 +7,21 @@
 // Based on https://stackoverflow.com/a/42072390
 namespace pc
 {
+   template <typename T1, typename T2>
+   struct Pair
+   {
+      T1 const first;
+      T2 const second;
+
+      Pair(T1 first, T2 second) : first(first), second(second) {}
+   };
    template <typename Key, typename Value>
    class OrderedHashSet
    {
 
     public:
-      typedef std::list<std::pair<Key, Value> /* */> List;
+      typedef Pair<Key, Value>                       KVPair;
+      typedef std::list<KVPair>                      List;
       typedef typename List::iterator                iterator;
       typedef typename List::const_iterator          const_iterator;
       typedef std::tr1::unordered_map<Key, iterator> Map;
@@ -53,12 +62,7 @@ namespace pc
       {
          // If already present
          // Remove
-         if (contains(key))
-         {
-            typename List::iterator removeExistingIt = mapper[key];
-            list.erase(removeExistingIt);
-         }
-         list.push_back(std::make_pair(key, value));
+         list.push_back(KVPair(key, value));
          iterator newItemIt = list.end();
          std::advance(newItemIt, -1);
          mapper[key] = newItemIt;
