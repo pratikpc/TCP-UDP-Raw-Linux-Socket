@@ -23,9 +23,9 @@ namespace pc
 #ifdef PC_PROFILE
        public:
          mutable timespec readTimeStart;
+         mutable timespec readTimeDiff;
          mutable timespec intraProcessingTimeStart;
          mutable timespec intraProcessingTimeDiff;
-         mutable timespec readTimeDiff;
          mutable timespec writeTimeDiff;
          mutable timespec executeTimeDiff;
          mutable timespec bufferCopyTimeDiff;
@@ -88,7 +88,9 @@ namespace pc
              command(command), data(data)
 #ifdef PC_PROFILE
              ,
-             readTimeStart(), intraProcessingTimeDiff(), readTimeDiff(), writeTimeDiff()
+             readTimeStart(), readTimeDiff(), intraProcessingTimeStart(),
+             intraProcessingTimeDiff(), writeTimeDiff(), executeTimeDiff(),
+             bufferCopyTimeDiff()
 #endif
          {
          }
@@ -135,11 +137,9 @@ namespace pc
          {
             return Write(poll.fd, timeout);
          }
-         network::Result Write(int const socket, std::size_t timeout) const
+
+         std::string Marshall() const
          {
-#ifdef PC_PROFILE
-            intraProcessingTimeDiff = timer::now() - intraProcessingTimeStart;
-#endif
             std::size_t const packetSize = size();
             // Convert packet to string array
             // Convert size to buffer
@@ -151,8 +151,15 @@ namespace pc
                    ((unsigned char)packetSize >> (CHAR_BIT * (i))) & UCHAR_MAX;
                sizeBuffer[i] = value;
             }
+            return sizeBuffer + command + data;
+         }
+         network::Result Write(int const socket, std::size_t timeout) const
+         {
+#ifdef PC_PROFILE
+            intraProcessingTimeDiff = timer::now() - intraProcessingTimeStart;
+#endif
             network::Result const result =
-                network::TCPPoll::write(socket, sizeBuffer + command + data, timeout);
+                network::TCPPoll::write(socket, Marshall(), timeout);
 #ifdef PC_PROFILE
             writeTimeDiff = result.duration;
 #endif
