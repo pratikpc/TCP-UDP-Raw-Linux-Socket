@@ -19,6 +19,18 @@ namespace pc
                throw std::runtime_error("Mutex init failed");
             }
          }
+         void Lock()
+         {
+#ifndef PC_GAIN_SPEED_BY_GUARD_DISABLE
+            pthread_mutex_lock(&mutex);
+#endif
+         }
+         void Unlock()
+         {
+#ifndef PC_GAIN_SPEED_BY_GUARD_DISABLE
+            pthread_mutex_unlock(&mutex);
+#endif
+         }
          ~Mutex()
          {
             pthread_mutex_destroy(&mutex);
