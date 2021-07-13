@@ -11,6 +11,15 @@
 #include <pc/thread/Mutex.hpp>
 #include <pc/thread/MutexGuard.hpp>
 
+#ifndef DEADLINE_MAX_COUNT_DEFAULT
+#   ifdef PC_PROTOCOL
+#      define DEADLINE_MAX_COUNT_DEFAULT 1000
+// When not testing deadline should be sufficiently low
+#   else
+#      define DEADLINE_MAX_COUNT_DEFAULT 25
+#   endif
+#endif
+
 namespace pc
 {
    namespace deadliner
@@ -58,15 +67,7 @@ namespace pc
          std::ptrdiff_t maxTime;
          std::ptrdiff_t maxHealthCheckTime;
 
-         Deadline(std::size_t maxCount =
-         // Set a very high deadline during testing
-#ifdef PC_PROTOCOL
-                      1000
-         // When not testing deadline should be sufficiently low
-#else
-                      25
-#endif
-                  ,
+         Deadline(std::size_t    maxCount           = DEADLINE_MAX_COUNT_DEFAULT,
                   std::ptrdiff_t maxTime            = 10 * 1.e9,
                   std::ptrdiff_t maxHealthCheckTime = 30 * 1.e9) :
              queue(maxCount),
