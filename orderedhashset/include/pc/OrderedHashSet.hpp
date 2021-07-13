@@ -48,11 +48,6 @@ namespace pc
          return list.end();
       }
 
-      bool contains(Key const key) const
-      {
-         return mapper.find(key) != mapper.end();
-      }
-
       std::size_t size() const
       {
          return list.size();
@@ -62,29 +57,17 @@ namespace pc
       {
          // If already present
          // Remove
+         typename Map::iterator existingMapIt = mapper.find(key);
          list.push_back(KVPair(key, value));
          iterator newItemIt = list.end();
          std::advance(newItemIt, -1);
-         mapper[key] = newItemIt;
+         if (existingMapIt != mapper.end())
+         {
+            list.erase(existingMapIt->second);
+            existingMapIt->second = newItemIt;
+         }
       }
 
-      Value const& operator[](Key const key) const
-      {
-         return *mapper[key];
-      }
-      Value& operator[](Key const key)
-      {
-         return *mapper[key];
-      }
-
-      iterator removeAndIterate(iterator it)
-      {
-         typename Map::iterator removeExistingMapperIt = mapper.find(it->first);
-         if (removeExistingMapperIt != mapper.end())
-            mapper.erase(removeExistingMapperIt);
-         it = list.erase(it);
-         return it;
-      }
       void remove(Key const key)
       {
          typename Map::iterator mapperIt = mapper.find(key);
