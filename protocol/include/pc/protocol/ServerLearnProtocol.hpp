@@ -19,7 +19,6 @@ namespace pc
    {
       class ServerLearnProtocol : public LearnProtocol
       {
-         typedef ClientInfos::PollConstIterator          PollConstIterator;
          typedef deadliner::MostRecentTimestamps         MostRecentTimestamps;
          typedef std::tr1::unordered_set<int /*socket*/> UniqueSockets;
 
@@ -45,11 +44,12 @@ namespace pc
          std::size_t balancerIndex;
          Config*     config;
 
-         void Add(int const socket, ClientResponseCallback callback)
+         void Add(int const              socket,
+                  ClientResponseCallback callback,
+                  std::size_t const      DeadlineMaxCount = DEADLINE_MAX_COUNT_DEFAULT)
          {
-            clientInfos.insert(socket, callback);
-            config->balancer->incPriority(balancerIndex,
-                                          clientInfos.get(socket).DeadlineMaxCount());
+            clientInfos.insert(socket, callback, DeadlineMaxCount);
+            config->balancer->incPriority(balancerIndex, DeadlineMaxCount);
             mostRecentTimestamps.updateSingle(socket);
          }
 
@@ -80,22 +80,13 @@ namespace pc
             if (network::TCPPoll::poll(polls, timeout) == 0)
                // Timeout
                return;
-            UniqueSockets socketsWithReadSuccess;
             UniqueSockets socketsToTerminate;
+            UniqueSockets socketsWeReadAt;
 
-            // Check poll results
-            for (PollConstIterator it = polls.begin(); it != polls.end(); ++it)
-            {
-               ::pollfd const   poll   = *it;
-               ClientPollResult result = clientInfos.OnReadPoll(poll, buffer);
-               if (result.read)
-                  socketsWithReadSuccess.insert(poll.fd);
-               if (result.terminate)
-                  socketsToTerminate.insert(poll.fd);
-            }
+            clientInfos.OnReadPoll(socketsWeReadAt, socketsToTerminate, buffer);
             // Upon success
             // Update timestamps
-            mostRecentTimestamps.updateFor(socketsWithReadSuccess);
+            mostRecentTimestamps.updateFor(socketsWeReadAt);
             // Upon termination
             closeSocketConnections(socketsToTerminate);
          }

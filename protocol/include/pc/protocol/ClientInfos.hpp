@@ -18,13 +18,8 @@ namespace pc
 
          typedef ClientInfoMap::iterator       iterator;
          typedef ClientInfoMap::const_iterator const_iterator;
-
-         typedef threads::MutexGuard MutexGuard;
-
-         typedef std::vector<pollfd> PollVec;
-
-       public:
-         typedef PollVec::iterator PollConstIterator;
+         typedef pc::threads::MutexGuard       MutexGuard;
+         typedef std::vector<pollfd>           PollVec;
 
        private:
          ClientInfoMap          clientInfos;
@@ -59,31 +54,20 @@ namespace pc
             }
             updateIssued = true;
          }
-         void insert(int const socket, ClientResponseCallback callback)
+         void insert(int const              socket,
+                     ClientResponseCallback callback,
+                     std::size_t const      DeadlineMaxCount = DEADLINE_MAX_COUNT_DEFAULT)
          {
+            MutexGuard lock(mutex);
             updateIssued = true;
-            MutexGuard lock(mutex);
-            clientInfos.insert(std::make_pair(socket, ClientInfo(socket, callback)));
-         }
-         ClientInfo get(int const socket) const
-         {
-            MutexGuard     lock(mutex);
-            const_iterator it = clientInfos.find(socket);
-            assert(it != clientInfos.end());
-            assert(it->first == socket);
-            return it->second;
-         }
-         ClientInfo& get(int const socket)
-         {
-            MutexGuard lock(mutex);
-            iterator   it = clientInfos.find(socket);
-            assert(it != clientInfos.end());
-            assert(it->first == socket);
-            return it->second;
+            clientInfos.insert(
+                std::make_pair(socket, ClientInfo(socket, callback, DeadlineMaxCount)));
          }
          template <typename UniqueSockets>
          void FilterSocketsToTerminate(UniqueSockets& socketsSelected)
          {
+            if (socketsSelected.empty())
+               return;
             for (typename UniqueSockets::const_iterator it = socketsSelected.begin();
                  it != socketsSelected.end();)
             {
@@ -91,9 +75,7 @@ namespace pc
                bool      terminateNow = false;
                {
                   iterator it = clientInfos.find(socket);
-                  if (it == clientInfos.end())
-                     terminateNow = false;
-                  else
+                  if (it != clientInfos.end())
                      terminateNow = it->second.TerminateThisCycleOrNext();
                }
                // If this is not the cycle to terminate
@@ -142,18 +124,25 @@ namespace pc
             MutexGuard lock(mutex);
             return clientInfos.size();
          }
-         template <typename Buffer>
-         ClientPollResult OnReadPoll(::pollfd poll, Buffer& buffer)
+         template <typename Buffer, typename UniqueSockets>
+         void OnReadPoll(UniqueSockets& socketsWeReadAt,
+                         UniqueSockets& socketsToTerminate,
+                         Buffer&        buffer)
          {
             MutexGuard lock(mutex);
-            iterator   it = clientInfos.find(poll.fd);
-            if (it == clientInfos.end())
+
+            PollVec::const_iterator pollIt = PollsIn.begin();
+            for (ClientInfos::iterator clientIt = clientInfos.begin();
+                 clientIt != clientInfos.end();
+                 ++clientIt, ++pollIt)
             {
-               ClientPollResult result;
-               result.terminate = true;
-               return result;
+               ::pollfd const   poll   = *pollIt;
+               ClientPollResult result = clientIt->second.OnReadPoll(poll, buffer);
+               if (result.read)
+                  socketsWeReadAt.insert(poll.fd);
+               if (result.terminate)
+                  socketsToTerminate.insert(poll.fd);
             }
-            return it->second.OnReadPoll(poll, buffer);
          }
       };
    } // namespace protocol
