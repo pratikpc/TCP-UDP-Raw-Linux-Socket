@@ -26,9 +26,9 @@ namespace pc
          {
             other.cancellable = false;
          }
-         bool StickToCore(std::size_t const core)
+         bool StickToCore(int const core)
          {
-            assert(core_id < ProcessorCount());
+            assert(core < ProcessorCount() && core >= 0);
 
             cpu_set_t cpuset;
             CPU_ZERO(&cpuset);
