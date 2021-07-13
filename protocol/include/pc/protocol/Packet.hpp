@@ -9,6 +9,8 @@
 #   include <pc/timer/timer.hpp>
 #endif
 
+#include <pc/stl/numeric.hpp>
+
 namespace pc
 {
    namespace protocol
@@ -16,6 +18,8 @@ namespace pc
       template <std::size_t N>
       class RawPacket
       {
+         typedef typename numeric::Integral<N>::type PacketSize;
+
        public:
          // Command always of size 4
          std::string command;
@@ -32,7 +36,7 @@ namespace pc
          static std::size_t const SizeBytes = N;
 
        private:
-         std::size_t size() const
+         PacketSize size() const
          {
             return command.size() + data.size();
          }
@@ -111,13 +115,13 @@ namespace pc
                // buffer[0] << 0 + buffer[1] << CHAR_BIT
                // Convert char array to integer
 #ifndef PC_NETWORK_MOCK
-               std::size_t bytesToRead = 0;
+               PacketSize bytesToRead = 0;
                for (std::size_t i = 0; i < N; ++i)
                   bytesToRead |= (((unsigned char)buffer[i]) << (CHAR_BIT * i));
 #else
                // Assume buffer contains 20 bytes at least
                // When mocking
-               std::size_t bytesToRead = 20;
+               PacketSize bytesToRead = 20;
 #endif
                assert(buffer.size() > bytesToRead);
                recvData =
@@ -145,7 +149,7 @@ namespace pc
 
          std::string Marshall() const
          {
-            std::size_t const packetSize = size();
+            PacketSize const packetSize = size();
             // Convert packet to string array
             // Convert size to buffer
             std::string sizeBuffer;
