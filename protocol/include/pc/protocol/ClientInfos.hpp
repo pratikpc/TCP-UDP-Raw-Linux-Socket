@@ -104,6 +104,7 @@ namespace pc
             if (updateIssued)
             {
                PollsIn.clear();
+               PollsIn.reserve(clientInfos.size());
                for (const_iterator it = clientInfos.begin(); it != clientInfos.end();
                     ++it)
                {
