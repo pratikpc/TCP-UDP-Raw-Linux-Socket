@@ -89,6 +89,7 @@ int main()
    protocol::Config config(
        "postgresql://postgres@localhost:5432/", balancer, &downCallback);
 
+#ifndef PC_DISABLE_DATABASE_SUPPORT
    {
       pc::pqpp::Result res = config.connection.exec(
           "CREATE TABLE IF NOT EXISTS priority_table ("
@@ -102,6 +103,7 @@ int main()
       }
       std::cout << "Table Created\n";
    }
+#endif
 
    for (ProtocolVec::iterator it = protocols.begin(); it != protocols.end(); ++it)
    {
