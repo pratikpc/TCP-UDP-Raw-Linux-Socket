@@ -62,7 +62,12 @@ namespace pc
             if (socketsSelected.empty())
                return;
             clientInfos.FilterSocketsToTerminate(socketsSelected);
-            closeSocketConnections(socketsSelected);
+            for (UniqueSockets::const_iterator it = socketsSelected.begin();
+                 it != socketsSelected.end();
+                 ++it)
+               // Just close the socket
+               // They will error out later
+               ::close(*it);
          }
          std::size_t size() const
          {
