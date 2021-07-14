@@ -3,7 +3,8 @@
 #include <pc/deadliner/IfNotWithin.hpp>
 #include <pc/lexical_cast.hpp>
 #include <pc/pqpp/Connection.hpp>
-
+#include <pc/thread/Mutex.hpp>
+#include <pc/thread/MutexGuard.hpp>
 #include <pc/balancer/priority.hpp>
 
 #include <string>
