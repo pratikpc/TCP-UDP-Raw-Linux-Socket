@@ -1,9 +1,7 @@
 #pragma once
 
-#include <pc/thread/Mutex.hpp>
-#include <pc/thread/MutexGuard.hpp>
-
-#include <pthread.h>
+#include <pc/thread/spin/SpinGuard.hpp>
+#include <pc/thread/spin/SpinLock.hpp>
 
 namespace pc
 {
@@ -15,7 +13,7 @@ namespace pc
       class Atomic
       {
        protected:
-         mutable pc::threads::Mutex mutex;
+         mutable pc::threads::SpinLock mutex;
 
          T value;
 
@@ -23,12 +21,12 @@ namespace pc
          Atomic(T value = T()) : value(value) {}
          operator T() const
          {
-            pc::threads::MutexGuard guard(mutex);
+            pc::threads::SpinLock guard(mutex);
             return value;
          }
          Atomic& operator=(T const newValue)
          {
-            pc::threads::MutexGuard guard(mutex);
+            pc::threads::SpinLock guard(mutex);
             value = newValue;
             return *this;
          }
