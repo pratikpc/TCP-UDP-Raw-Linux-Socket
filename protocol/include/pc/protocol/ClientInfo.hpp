@@ -1,11 +1,11 @@
 #pragma once
 
+#include <list>
 #include <pc/deadliner/Deadline.hpp>
 #include <pc/protocol/ClientPollResult.hpp>
 #include <pc/protocol/Packet.hpp>
 #include <pc/protocol/types.hpp>
 #include <pc/thread/Atomic.hpp>
-#include <queue>
 #include <string>
 
 #ifdef PC_PROFILE
@@ -30,9 +30,8 @@ namespace pc
    {
       class ClientInfo
       {
-         typedef std::queue<NetworkPacket> PacketVec;
+         typedef std::list<NetworkPacket> PacketList;
 #ifdef PC_PROFILE
-         typedef std::queue<timespec>      TimeVec;
          typedef pc::opt::Averager<double> Averager;
 #endif
          typedef pc::threads::Atomic<bool> AtomicBool;
@@ -47,7 +46,7 @@ namespace pc
          ClientResponseCallback& callback;
          AtomicBool              terminateOnNextCycle;
          AtomicBool              terminateNow;
-         PacketVec               packetsToRead;
+         PacketList              packetsToRead;
 #ifndef PC_USE_SPINLOCKS
          mutable threads::Mutex      readMutex;
          mutable threads::Mutex      writeMutex;
@@ -57,7 +56,7 @@ namespace pc
          mutable threads::SpinLock  writeMutex;
          typedef threads::SpinGuard LockGuard;
 #endif
-         PacketVec packetsToWrite;
+         PacketList packetsToWrite;
 
 #ifdef PC_PROFILE
          Averager averageIntraProcessingTime;
@@ -69,8 +68,8 @@ namespace pc
 #endif
 
        public:
-         ClientInfo(int                    socket,
-                    ClientResponseCallback callback,
+         ClientInfo(int const               socket,
+                    ClientResponseCallback& callback,
                     std::size_t const DeadlineMaxCount = DEADLINE_MAX_COUNT_DEFAULT) :
              socket(socket),
              deadline(DeadlineMaxCount), callback(callback), terminateOnNextCycle(),
@@ -86,44 +85,37 @@ namespace pc
 
          void executeCallbacks()
          {
-            if (packetsToRead.empty())
-               return;
-            PacketVec tempWriteVec;
+            PacketList tempWriteVec;
             {
                // Add to a temporary vector for writes
                LockGuard guard(readMutex);
-               while (!packetsToRead.empty())
+               if (packetsToRead.empty())
+                  return;
+               for (PacketList::const_iterator readPacketIt = packetsToRead.begin();
+                    readPacketIt != packetsToRead.end();
+                    ++readPacketIt)
                {
-                  NetworkPacket const readPacket = packetsToRead.front();
 #ifdef PC_PROFILE
                   timespec const executeStart = timer::now();
 #endif
-                  NetworkSendPacket writePacket = callback(readPacket, *this);
+                  NetworkPacket writePacket = callback(*readPacketIt, *this);
 #ifdef PC_PROFILE
                   writePacket.executeTimeDiff = timer::now() - executeStart;
-                  writePacket.readTimeDiff    = readPacket.readTimeDiff;
+                  writePacket.readTimeDiff    = readPacketIt->readTimeDiff;
                   writePacket.intraProcessingTimeStart =
-                      readPacket.intraProcessingTimeStart;
+                      readPacketIt->intraProcessingTimeStart;
 #endif
-                  packetsToRead.pop();
                   if (writePacket.command == Commands::Send)
-                     tempWriteVec.push(writePacket);
+                     tempWriteVec.push_back(writePacket);
                }
+               packetsToRead.clear();
             }
+            if (!tempWriteVec.empty())
             {
                // Add to write vector
                LockGuard guard(writeMutex);
                // If Write Vector is empty, simply copy
-               if (packetsToWrite.empty())
-                  packetsToWrite = tempWriteVec;
-               else
-                  // Else, add all elems from tempWriteVec to end of write vector
-                  while (!tempWriteVec.empty())
-                  {
-                     NetworkPacket writePacket = tempWriteVec.front();
-                     tempWriteVec.pop();
-                     packetsToWrite.push(writePacket);
-                  }
+               packetsToWrite.splice(packetsToWrite.end(), tempWriteVec);
             }
          }
 
@@ -193,13 +185,13 @@ namespace pc
             else if (packet.command == Commands::Setup::Ack)
             {
                LockGuard guard(writeMutex);
-               packetsToWrite.push(NetworkPacket(Commands::Setup::Syn));
+               packetsToWrite.push_back(NetworkPacket(Commands::Setup::Syn));
             }
             else if (packet.command == Commands::Setup::ClientID)
             {
                clientId = packet.data;
                LockGuard guard(writeMutex);
-               packetsToWrite.push(NetworkPacket(Commands::Setup::Join));
+               packetsToWrite.push_back(NetworkPacket(Commands::Setup::Join));
             }
             else if (packet.command == Commands::MajorErrors::SocketClosed)
             {
@@ -213,7 +205,7 @@ namespace pc
             {
                terminateOnNextCycle = false;
                LockGuard guard(readMutex);
-               packetsToRead.push(packet);
+               packetsToRead.push_back(packet);
             }
 #ifdef PC_PROFILE
             averageBufferCopyTime += packet.bufferCopyTimeDiff;
@@ -229,28 +221,29 @@ namespace pc
                LockGuard guard(writeMutex);
                if (packetsToWrite.empty())
                   return;
-               while (!packetsToWrite.empty())
+               for (PacketList::const_iterator writePacketIt = packetsToWrite.begin();
+                    writePacketIt != packetsToWrite.end();
+                    ++writePacketIt)
                {
-                  NetworkPacket const&  writePacket = packetsToWrite.front();
-                  network::Result const result      = writePacket.Write(socket, timeout);
+                  network::Result const result = writePacketIt->Write(socket, timeout);
                   if (result.SocketClosed)
                      return Terminate();
 #ifdef PC_PROFILE
                   // Only send commands have readTimeTaken and readWriteTime defined
-                  if (writePacket.command == Commands::Send)
+                  if (writePacketIt->command == Commands::Send)
                   {
-                     averageExecuteTime += writePacket.executeTimeDiff;
-                     averageWriteTime += writePacket.writeTimeDiff;
-                     averageIntraProcessingTime += writePacket.intraProcessingTimeDiff;
+                     averageExecuteTime += writePacketIt->executeTimeDiff;
+                     averageWriteTime += writePacketIt->writeTimeDiff;
+                     averageIntraProcessingTime += writePacketIt->intraProcessingTimeDiff;
                      averageAccumulatedTime +=
-                         (writePacket.intraProcessingTimeDiff +
-                          writePacket.executeTimeDiff + writePacket.writeTimeDiff +
-                          writePacket.readTimeDiff);
+                         (writePacketIt->intraProcessingTimeDiff +
+                          writePacketIt->executeTimeDiff + writePacketIt->writeTimeDiff +
+                          writePacketIt->readTimeDiff);
                   }
 #endif
                   timeout = 0;
-                  packetsToWrite.pop();
                }
+               packetsToWrite.clear();
 #ifdef PC_PROFILE
             }
 #endif
@@ -300,7 +293,7 @@ namespace pc
             {
                LockGuard guard(writeMutex);
                // Add heartbeat packet to write queue
-               packetsToWrite.push(NetworkPacket(Commands::HeartBeat));
+               packetsToWrite.push_back(NetworkPacket(Commands::HeartBeat));
             }
 
             // Terminate on next cycle
