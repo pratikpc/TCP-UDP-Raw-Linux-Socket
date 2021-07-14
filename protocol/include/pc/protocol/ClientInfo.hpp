@@ -58,7 +58,7 @@ namespace pc
        public:
          ClientInfo(int                    socket,
                     ClientResponseCallback callback,
-                    std::size_t const      DeadlineMaxCount = DEADLINE_MAX_COUNT_DEFAULT) :
+                    std::size_t const DeadlineMaxCount = DEADLINE_MAX_COUNT_DEFAULT) :
              socket(socket),
              deadline(DeadlineMaxCount), callback(callback), terminateOnNextCycle(),
              terminateNow()
@@ -155,11 +155,18 @@ namespace pc
          }
 
          template <typename Buffer>
-         void ReadPacket(Buffer& buffer)
+         ClientPollResult ReadPacket(Buffer& buffer)
          {
             if (!pc::network::TCP::containsDataToRead(socket))
-               return Terminate();
+            {
+               Terminate();
+               ClientPollResult result;
+               result.terminate = true;
+               return result;
+            }
             ++deadline;
+            ClientPollResult result;
+            result.read = true;
 
             NetworkPacket packet = NetworkPacket::Read(socket, buffer, 0);
 #ifdef PC_PROFILE
@@ -182,7 +189,12 @@ namespace pc
                packetsToWrite.push(NetworkPacket(Commands::Setup::Join));
             }
             else if (packet.command == Commands::MajorErrors::SocketClosed)
-               return Terminate();
+            {
+               Terminate();
+               ClientPollResult result;
+               result.terminate = true;
+               return result;
+            }
 
             else if (packet.command == Commands::Send)
             {
@@ -193,6 +205,7 @@ namespace pc
 #ifdef PC_PROFILE
             averageBufferCopyTime += packet.bufferCopyTimeDiff;
 #endif
+            return result;
          }
 
          void WritePackets(std::time_t timeout)
@@ -251,10 +264,7 @@ namespace pc
                return result;
             }
             if (poll.revents & POLLIN)
-            {
-               this->ReadPacket(buffer);
-               result.read = true;
-            }
+               return this->ReadPacket(buffer);
             return result;
          }
 
