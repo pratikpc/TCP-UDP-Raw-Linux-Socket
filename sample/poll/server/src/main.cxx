@@ -24,8 +24,8 @@ std::string repeat(std::string value, std::size_t times)
    return stream.str();
 }
 
-protocol::NetworkSendPacket pollCallback(protocol::NetworkPacket const& packet,
-                                         protocol::ClientInfo const&    clientInfo)
+protocol::NetworkPacket pollCallback(protocol::NetworkPacket const& packet,
+                                     protocol::ClientInfo const&    clientInfo)
 {
    std::string const response = packet.data + " was received from " + clientInfo.clientId;
    protocol::NetworkSendPacket responsePacket(response);
@@ -44,6 +44,11 @@ void* PollAndExecute(void* arg)
 #endif
    while (true)
    {
+      if (poll.size() == 0)
+      {
+         sleep(poll.timeout);
+         continue;
+      }
       poll.Poll(buffer);
       poll.Execute();
       poll.Write();
