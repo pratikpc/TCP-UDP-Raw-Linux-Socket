@@ -65,9 +65,9 @@ namespace pc
             }
             updateIssued = true;
          }
-         void insert(int const              socket,
-                     ClientResponseCallback callback,
-                     std::size_t const      DeadlineMaxCount = DEADLINE_MAX_COUNT_DEFAULT)
+         void insert(int const               socket,
+                     ClientResponseCallback& callback,
+                     std::size_t const DeadlineMaxCount = DEADLINE_MAX_COUNT_DEFAULT)
          {
             LockGuard guard(lock);
             updateIssued = true;

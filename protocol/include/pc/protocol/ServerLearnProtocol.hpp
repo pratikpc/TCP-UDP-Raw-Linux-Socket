@@ -44,9 +44,9 @@ namespace pc
          std::size_t balancerIndex;
          Config*     config;
 
-         void Add(int const              socket,
-                  ClientResponseCallback callback,
-                  std::size_t const      DeadlineMaxCount = DEADLINE_MAX_COUNT_DEFAULT)
+         void Add(int const               socket,
+                  ClientResponseCallback& callback,
+                  std::size_t const       DeadlineMaxCount = DEADLINE_MAX_COUNT_DEFAULT)
          {
             clientInfos.insert(socket, callback, DeadlineMaxCount);
             config->balancer->incPriority(balancerIndex, DeadlineMaxCount);

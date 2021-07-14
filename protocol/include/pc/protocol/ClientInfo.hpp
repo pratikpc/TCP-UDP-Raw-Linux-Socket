@@ -44,7 +44,7 @@ namespace pc
 
        private:
          pc::deadliner::Deadline deadline;
-         ClientResponseCallback  callback;
+         ClientResponseCallback& callback;
          AtomicBool              terminateOnNextCycle;
          AtomicBool              terminateNow;
          PacketVec               packetsToRead;
