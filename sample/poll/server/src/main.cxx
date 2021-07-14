@@ -82,6 +82,18 @@ int main()
    server.speedUp();
    server.listen();
 
+#ifdef PC_PROFILE
+   std::cout << "Profiling mode on" << std::endl;
+#endif
+#ifdef PC_NETWORK_MOCK
+   std::cout << "Network mock on" << std::endl;
+#endif
+#ifdef PC_USE_SPINLOCKS
+   std::cout << "Spinlock mode on" << std::endl;
+#endif
+#ifndef PC_DISABLE_DATABASE_SUPPORT
+   std::cout << "Database support on" << std::endl;
+#endif
    ProtocolVec protocols(/*pc::threads::ProcessorCount()*/ 1);
 
    pc::balancer::priority balancer(protocols.size());
