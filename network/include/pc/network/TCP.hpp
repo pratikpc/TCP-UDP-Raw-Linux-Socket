@@ -16,6 +16,12 @@
 #   include <pc/timer/timer.hpp>
 #endif
 
+#if defined(PC_NETWORK_MOCK) && defined(PC_DISABLE_DATABASE_SUPPORT)
+#   ifndef PC_IGNORE
+#      define PC_IGNORE(x) (void)x
+#   endif
+#endif
+
 namespace pc
 {
    namespace network
@@ -95,6 +101,9 @@ namespace pc
 #ifndef PC_NETWORK_MOCK
             ssize_t const opt = ::recv(socket, input, size, flags);
 #else
+            PC_IGNORE(socket);
+            PC_IGNORE(input);
+            PC_IGNORE(flags);
             ssize_t const opt = size;
 #endif
             if (opt == -1)
@@ -211,6 +220,8 @@ namespace pc
                ssize_t const recv =
                    ::recv(socket, buffer.data() + total, size - total, flags);
 #else
+               PC_IGNORE(socket);
+               PC_IGNORE(buffer);
                ssize_t const recv = size;
 #endif
                if (recv == 0)
@@ -285,6 +296,9 @@ namespace pc
 #ifndef PC_NETWORK_MOCK
                ssize_t const sent = ::send(socket, msg, len, flags);
 #else
+               PC_IGNORE(socket);
+               PC_IGNORE(msg);
+               PC_IGNORE(flags);
                ssize_t const sent = len;
 #endif
 #ifdef PC_PROFILE
@@ -321,6 +335,9 @@ namespace pc
 #ifndef PC_NETWORK_MOCK
             ssize_t const sent = ::send(socket, msg, len, flags);
 #else
+            PC_IGNORE(socket);
+            PC_IGNORE(msg);
+            PC_IGNORE(flags);
             ssize_t const sent = len;
 #endif
             if (sent == -1)
@@ -330,3 +347,5 @@ namespace pc
       };
    } // namespace network
 } // namespace pc
+
+#undef PC_IGNORE

@@ -9,6 +9,12 @@
 
 #include <string>
 
+#if defined(PC_PROFILE) && defined(PC_DISABLE_DATABASE_SUPPORT)
+#   ifndef PC_IGNORE
+#      define PC_IGNORE(x) (void)x
+#   endif
+#endif
+
 namespace pc
 {
    namespace protocol
@@ -34,6 +40,9 @@ namespace pc
 #endif
              balancer(&balancer), downCallback(downCallback)
          {
+#ifdef PC_DISABLE_DATABASE_SUPPORT
+            PC_IGNORE(connectionString);
+#endif
          }
 
          std::size_t ExtractDeadlineMaxCountFromDatabase(std::string const clientId)
@@ -58,9 +67,13 @@ namespace pc
                 pc::lexical_cast<std::string, std::ptrdiff_t>(res[0]);
             return newDeadlineMaxCount;
 #else
+            // Ignore Unused warning
+            PC_IGNORE(clientId);
             return 45;
 #endif
          }
       };
    } // namespace protocol
 } // namespace pc
+
+#undef PC_IGNORE
