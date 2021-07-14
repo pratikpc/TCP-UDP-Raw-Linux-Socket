@@ -32,7 +32,7 @@ namespace pc
                low = incBy;
             if (incBy > high)
                high = incBy;
-            if (incBy >= 0.5 * high)
+            if (incBy >= 0.2 * high)
                ++NoOfClosesToHigh;
             return *this;
          }
