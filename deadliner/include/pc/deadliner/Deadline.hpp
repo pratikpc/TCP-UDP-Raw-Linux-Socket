@@ -8,15 +8,20 @@
 
 #include <pc/queue.hpp>
 
-#include <pc/thread/Mutex.hpp>
-#include <pc/thread/MutexGuard.hpp>
+#ifndef PC_USE_SPINLOCKS
+#   include <pc/thread/Mutex.hpp>
+#   include <pc/thread/MutexGuard.hpp>
+#else
+#   include <pc/thread/spin/SpinGuard.hpp>
+#   include <pc/thread/spin/SpinLock.hpp>
+#endif
 
 #ifndef DEADLINE_MAX_COUNT_DEFAULT
 #   ifdef PC_PROTOCOL
 #      define DEADLINE_MAX_COUNT_DEFAULT 1000
 // When not testing deadline should be sufficiently low
 #   else
-#      define DEADLINE_MAX_COUNT_DEFAULT 25
+#      define DEADLINE_MAX_COUNT_DEFAULT 10000
 #   endif
 #endif
 
@@ -60,9 +65,15 @@ namespace pc
       class Deadline
       {
        protected:
-         pc::queue<timespec>        queue;
-         mutable pc::threads::Mutex mutex;
+         pc::queue<timespec> queue;
 
+#ifndef PC_USE_SPINLOCKS
+         mutable pc::threads::Mutex      lock;
+         typedef pc::threads::MutexGuard LockGuard;
+#else
+         mutable pc::threads::SpinLock  lock;
+         typedef pc::threads::SpinGuard LockGuard;
+#endif
        public:
          std::ptrdiff_t maxTime;
          std::ptrdiff_t maxHealthCheckTime;
@@ -79,7 +90,7 @@ namespace pc
          {
             timespec curTime = timer::now();
 
-            pc::threads::MutexGuard guard(mutex);
+            LockGuard guard(lock);
             if (queue.rear != -1)
             {
                assert(curTime > queue.Last());
@@ -92,7 +103,7 @@ namespace pc
          {
             timespec curTime = timer::now();
 
-            pc::threads::MutexGuard guard(mutex);
+            LockGuard guard(lock);
             // If Full
             if (queue)
             {
@@ -107,7 +118,7 @@ namespace pc
          }
          Deadline& increment()
          {
-            pc::threads::MutexGuard guard(mutex);
+            LockGuard guard(lock);
 
             timespec curTime = timer::now();
             queue.Add(curTime);
@@ -120,7 +131,7 @@ namespace pc
 
          Deadline& MaxCount(std::ptrdiff_t newMaxCount)
          {
-            pc::threads::MutexGuard guard(mutex);
+            LockGuard guard(lock);
             // Check if Queue needs to be expanded
             queue.MaxCount(newMaxCount);
             return *this;

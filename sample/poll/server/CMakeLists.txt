@@ -38,4 +38,5 @@ target_compile_definitions(${PROJECT_NAME}
  PRIVATE
   PC_PROFILE
   PC_NETWORK_MOCK
+  PC_USE_SPINLOCKS
 )

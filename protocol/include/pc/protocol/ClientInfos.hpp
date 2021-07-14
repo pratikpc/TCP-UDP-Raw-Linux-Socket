@@ -3,10 +3,16 @@
 #include <pc/protocol/ClientInfo.hpp>
 #include <pc/protocol/ClientPollResult.hpp>
 #include <pc/protocol/Config.hpp>
-#include <pc/thread/Mutex.hpp>
-#include <pc/thread/MutexGuard.hpp>
 #include <tr1/unordered_map>
 #include <vector>
+
+#ifndef PC_USE_SPINLOCKS
+#   include <pc/thread/Mutex.hpp>
+#   include <pc/thread/MutexGuard.hpp>
+#else
+#   include <pc/thread/spin/SpinGuard.hpp>
+#   include <pc/thread/spin/SpinLock.hpp>
+#endif
 
 namespace pc
 {
@@ -18,13 +24,18 @@ namespace pc
 
          typedef ClientInfoMap::iterator       iterator;
          typedef ClientInfoMap::const_iterator const_iterator;
-         typedef pc::threads::MutexGuard       MutexGuard;
          typedef std::vector<pollfd>           PollVec;
 
-       private:
-         ClientInfoMap          clientInfos;
-         mutable threads::Mutex mutex;
-         bool                   updateIssued;
+         ClientInfoMap clientInfos;
+         bool          updateIssued;
+
+#ifndef PC_USE_SPINLOCKS
+         mutable pc::threads::Mutex      lock;
+         typedef pc::threads::MutexGuard LockGuard;
+#else
+         mutable pc::threads::SpinLock  lock;
+         typedef pc::threads::SpinGuard LockGuard;
+#endif
 
        public:
          PollVec PollsIn;
@@ -34,7 +45,7 @@ namespace pc
                     Config::balancerT* balancer,
                     std::size_t const  balancerIndex)
          {
-            pc::threads::MutexGuard guard(mutex);
+            LockGuard guard(lock);
             for (typename UniqueSockets::iterator it = socketsToRemove.begin();
                  it != socketsToRemove.end();)
             {
@@ -58,7 +69,7 @@ namespace pc
                      ClientResponseCallback callback,
                      std::size_t const      DeadlineMaxCount = DEADLINE_MAX_COUNT_DEFAULT)
          {
-            MutexGuard lock(mutex);
+            LockGuard guard(lock);
             updateIssued = true;
             clientInfos.insert(
                 std::make_pair(socket, ClientInfo(socket, callback, DeadlineMaxCount)));
@@ -89,17 +100,17 @@ namespace pc
          }
          void Update()
          {
-            MutexGuard lock(mutex);
+            LockGuard guard(lock);
             if (updateIssued)
             {
                PollsIn.clear();
                for (const_iterator it = clientInfos.begin(); it != clientInfos.end();
                     ++it)
                {
-                  pollfd pollAdd;
-                  pollAdd.fd     = it->first;
-                  pollAdd.events = POLLIN;
-                  PollsIn.push_back(pollAdd);
+                  ::pollfd pollVar;
+                  pollVar.fd     = it->first;
+                  pollVar.events = POLLIN;
+                  PollsIn.push_back(pollVar);
                }
                updateIssued = false;
             }
@@ -107,21 +118,21 @@ namespace pc
 
          void Execute()
          {
-            pc::threads::MutexGuard lock(mutex);
+            LockGuard guard(lock);
             for (iterator it = clientInfos.begin(); it != clientInfos.end(); ++it)
                it->second.executeCallbacks();
          }
 
          void Write(std::time_t timeout)
          {
-            pc::threads::MutexGuard lock(mutex);
+            LockGuard guard(lock);
             for (iterator it = clientInfos.begin(); it != clientInfos.end(); ++it)
                it->second.WritePackets(timeout);
          }
 
          std::size_t size() const
          {
-            MutexGuard lock(mutex);
+            LockGuard guard(lock);
             return clientInfos.size();
          }
          template <typename Buffer, typename UniqueSockets>
@@ -129,7 +140,7 @@ namespace pc
                          UniqueSockets& socketsToTerminate,
                          Buffer&        buffer)
          {
-            MutexGuard lock(mutex);
+            LockGuard guard(lock);
 
             PollVec::const_iterator pollIt = PollsIn.begin();
             for (ClientInfos::iterator clientIt = clientInfos.begin();

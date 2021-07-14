@@ -5,8 +5,6 @@
 #include <pc/protocol/Packet.hpp>
 #include <pc/protocol/types.hpp>
 #include <pc/thread/Atomic.hpp>
-#include <pc/thread/Mutex.hpp>
-#include <pc/thread/MutexGuard.hpp>
 #include <queue>
 #include <string>
 
@@ -16,6 +14,14 @@
 
 #ifdef PC_PROFILE
 #   include <pc/opt/Averager.hpp>
+#endif
+
+#ifndef PC_USE_SPINLOCKS
+#   include <pc/thread/Mutex.hpp>
+#   include <pc/thread/MutexGuard.hpp>
+#else
+#   include <pc/thread/spin/SpinGuard.hpp>
+#   include <pc/thread/spin/SpinLock.hpp>
 #endif
 
 namespace pc
@@ -42,9 +48,16 @@ namespace pc
          AtomicBool              terminateOnNextCycle;
          AtomicBool              terminateNow;
          PacketVec               packetsToRead;
-         pc::threads::Mutex      readMutex;
-         PacketVec               packetsToWrite;
-         pc::threads::Mutex      writeMutex;
+#ifndef PC_USE_SPINLOCKS
+         mutable threads::Mutex      readMutex;
+         mutable threads::Mutex      writeMutex;
+         typedef threads::MutexGuard LockGuard;
+#else
+         mutable threads::SpinLock  readMutex;
+         mutable threads::SpinLock  writeMutex;
+         typedef threads::SpinGuard LockGuard;
+#endif
+         PacketVec packetsToWrite;
 
 #ifdef PC_PROFILE
          Averager averageIntraProcessingTime;
@@ -78,7 +91,7 @@ namespace pc
             PacketVec tempWriteVec;
             {
                // Add to a temporary vector for writes
-               pc::threads::MutexGuard guard(readMutex);
+               LockGuard guard(readMutex);
                while (!packetsToRead.empty())
                {
                   NetworkPacket const readPacket = packetsToRead.front();
@@ -99,7 +112,7 @@ namespace pc
             }
             {
                // Add to write vector
-               pc::threads::MutexGuard guard(writeMutex);
+               LockGuard guard(writeMutex);
                // If Write Vector is empty, simply copy
                if (packetsToWrite.empty())
                   packetsToWrite = tempWriteVec;
@@ -121,7 +134,7 @@ namespace pc
          //    // Make the balancer updation guard
          //    // static
          //    static pc::threads::Mutex balancerPriorityUpdationMutex;
-         //    pc::threads::MutexGuard   guard(balancerPriorityUpdationMutex);
+         //    LockGuard   guard(balancerPriorityUpdationMutex);
          //    std::size_t               newDeadlineMaxCount =
          //        config->ExtractDeadlineMaxCountFromDatabase(clientInfo.clientId);
          //    config->balancer->setPriority(balancerIndex,
@@ -179,13 +192,13 @@ namespace pc
             }
             else if (packet.command == Commands::Setup::Ack)
             {
-               pc::threads::MutexGuard guard(writeMutex);
+               LockGuard guard(writeMutex);
                packetsToWrite.push(NetworkPacket(Commands::Setup::Syn));
             }
             else if (packet.command == Commands::Setup::ClientID)
             {
                clientId = packet.data;
-               pc::threads::MutexGuard guard(writeMutex);
+               LockGuard guard(writeMutex);
                packetsToWrite.push(NetworkPacket(Commands::Setup::Join));
             }
             else if (packet.command == Commands::MajorErrors::SocketClosed)
@@ -199,7 +212,7 @@ namespace pc
             else if (packet.command == Commands::Send)
             {
                terminateOnNextCycle = false;
-               pc::threads::MutexGuard guard(readMutex);
+               LockGuard guard(readMutex);
                packetsToRead.push(packet);
             }
 #ifdef PC_PROFILE
@@ -213,7 +226,7 @@ namespace pc
 #ifdef PC_PROFILE
             {
 #endif
-               pc::threads::MutexGuard guard(writeMutex);
+               LockGuard guard(writeMutex);
                if (packetsToWrite.empty())
                   return;
                while (!packetsToWrite.empty())
@@ -285,7 +298,7 @@ namespace pc
 
             // Send heartbeat
             {
-               pc::threads::MutexGuard guard(writeMutex);
+               LockGuard guard(writeMutex);
                // Add heartbeat packet to write queue
                packetsToWrite.push(NetworkPacket(Commands::HeartBeat));
             }
