@@ -13,7 +13,7 @@ namespace pc
       class Atomic
       {
        protected:
-         mutable pc::threads::SpinLock mutex;
+         mutable pc::threads::SpinLock lock;
 
          T value;
 
@@ -21,12 +21,12 @@ namespace pc
          Atomic(T value = T()) : value(value) {}
          operator T() const
          {
-            pc::threads::SpinLock guard(mutex);
+            pc::threads::SpinLock guard(lock);
             return value;
          }
          Atomic& operator=(T const newValue)
          {
-            pc::threads::SpinLock guard(mutex);
+            pc::threads::SpinLock guard(lock);
             value = newValue;
             return *this;
          }
