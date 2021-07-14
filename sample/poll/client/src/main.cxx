@@ -23,9 +23,9 @@ void* func(void* clientIndexPtr)
    pc::network::IP ip(SOCK_STREAM);
    ip.load("127.0.0.1", "9900");
 
-   std::cout << "\nHostname = " << pc::network::IP::hostName();
+   std::cout << "Hostname = " << pc::network::IP::hostName() << "\n";
    std::string ipstr = ip;
-   std::cout << std::endl << "IP = " << ipstr;
+   std::cout << "IP = " << ipstr << std::endl;
    pc::network::TCP server(ip.connect());
    // server.keepAlive();
    server.speedUp();
@@ -33,7 +33,7 @@ void* func(void* clientIndexPtr)
    int const clientIndex = *((int*)clientIndexPtr);
 
    std::string const clientId = "CLIENT-" + pc::lexical_cast(clientIndex);
-   std::cout << std::endl << "ClientId = " << clientId;
+   std::cout << "ClientId = " << clientId << std::endl;
 
    try
    {
@@ -42,8 +42,8 @@ void* func(void* clientIndexPtr)
       pc::network::buffer buffer(UINT16_MAX);
 
       pc::network::Result result = protocol.SetupConnection(buffer);
-      if (result.IsFailure())
-         throw std::runtime_error("Setup failed");
+      // if (result.IsFailure())
+      //    throw std::runtime_error("Setup failed");
       for (std::size_t i = 0; true; i++)
       {
          std::cout << "Message sending " << i << " at " << protocol.clientId << std::endl;
@@ -52,7 +52,7 @@ void* func(void* clientIndexPtr)
          result = protocol.Write(packet);
          if (result.IsFailure())
             break;
-         usleep(1 * 1000 * 1000 / 100);
+         // usleep(1 * 1000 * 1000 / 100);
       }
       sleep(5);
       for (std::size_t i = 0; true;)
