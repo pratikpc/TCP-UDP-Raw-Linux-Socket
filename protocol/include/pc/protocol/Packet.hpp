@@ -121,7 +121,7 @@ namespace pc
 #ifdef PC_PROFILE
             timespec const bufferCopyTimeStart = timer::now();
 #endif
-            assert(bytesToRead >= command.size());
+            assert(bytesToRead >= (PacketSize)command.size());
             std::copy(buffer.begin(), buffer.begin() + command.size(), command.begin());
             if (bytesToRead > (PacketSize)command.size())
             {
