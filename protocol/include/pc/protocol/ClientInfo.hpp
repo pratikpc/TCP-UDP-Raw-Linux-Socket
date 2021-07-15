@@ -237,6 +237,7 @@ namespace pc
                      averageIntraProcessingTime += writePacketIt->intraProcessingTimeDiff;
                      averageAccumulatedTime +=
                          (writePacketIt->intraProcessingTimeDiff +
+                          writePacketIt->bufferCopyTimeDiff +
                           writePacketIt->executeTimeDiff + writePacketIt->writeTimeDiff +
                           writePacketIt->readTimeDiff);
                   }
