@@ -192,8 +192,10 @@ namespace pc
             timespec start = timer::now();
 #endif
 #ifndef PC_NETWORK_MOCK
-            ssize_t const recv =
-                ::recv(socket, buffer.data(), buffer.size(), flags | MSG_DONTWAIT);
+            ssize_t const recv = ::recv(socket,
+                                        buffer.data(),
+                                        buffer.size(),
+                                        flags | MSG_DONTWAIT | MSG_NOSIGNAL);
 #else
             PC_IGNORE(socket);
             PC_IGNORE(flags);
@@ -244,8 +246,8 @@ namespace pc
             while (total < size)
             {
 #ifndef PC_NETWORK_MOCK
-               ssize_t const recv =
-                   ::recv(socket, buffer.data() + total, size - total, flags);
+               ssize_t const recv = ::recv(
+                   socket, buffer.data() + total, size - total, flags | MSG_NOSIGNAL);
 #else
                PC_IGNORE(socket);
                PC_IGNORE(buffer);
@@ -322,7 +324,7 @@ namespace pc
 #endif
 
 #ifndef PC_NETWORK_MOCK
-               ssize_t const sent = ::send(socket, msg, len, flags);
+               ssize_t const sent = ::send(socket, msg, len, flags | MSG_NOSIGNAL);
 #else
                PC_IGNORE(socket);
                PC_IGNORE(msg);
@@ -361,7 +363,7 @@ namespace pc
                                           int const    flags = 0)
          {
 #ifndef PC_NETWORK_MOCK
-            ssize_t const sent = ::send(socket, msg, len, flags);
+            ssize_t const sent = ::send(socket, msg, len, flags | MSG_NOSIGNAL);
 #else
             PC_IGNORE(socket);
             PC_IGNORE(msg);
