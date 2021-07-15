@@ -197,7 +197,10 @@ namespace pc
 #else
             PC_IGNORE(socket);
             PC_IGNORE(flags);
-            ssize_t const recv = buffer.size();
+            ssize_t const recv = 22;
+#endif
+#ifdef PC_PROFILE
+            result.duration = timer::now() - start;
 #endif
             if (recv == -1)
             {
