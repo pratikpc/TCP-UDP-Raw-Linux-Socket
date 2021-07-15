@@ -1,7 +1,7 @@
 #include <iostream>
 
+#include <pc/memory/Buffer.hpp>
 #include <pc/network/TCP.hpp>
-#include <pc/network/types.hpp>
 #include <pc/network/ip.hpp>
 
 #include <cstdlib>
@@ -15,7 +15,7 @@ int main()
    std::cout << "IP = " << ipstr;
    std::cout << "\nHostname = " << pc::network::IP::hostName();
    pc::network::TCP    tcp(ip.connect());
-   pc::network::buffer recv(100);
+   pc::memory::Buffer<char> recv(100);
    while (true)
    {
       pc::network::Result result = tcp.recv(recv);

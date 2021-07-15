@@ -1,10 +1,8 @@
 #pragma once
 
-#include <vector>
-
 namespace pc
 {
-   namespace opt
+   namespace memory
    {
       template <typename T>
       class Buffer

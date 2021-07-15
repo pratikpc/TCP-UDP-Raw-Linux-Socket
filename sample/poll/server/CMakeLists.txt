@@ -26,6 +26,7 @@ pc::network
 pc::pqpp
 pc::lexical_cast
 pc::protocol
+pc::memory
 )
 
 target_compile_options(${PROJECT_NAME}

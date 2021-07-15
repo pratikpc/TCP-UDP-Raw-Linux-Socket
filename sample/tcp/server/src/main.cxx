@@ -1,9 +1,9 @@
 #include <cstdlib>
 #include <iostream>
 
+#include <pc/memory/Buffer.hpp>
 #include <pc/network/TCP.hpp>
 #include <pc/network/ip.hpp>
-#include <pc/network/types.hpp>
 
 #include <pc/thread/Thread.hpp>
 
@@ -11,7 +11,7 @@ void* childSocketExec(void* arg)
 {
    pc::network::TCP* child = (pc::network::TCP*)arg;
    std::cout << "Accepted " << child->socket << "\n";
-   pc::network::buffer recv(1000);
+   pc::memory::Buffer<char> recv(1000);
    pc::network::Result result;
    std::string const   data("nokia tyre");
    while (true)

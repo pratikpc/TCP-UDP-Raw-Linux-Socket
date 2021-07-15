@@ -3,9 +3,9 @@
 #include <iostream>
 #include <sstream>
 
+#include <pc/memory/Buffer.hpp>
 #include <pc/network/TCP.hpp>
 #include <pc/network/ip.hpp>
-#include <pc/network/types.hpp>
 #include <pc/protocol/ClientLearnProtocol.hpp>
 
 #include <pc/lexical_cast.hpp>
@@ -39,7 +39,7 @@ void* func(void* clientIndexPtr)
    {
       pc::protocol::ClientLearnProtocol protocol(server, clientId);
       protocol.timeout = 10;
-      pc::network::buffer buffer(UINT16_MAX);
+      pc::memory::Buffer<char> buffer(UINT16_MAX);
 
       pc::network::Result result = protocol.SetupConnection(buffer);
       // if (result.IsFailure())

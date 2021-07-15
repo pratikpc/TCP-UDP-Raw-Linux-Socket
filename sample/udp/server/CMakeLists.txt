@@ -24,5 +24,5 @@ target_compile_options(${PROJECT_NAME}
 target_link_libraries(${PROJECT_NAME}
 PRIVATE
 	pc::network
-	pthread
+  pc::memory
 )

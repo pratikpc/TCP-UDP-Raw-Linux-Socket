@@ -3,9 +3,9 @@
 #include <iostream>
 #include <sstream>
 
+#include <pc/memory/Buffer.hpp>
 #include <pc/network/TCP.hpp>
 #include <pc/network/ip.hpp>
-#include <pc/network/types.hpp>
 #include <pc/protocol/ServerLearnProtocol.hpp>
 
 #include <pc/thread/Thread.hpp>
@@ -34,9 +34,9 @@ protocol::NetworkPacket pollCallback(protocol::NetworkPacket const& packet,
 
 void* PollAndExecute(void* arg)
 {
-   using namespace pc::network;
+   using namespace pc::memory;
    Protocol& poll = *((Protocol*)arg);
-   buffer    buffer(UINT16_MAX);
+   Buffer<char>    buffer(UINT16_MAX);
 #ifdef PC_NETWORK_MOCK
    pc::protocol::NetworkPacket packet(pc::protocol::Commands::Send,
                                       repeat("Hi this is PC. Start working", 10));

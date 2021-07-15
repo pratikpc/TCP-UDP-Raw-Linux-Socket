@@ -27,4 +27,5 @@ PRIVATE
  pc::network
  pc::threads
  pc::lexical_cast
+ pc::memory
 )

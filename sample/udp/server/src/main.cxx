@@ -1,5 +1,6 @@
 #include <iostream>
 
+#include <pc/memory/Buffer.hpp>
 #include <pc/network/UDP.hpp>
 #include <pc/network/ip.hpp>
 
@@ -15,7 +16,7 @@ int main()
    std::cout << "IP = " << ipstr;
    std::cout << "\n Hostname = " << ip.hostName();
    pc::network::UDP    udp(ip.bind());
-   pc::network::buffer recv(100);
+   pc::memory::Buffer<char> recv(100);
    while (1)
    {
       pc::network::Result result = udp.recv(recv);
