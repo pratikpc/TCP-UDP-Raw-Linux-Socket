@@ -11,6 +11,12 @@
 
 #include <pc/stl/numeric.hpp>
 
+#if defined(PC_NETWORK_MOCK)
+#   ifndef PC_IGNORE
+#      define PC_IGNORE(x) (void)x
+#   endif
+#endif
+
 namespace pc
 {
    namespace protocol
@@ -58,8 +64,8 @@ namespace pc
             return command.size() + data.size();
          }
          template <typename Buffer>
-         RawPacket(Buffer const&   buffer,
-                   network::Result recvData
+         RawPacket(Buffer const&    buffer,
+                   PacketSize const bytesToRead
 #ifdef PC_PROFILE
                    ,
                    timespec const& readTimeDiff
@@ -70,32 +76,10 @@ namespace pc
              readTimeDiff(readTimeDiff)
 #endif
          {
-            if (recvData.IsFailure())
-            {
-               if (recvData.PollFailure)
-                  command = Commands::Empty;
-               // Anything other than Poll Failure
-               else
-                  command = Commands::MajorErrors::SocketClosed;
-               return;
-            }
-#ifdef PC_PROFILE
-            timespec const bufferCopyTimeStart = timer::now();
-#endif
             command.resize(4);
-            assert(recvData.NoOfBytes >= command.size());
-            std::copy(buffer.begin(), buffer.begin() + command.size(), command.begin());
-            if (recvData.NoOfBytes > command.size())
-            {
-               data.resize(recvData.NoOfBytes - command.size());
-               std::copy(buffer.begin() + command.size(),
-                         buffer.begin() + recvData.NoOfBytes,
-                         data.begin());
-            }
+            this->ExtractDataFromBuffer(buffer, bytesToRead);
 #ifdef PC_PROFILE
-            timespec nowTime         = timer::now();
-            intraProcessingTimeStart = nowTime;
-            bufferCopyTimeDiff       = nowTime - bufferCopyTimeStart;
+            intraProcessingTimeStart = timer::now();
 #endif
          }
 
@@ -116,6 +100,42 @@ namespace pc
             return RawPacket<N>::Read(poll.fd, buffer, timeout);
          }
          template <typename Buffer>
+         static PacketSize ExtractPacketSizeFromBuffer(Buffer const& buffer)
+         {
+// buffer[0] << 0 + buffer[1] << CHAR_BIT
+// Convert char array to integer
+#ifndef PC_NETWORK_MOCK
+            PacketSize bytesToRead = 0;
+            for (std::size_t i = 0; i < N; ++i)
+               bytesToRead |= (((unsigned char)buffer[i]) << (CHAR_BIT * i));
+            bytesToRead = NetworkToHost(bytesToRead);
+            return bytesToRead;
+#else
+            PC_IGNORE(buffer);
+            return 20;
+#endif
+         }
+         template <typename Buffer>
+         void ExtractDataFromBuffer(Buffer const& buffer, PacketSize const bytesToRead)
+         {
+#ifdef PC_PROFILE
+            timespec const bufferCopyTimeStart = timer::now();
+#endif
+            assert(bytesToRead >= command.size());
+            std::copy(buffer.begin(), buffer.begin() + command.size(), command.begin());
+            if (bytesToRead > (PacketSize)command.size())
+            {
+               data.resize(bytesToRead - command.size());
+               std::copy(buffer.begin() + command.size(),
+                         buffer.begin() + bytesToRead,
+                         data.begin());
+            }
+#ifdef PC_PROFILE
+            bufferCopyTimeDiff = timer::now() - bufferCopyTimeStart;
+#endif
+         }
+
+         template <typename Buffer>
          static RawPacket<N>
              Read(int const socket, Buffer& buffer, std::size_t const timeout)
          {
@@ -124,40 +144,40 @@ namespace pc
 #ifdef PC_PROFILE
             timespec readTimeDiff = recvData.duration;
 #endif
-            if (recvData.IsSuccess())
+            if (recvData.IsFailure())
             {
-               // buffer[0] << 0 + buffer[1] << CHAR_BIT
-               // Convert char array to integer
-#ifndef PC_NETWORK_MOCK
-               PacketSize bytesToRead = 0;
-               for (std::size_t i = 0; i < N; ++i)
-                  bytesToRead |= (((unsigned char)buffer[i]) << (CHAR_BIT * i));
-               bytesToRead = NetworkToHost(bytesToRead);
-#else
-               // Assume buffer contains 20 bytes at least
-               // When mocking
-               PacketSize bytesToRead = 20;
-#endif
-               assert(buffer.size() > bytesToRead);
-               recvData =
-                   network::TCPPoll::recvFixedBytes(socket, buffer, bytesToRead, timeout);
-#ifdef PC_PROFILE
-               readTimeDiff = readTimeDiff + recvData.duration;
-#endif
-               if (recvData.IsSuccess())
-               {
-                  assert(recvData.NoOfBytes == bytesToRead);
-               }
+               if (recvData.PollFailure)
+                  return RawPacket(Commands::Empty);
+               // Anything other than Poll Failure
+               else
+                  return RawPacket(Commands::MajorErrors::SocketClosed);
             }
+            PacketSize const bytesToRead =
+                RawPacket<N>::ExtractPacketSizeFromBuffer(buffer);
+            assert(buffer.size() > bytesToRead);
+            recvData =
+                network::TCPPoll::recvFixedBytes(socket, buffer, bytesToRead, timeout);
+#ifdef PC_PROFILE
+            readTimeDiff = readTimeDiff + recvData.duration;
+#endif
+            if (recvData.IsFailure())
+            {
+               if (recvData.PollFailure)
+                  return RawPacket(Commands::Empty);
+               // Anything other than Poll Failure
+               else
+                  return RawPacket(Commands::MajorErrors::SocketClosed);
+            }
+            assert(recvData.NoOfBytes == bytesToRead);
             return RawPacket(buffer,
-                             recvData
+                             bytesToRead
 #ifdef PC_PROFILE
                              ,
                              readTimeDiff
 #endif
             );
          }
-         network::Result Write(::pollfd poll, std::size_t timeout) const
+         network::Result Write(::pollfd const& poll, std::size_t timeout) const
          {
             return Write(poll.fd, timeout);
          }
@@ -198,3 +218,5 @@ namespace pc
       };
    } // namespace protocol
 } // namespace pc
+
+#undef PC_IGNORE
