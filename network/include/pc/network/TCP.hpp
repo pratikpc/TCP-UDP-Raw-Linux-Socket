@@ -183,6 +183,47 @@ namespace pc
             return false;
          }
          template <typename Buffer>
+         static Result recvAsManyAsPossibleAsync(int const socket,
+                                                 Buffer&   buffer,
+                                                 int const flags = 0)
+         {
+            Result result;
+#ifdef PC_PROFILE
+            timespec start = timer::now();
+#endif
+#ifndef PC_NETWORK_MOCK
+            ssize_t const recv =
+                ::recv(socket, buffer.data(), buffer.size(), flags | MSG_DONTWAIT);
+#else
+            PC_IGNORE(socket);
+            PC_IGNORE(flags);
+            ssize_t const recv = buffer.size();
+#endif
+            if (recv == -1)
+            {
+               std::size_t asyncFailCounter = 0;
+               std::size_t majorFailCounter = 0;
+               result.NoOfBytes             = 0;
+               if (!TCP::HandleError(result, asyncFailCounter, majorFailCounter))
+                  return result;
+               // If it was an async failure
+               if (asyncFailCounter != 0)
+                  return result;
+               // Otherwise
+               // It was an error we can recover from
+               // Run function again
+               return recvAsManyAsPossibleAsync(socket, buffer, flags);
+            }
+            result.NoOfBytes = recv;
+            if (recv == 0)
+            {
+               result.SocketClosed = true;
+               return result;
+            }
+            return result;
+         }
+
+         template <typename Buffer>
          static Result recvFixedBytes(int const         socket,
                                       Buffer&           buffer,
                                       std::size_t const size,

@@ -77,6 +77,34 @@ namespace pc
             return network::TCP::recvFixedBytes(fd, buffer, size, MSG_DONTWAIT);
          }
 
+         template <typename Buffer>
+         Result recvAsManyAsPossible(::pollfd& poll, Buffer& buffer, std::size_t timeout)
+         {
+            if (timeout != 0)
+            {
+               int const ret = TCPPoll::poll(poll, timeout);
+               if (ret <= 0 || !(poll.revents & POLLIN))
+               {
+                  Result recvData;
+                  recvData.PollFailure = true;
+                  return recvData;
+               }
+            }
+            return network::TCP::recvAsManyAsPossibleAsync(poll.fd, buffer);
+         }
+         template <typename Buffer>
+         Result recvAsManyAsPossible(int fd, Buffer& buffer, std::size_t timeout)
+         {
+            if (timeout != 0)
+            {
+               ::pollfd poll;
+               poll.fd     = fd;
+               poll.events = POLLIN;
+               return recvAsManyAsPossible(poll, buffer, timeout);
+            }
+            return network::TCP::recvAsManyAsPossibleAsync(fd, buffer);
+         }
+
          template <typename Data>
          Result write(pollfd& poll, Data const& out, std::size_t const timeout)
          {
