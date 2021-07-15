@@ -29,6 +29,10 @@ namespace pc
             assert(offset < sizeV);
             offset = newOffset;
          }
+         void OffsetBy(std::size_t by)
+         {
+            return Offset(offset + by);
+         }
          std::size_t Offset() const
          {
             return offset;
