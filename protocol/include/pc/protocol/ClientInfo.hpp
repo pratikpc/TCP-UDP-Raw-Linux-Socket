@@ -181,54 +181,63 @@ namespace pc
          template <typename Buffer>
          ClientPollResult ReadPacket(Buffer& buffer)
          {
-            if (!pc::network::TCP::containsDataToRead(socket))
+            // If no data to read
+            // But read poll signalled POLLIN
+            // It means that socket has terminated
+            if (!network::TCP::containsDataToRead(socket))
             {
                Terminate();
                ClientPollResult result;
                result.terminate = true;
                return result;
             }
-            ++deadline;
+            // We have at least one packet
+            // available
+            do
+            {
+               ++deadline;
+               NetworkPacket packet = NetworkPacket::Read(socket, buffer, 0);
+#ifdef PC_PROFILE
+               averageReadTime += packet.readTimeDiff;
+#endif
+               if (packet.command == Commands::Blank)
+               {
+                  terminateOnNextCycle = false;
+               }
+               else if (packet.command == Commands::Setup::Ack)
+               {
+                  LockGuard guard(writeMutex);
+                  packetsToWrite.push_back(NetworkPacket(Commands::Setup::Syn));
+               }
+               else if (packet.command == Commands::Setup::ClientID)
+               {
+                  clientId = packet.data;
+                  LockGuard guard(writeMutex);
+                  packetsToWrite.push_back(NetworkPacket(Commands::Setup::Join));
+               }
+               else if (packet.command == Commands::MajorErrors::SocketClosed)
+               {
+                  Terminate();
+                  ClientPollResult result;
+                  result.terminate = true;
+                  return result;
+               }
+
+               else if (packet.command == Commands::Send)
+               {
+                  terminateOnNextCycle = false;
+                  LockGuard guard(readMutex);
+                  packetsToRead.push_back(packet);
+               }
+#ifdef PC_PROFILE
+               averageBufferCopyTime += packet.bufferCopyTimeDiff;
+#endif
+               // if there is more data available to read
+               // Keep adding
+            } while (network::TCP::containsDataToRead(socket));
+
             ClientPollResult result;
             result.read = true;
-
-            NetworkPacket packet = NetworkPacket::Read(socket, buffer, 0);
-#ifdef PC_PROFILE
-            averageReadTime += packet.readTimeDiff;
-            // std::cout << packet.readTimeDiff << " read" << std::endl;
-#endif
-            if (packet.command == Commands::Blank)
-            {
-               terminateOnNextCycle = false;
-            }
-            else if (packet.command == Commands::Setup::Ack)
-            {
-               LockGuard guard(writeMutex);
-               packetsToWrite.push_back(NetworkPacket(Commands::Setup::Syn));
-            }
-            else if (packet.command == Commands::Setup::ClientID)
-            {
-               clientId = packet.data;
-               LockGuard guard(writeMutex);
-               packetsToWrite.push_back(NetworkPacket(Commands::Setup::Join));
-            }
-            else if (packet.command == Commands::MajorErrors::SocketClosed)
-            {
-               Terminate();
-               ClientPollResult result;
-               result.terminate = true;
-               return result;
-            }
-
-            else if (packet.command == Commands::Send)
-            {
-               terminateOnNextCycle = false;
-               LockGuard guard(readMutex);
-               packetsToRead.push_back(packet);
-            }
-#ifdef PC_PROFILE
-            averageBufferCopyTime += packet.bufferCopyTimeDiff;
-#endif
             return result;
          }
 
