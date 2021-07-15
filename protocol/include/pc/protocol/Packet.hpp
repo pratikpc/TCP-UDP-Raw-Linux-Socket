@@ -63,6 +63,8 @@ namespace pc
          {
             return command.size() + data.size();
          }
+
+       public:
          template <typename Buffer>
          RawPacket(Buffer const&    buffer,
                    PacketSize const bytesToRead
@@ -82,8 +84,6 @@ namespace pc
             intraProcessingTimeStart = timer::now();
 #endif
          }
-
-       public:
          RawPacket(std::string const& command, std::string const& data = "") :
              command(command), data(data)
 #ifdef PC_PROFILE
