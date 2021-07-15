@@ -9,7 +9,7 @@ namespace pc
       template <typename T>
       class Buffer
       {
-         T*          arr;
+         T* const    arr;
          std::size_t sizeV;
          std::size_t offset;
 
