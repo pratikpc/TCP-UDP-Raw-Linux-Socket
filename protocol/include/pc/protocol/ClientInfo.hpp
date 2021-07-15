@@ -140,14 +140,14 @@ namespace pc
 
          // TODO
          // {
+         //    std::size_t               newDeadlineMaxCount =
+         //        config->ExtractDeadlineMaxCountFromDatabase(clientInfo.clientId);
          //    // As the balancer element is common
          //    // and shared across protocols
          //    // Make the balancer updation guard
          //    // static
          //    static pc::threads::Mutex balancerPriorityUpdationMutex;
          //    LockGuard   guard(balancerPriorityUpdationMutex);
-         //    std::size_t               newDeadlineMaxCount =
-         //        config->ExtractDeadlineMaxCountFromDatabase(clientInfo.clientId);
          //    config->balancer->setPriority(balancerIndex,
          //                                  // Update priority for given element
          //                                  (*config->balancer)[balancerIndex] -
@@ -195,7 +195,6 @@ namespace pc
             NetworkPacket packet = NetworkPacket::Read(socket, buffer, 0);
 #ifdef PC_PROFILE
             averageReadTime += packet.readTimeDiff;
-            // std::cout << packet.readTimeDiff << " read" << std::endl;
 #endif
             if (packet.command == Commands::Blank)
             {
@@ -248,11 +247,10 @@ namespace pc
                   if (result.SocketClosed)
                      return Terminate();
 #ifdef PC_PROFILE
-                  // Only send commands have readTimeTaken and readWriteTime defined
+                  averageWriteTime += writePacketIt->writeTimeDiff;
                   if (writePacketIt->command == Commands::Send)
                   {
                      averageExecuteTime += writePacketIt->executeTimeDiff;
-                     averageWriteTime += writePacketIt->writeTimeDiff;
                      averageIntraProcessingTime += writePacketIt->intraProcessingTimeDiff;
                      averageAccumulatedTime +=
                          (writePacketIt->intraProcessingTimeDiff +
