@@ -85,37 +85,56 @@ namespace pc
 
          void executeCallbacks()
          {
-            PacketList tempWriteVec;
+            PacketList tempList;
             {
                // Add to a temporary vector for writes
                LockGuard guard(readMutex);
                if (packetsToRead.empty())
                   return;
-               for (PacketList::const_iterator readPacketIt = packetsToRead.begin();
-                    readPacketIt != packetsToRead.end();
-                    ++readPacketIt)
-               {
-#ifdef PC_PROFILE
-                  timespec const executeStart = timer::now();
-#endif
-                  NetworkPacket writePacket = callback(*readPacketIt, *this);
-#ifdef PC_PROFILE
-                  writePacket.executeTimeDiff = timer::now() - executeStart;
-                  writePacket.readTimeDiff    = readPacketIt->readTimeDiff;
-                  writePacket.intraProcessingTimeStart =
-                      readPacketIt->intraProcessingTimeStart;
-#endif
-                  if (writePacket.command == Commands::Send)
-                     tempWriteVec.push_back(writePacket);
-               }
-               packetsToRead.clear();
+               tempList.splice(tempList.end(), packetsToRead);
             }
-            if (!tempWriteVec.empty())
+            // What we will do here
+            // We will iterate over the read list
+            // Then we will assign the value to write
+            // Within this list itself as an optimization
+            // To reduce copies
+            // Then we will copy these values to the write List
+            for (PacketList::iterator packetIt = tempList.begin();
+                 packetIt != tempList.end();)
+            {
+               // At the start, packetIt will have the item to read
+#ifdef PC_PROFILE
+               timespec const readPacketTimeDiff = packetIt->readTimeDiff;
+               timespec const readPacketIntraProcessingTimeStart =
+                   packetIt->intraProcessingTimeStart;
+               timespec const executeStart = timer::now();
+#endif
+               // Item to write added to packetIt itself
+               // So the read array will now have the items to write
+               *packetIt = callback(*packetIt, *this);
+#ifdef PC_PROFILE
+               packetIt->executeTimeDiff          = timer::now() - executeStart;
+               packetIt->readTimeDiff             = readPacketTimeDiff;
+               packetIt->intraProcessingTimeStart = readPacketIntraProcessingTimeStart;
+#endif
+               // We only write if send
+               if (packetIt->command == Commands::Send)
+                  ++packetIt;
+               // If not send, remove this packet
+               else
+                  packetIt = tempList.erase(packetIt);
+            }
+            // If nothing available to write
+            // Return
+            // Remember that tempList now will contain
+            // All output of callbacks
+            // And hence it is now the write array
+            if (tempList.empty())
+               return;
             {
                // Add to write vector
                LockGuard guard(writeMutex);
-               // If Write Vector is empty, simply copy
-               packetsToWrite.splice(packetsToWrite.end(), tempWriteVec);
+               packetsToWrite.splice(packetsToWrite.end(), tempList);
             }
          }
 
