@@ -88,28 +88,11 @@ namespace pc
          static bool containsDataToRead(int socket, int const flags = 0)
          {
             char    val;
-            ssize_t bytes = pc::network::TCP::recvRaw(
-                socket, &val, sizeof(val), MSG_PEEK | MSG_DONTWAIT | flags);
+            ssize_t bytes =
+                ::recv(socket, &val, sizeof(val), MSG_PEEK | MSG_DONTWAIT | flags);
             return bytes > 0;
          }
 
-         static ssize_t recvRaw(int const         socket,
-                                char*             input,
-                                std::size_t const size,
-                                int const         flags = 0)
-         {
-#ifndef PC_NETWORK_MOCK
-            ssize_t const opt = ::recv(socket, input, size, flags);
-#else
-            PC_IGNORE(socket);
-            PC_IGNORE(input);
-            PC_IGNORE(flags);
-            ssize_t const opt = size;
-#endif
-            if (opt == -1)
-               throw std::runtime_error("Unable to read data");
-            return opt;
-         }
          static bool HandleError(Result&      result,
                                  std::size_t& asyncFailCounter,
                                  std::size_t& majorFailCount)
