@@ -3,7 +3,6 @@
 #include <pc/network/Result.hpp>
 #include <pc/network/Socket.hpp>
 #include <pc/network/ip.hpp>
-#include <pc/network/types.hpp>
 
 #include <sys/socket.h>
 
@@ -22,7 +21,8 @@ namespace pc
             o.socket = -1;
          }
 
-         Result recv(network::buffer& buffer, int flags = 0) const
+         template <typename Buffer>
+         Result recv(Buffer& buffer, int flags = 0) const
          {
             sockaddr_storage their_addr;
             socklen_t        addr_len = sizeof(their_addr);
