@@ -35,8 +35,8 @@ protocol::NetworkPacket pollCallback(protocol::NetworkPacket const& packet,
 void* PollAndExecute(void* arg)
 {
    using namespace pc::memory;
-   Protocol& poll = *((Protocol*)arg);
-   Buffer<char>    buffer(UINT16_MAX);
+   Protocol&    poll = *((Protocol*)arg);
+   Buffer<char> buffer(106);
 #ifdef PC_NETWORK_MOCK
    pc::protocol::NetworkPacket packet(pc::protocol::Commands::Send,
                                       repeat("Hi this is PC. Start working", 10));
@@ -98,6 +98,9 @@ int main()
 #endif
 #ifndef PC_DISABLE_DATABASE_SUPPORT
    std::cout << "Database support on" << std::endl;
+#endif
+#ifdef PC_OPTIMIZE_READ_MULTIPLE_SINGLE_SHOT
+   std::cout << "Optimize reads by reading multiple elements" << std::endl;
 #endif
    ProtocolVec protocols(/*pc::threads::ProcessorCount()*/ 1);
 

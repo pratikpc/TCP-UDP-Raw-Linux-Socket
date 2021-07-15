@@ -44,11 +44,10 @@ void* func(void* clientIndexPtr)
       pc::network::Result result = protocol.SetupConnection(buffer);
       // if (result.IsFailure())
       //    throw std::runtime_error("Setup failed");
+      pc::protocol::NetworkSendPacket packet(repeat("H", 100));
       for (std::size_t i = 0; true; i++)
       {
-         std::cout << "Message sending " << i << " at " << protocol.clientId << std::endl;
-         pc::protocol::NetworkSendPacket packet(repeat(
-             "Hi server from " + protocol.clientId + " " + pc::lexical_cast(i), 1));
+         // std::cout << "Message sending " << i << " at " << protocol.clientId << std::endl;
          result = protocol.Write(packet);
          if (result.IsFailure())
             break;

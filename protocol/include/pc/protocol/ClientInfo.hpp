@@ -65,6 +65,11 @@ namespace pc
          Averager averageExecuteTime;
          Averager averageBufferCopyTime;
          Averager averageAccumulatedTime;
+         Averager averageSingleReadIterTime;
+
+#   ifdef PC_OPTIMIZE_READ_MULTIPLE_SINGLE_SHOT
+         Averager averageReadCountPerIt;
+#   endif
 #endif
 
        public:
@@ -167,12 +172,18 @@ namespace pc
 #ifdef PC_PROFILE
                std::cout << "For Client ID " << clientId << std::endl;
                std::cout << "Average exec time= " << averageExecuteTime << std::endl;
+               std::cout << "Average rdit time= " << averageSingleReadIterTime
+                         << std::endl;
                std::cout << "Average intr time= " << averageIntraProcessingTime
                          << std::endl;
                std::cout << "Average read time= " << averageReadTime << std::endl;
                std::cout << "Average writ time= " << averageWriteTime << std::endl;
                std::cout << "Average bfcp time= " << averageBufferCopyTime << std::endl;
                std::cout << "Average sumt time= " << averageAccumulatedTime << std::endl;
+#   ifdef PC_OPTIMIZE_READ_MULTIPLE_SINGLE_SHOT
+               // Average Read count per iteration
+               std::cout << "Average reco prit= " << averageReadCountPerIt << std::endl;
+#   endif
                std::cout << "=================" << std::endl;
 #endif
             }
@@ -181,53 +192,166 @@ namespace pc
          template <typename Buffer>
          ClientPollResult ReadPacket(Buffer& buffer)
          {
-            if (!pc::network::TCP::containsDataToRead(socket))
+#ifdef PC_PROFILE
+            timespec const readPacketItStart = timer::now();
+#endif
+            buffer.Offset(0);
+#ifdef PC_OPTIMIZE_READ_MULTIPLE_SINGLE_SHOT
+            network::Result recvResult =
+                network::TCP::recvAsManyAsPossibleAsync(socket, buffer);
+#else
+            if (!network::TCP::containsDataToRead(socket))
             {
                Terminate();
                ClientPollResult result;
                result.terminate = true;
                return result;
             }
-            ++deadline;
+            network::Result recvResult = network::TCP::recvFixedBytes(
+                socket, buffer, NetworkPacket::SizeBytes, MSG_DONTWAIT);
+#endif
+            if (recvResult.IsFailure())
+            {
+               Terminate();
+               ClientPollResult result;
+               result.terminate = true;
+               return result;
+            }
             ClientPollResult result;
             result.read = true;
-
-            NetworkPacket packet = NetworkPacket::Read(socket, buffer, 0);
-#ifdef PC_PROFILE
-            averageReadTime += packet.readTimeDiff;
+#ifdef PC_OPTIMIZE_READ_MULTIPLE_SINGLE_SHOT
+            std::size_t bytesToRead = recvResult.NoOfBytes;
 #endif
-            if (packet.command == Commands::Blank)
+#ifdef PC_OPTIMIZE_READ_MULTIPLE_SINGLE_SHOT
+#   ifdef PC_PROFILE
+            std::size_t readCountThisIt = 0;
+#   endif
+#endif
+            PacketList tempReadList;
+#ifdef PC_OPTIMIZE_READ_MULTIPLE_SINGLE_SHOT
+            while (bytesToRead > NetworkPacket::SizeBytes)
             {
-               terminateOnNextCycle = false;
-            }
-            else if (packet.command == Commands::Setup::Ack)
-            {
-               LockGuard guard(writeMutex);
-               packetsToWrite.push_back(NetworkPacket(Commands::Setup::Syn));
-            }
-            else if (packet.command == Commands::Setup::ClientID)
-            {
-               clientId = packet.data;
-               LockGuard guard(writeMutex);
-               packetsToWrite.push_back(NetworkPacket(Commands::Setup::Join));
-            }
-            else if (packet.command == Commands::MajorErrors::SocketClosed)
-            {
-               Terminate();
-               ClientPollResult result;
-               result.terminate = true;
-               return result;
-            }
+#endif
+               ++deadline;
+               // We know at least one packet is available
+               std::size_t packetSize =
+                   NetworkPacket::ExtractPacketSizeFromBuffer(buffer);
+#ifdef PC_OPTIMIZE_READ_MULTIPLE_SINGLE_SHOT
+               bytesToRead -= NetworkPacket::SizeBytes;
+               // Move buffer ahead
+               buffer.OffsetBy(NetworkPacket::SizeBytes);
+#endif
 
-            else if (packet.command == Commands::Send)
+#ifndef PC_OPTIMIZE_READ_MULTIPLE_SINGLE_SHOT
+               recvResult =
+                   network::TCP::recvFixedBytes(socket, buffer, packetSize, MSG_DONTWAIT);
+               if (recvResult.IsFailure())
+               {
+                  Terminate();
+                  ClientPollResult result;
+                  result.terminate = true;
+                  return result;
+               }
+#endif
+               assert(packetSize < buffer.sizeIgnoreOffset());
+               if (packetSize >= buffer.sizeIgnoreOffset())
+                  throw std::invalid_argument("Packet is very very large");
+
+#ifdef PC_OPTIMIZE_READ_MULTIPLE_SINGLE_SHOT
+#   ifdef PC_PROFILE
+               ++readCountThisIt;
+#   endif
+#endif
+#ifdef PC_OPTIMIZE_READ_MULTIPLE_SINGLE_SHOT
+               if (packetSize > bytesToRead)
+               {
+
+                  std::size_t const extraElements = packetSize - bytesToRead;
+                  // Move all elements to start
+                  // And set 0 offset
+                  buffer.MoveToStart();
+                  buffer.Offset(bytesToRead);
+                  // Read only the extra elements
+                  recvResult = pc::network::TCP::recvFixedBytes(
+                      socket, buffer, extraElements, MSG_DONTWAIT);
+                  // Terrminate if extras read fails
+                  if (recvResult.IsFailure())
+                  {
+                     Terminate();
+                     ClientPollResult result;
+                     result.terminate = true;
+                     return result;
+                  }
+                  // Add to bytesToRead
+                  bytesToRead += recvResult.NoOfBytes;
+                  // Set buffer offset to start
+                  buffer.Offset(0);
+               }
+#endif
+
+               NetworkPacket const packet(buffer,
+                                          packetSize
+#ifdef PC_PROFILE
+                                          ,
+                                          recvResult.duration
+#endif
+               );
+
+               // Ignore current packet
+               buffer.OffsetBy(packetSize);
+#ifdef PC_OPTIMIZE_READ_MULTIPLE_SINGLE_SHOT
+               bytesToRead -= packetSize;
+#endif
+
+#ifdef PC_PROFILE
+               averageReadTime += packet.readTimeDiff;
+#endif
+               if (packet.command == Commands::Blank)
+               {
+                  terminateOnNextCycle = false;
+               }
+               else if (packet.command == Commands::Setup::Ack)
+               {
+                  LockGuard guard(writeMutex);
+                  packetsToWrite.push_back(NetworkPacket(Commands::Setup::Syn));
+               }
+               else if (packet.command == Commands::Setup::ClientID)
+               {
+                  clientId = packet.data;
+                  LockGuard guard(writeMutex);
+                  packetsToWrite.push_back(NetworkPacket(Commands::Setup::Join));
+               }
+               else if (packet.command == Commands::MajorErrors::SocketClosed)
+               {
+                  Terminate();
+                  ClientPollResult result;
+                  result.terminate = true;
+                  return result;
+               }
+
+               else if (packet.command == Commands::Send)
+               {
+                  terminateOnNextCycle = false;
+                  tempReadList.push_back(packet);
+               }
+#ifdef PC_PROFILE
+               averageSingleReadIterTime += (timer::now() - readPacketItStart);
+               averageBufferCopyTime += packet.bufferCopyTimeDiff;
+#endif
+
+#ifdef PC_OPTIMIZE_READ_MULTIPLE_SINGLE_SHOT
+            }
+#endif
+#ifdef PC_OPTIMIZE_READ_MULTIPLE_SINGLE_SHOT
+#   ifdef PC_PROFILE
+            averageReadCountPerIt += readCountThisIt;
+#   endif
+#endif
             {
-               terminateOnNextCycle = false;
                LockGuard guard(readMutex);
-               packetsToRead.push_back(packet);
+               packetsToRead.splice(packetsToRead.end(), tempReadList);
             }
-#ifdef PC_PROFILE
-            averageBufferCopyTime += packet.bufferCopyTimeDiff;
-#endif
+
             return result;
          }
 
