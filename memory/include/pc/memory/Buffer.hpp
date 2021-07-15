@@ -42,6 +42,10 @@ namespace pc
          {
             return sizeV - offset;
          }
+         std::size_t sizeIgnoreOffset() const
+         {
+            return sizeV;
+         }
          T* data()
          {
             return arr + offset;
