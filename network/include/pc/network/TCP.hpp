@@ -183,10 +183,10 @@ namespace pc
             return false;
          }
          template <typename Buffer>
-         static Result recvOnly(int const         socket,
-                                Buffer&           buffer,
-                                std::size_t const size,
-                                int const         flags = 0)
+         static Result recvFixedBytes(int const         socket,
+                                      Buffer&           buffer,
+                                      std::size_t const size,
+                                      int const         flags = 0)
          {
             std::size_t total            = 0;
             std::size_t asyncFailCounter = 0;
@@ -245,14 +245,15 @@ namespace pc
             return result;
          }
          template <typename Buffer>
-         Result recvOnly(Buffer& buffer, std::size_t const size, int const flags = 0)
+         Result
+             recvFixedBytes(Buffer& buffer, std::size_t const size, int const flags = 0)
          {
-            return TCP::recvOnly(socket, buffer, size, flags);
+            return TCP::recvFixedBytes(socket, buffer, size, flags);
          }
          template <typename Buffer>
          Result recv(Buffer& buffer, int const flags = 0)
          {
-            return TCP::recvOnly(socket, buffer, buffer.size(), flags);
+            return TCP::recvFixedBytes(socket, buffer, buffer.size(), flags);
          }
          template <typename Data>
          Result send(Data const& data, int const flags = 0)

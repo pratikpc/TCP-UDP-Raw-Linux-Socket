@@ -46,10 +46,10 @@ namespace pc
          }
 
          template <typename Buffer>
-         Result readOnly(::pollfd&   poll,
-                         Buffer&     buffer,
-                         std::size_t size,
-                         std::size_t timeout)
+         Result recvFixedBytes(::pollfd&   poll,
+                               Buffer&     buffer,
+                               std::size_t size,
+                               std::size_t timeout)
          {
             if (timeout != 0)
             {
@@ -61,32 +61,20 @@ namespace pc
                   return recvData;
                }
             }
-            return network::TCP::recvOnly(poll.fd, buffer, size, MSG_DONTWAIT);
+            return network::TCP::recvFixedBytes(poll.fd, buffer, size, MSG_DONTWAIT);
          }
          template <typename Buffer>
-         Result readOnly(int fd, Buffer& buffer, std::size_t size, std::size_t timeout)
+         Result
+             recvFixedBytes(int fd, Buffer& buffer, std::size_t size, std::size_t timeout)
          {
             if (timeout != 0)
             {
                ::pollfd poll;
                poll.fd     = fd;
                poll.events = POLLIN;
-               return readOnly(poll, buffer, size, timeout);
+               return recvFixedBytes(poll, buffer, size, timeout);
             }
-            return network::TCP::recvOnly(fd, buffer, size, MSG_DONTWAIT);
-         }
-
-         template <typename Buffer>
-         Result read(pollfd poll, Buffer& buffer, std::size_t timeout)
-         {
-            return TCPPoll::readOnly(poll, buffer, buffer.size(), timeout);
-         }
-         template <typename Buffer>
-         Result read(int socket, Buffer& buffer, std::size_t timeout)
-         {
-            pollfd poll;
-            poll.fd = socket;
-            return TCPPoll::read(poll, buffer, timeout);
+            return network::TCP::recvFixedBytes(fd, buffer, size, MSG_DONTWAIT);
          }
 
          template <typename Data>

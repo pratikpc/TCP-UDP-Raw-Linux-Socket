@@ -120,7 +120,7 @@ namespace pc
              Read(int const socket, Buffer& buffer, std::size_t const timeout)
          {
             network::Result recvData =
-                network::TCPPoll::readOnly(socket, buffer, N, timeout);
+                network::TCPPoll::recvFixedBytes(socket, buffer, N, timeout);
 #ifdef PC_PROFILE
             timespec readTimeDiff = recvData.duration;
 #endif
@@ -140,7 +140,7 @@ namespace pc
 #endif
                assert(buffer.size() > bytesToRead);
                recvData =
-                   network::TCPPoll::readOnly(socket, buffer, bytesToRead, timeout);
+                   network::TCPPoll::recvFixedBytes(socket, buffer, bytesToRead, timeout);
 #ifdef PC_PROFILE
                readTimeDiff = readTimeDiff + recvData.duration;
 #endif
