@@ -162,7 +162,7 @@ namespace pc
             if (socket != -1)
             {
                terminateNow = true;
-               ::close(socket);
+               ::shutdown(socket, SHUT_RDWR);
                socket = -1;
 #ifdef PC_PROFILE
                std::cout << "For Client ID " << clientId << std::endl;

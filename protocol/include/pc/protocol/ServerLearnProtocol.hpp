@@ -67,7 +67,7 @@ namespace pc
                  ++it)
                // Just close the socket
                // They will error out later
-               ::close(*it);
+               ::shutdown(*it, SHUT_RDWR);
          }
          std::size_t size() const
          {

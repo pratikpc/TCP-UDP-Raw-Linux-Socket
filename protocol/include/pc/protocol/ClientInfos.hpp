@@ -56,6 +56,7 @@ namespace pc
                {
                   balancer->decPriority(balancerIndex, infoIt->second.DeadlineMaxCount());
                   clientInfos.erase(socket);
+                  ::close(socket);
                   ++it;
                }
                // If it does not
