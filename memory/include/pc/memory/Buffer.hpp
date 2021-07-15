@@ -66,6 +66,13 @@ namespace pc
          {
             return arr + offset;
          }
+         // Expensive operation
+         // Use rarely
+         void MoveToStart()
+         {
+            std::copy(arr + offset, arr + sizeV, arr);
+            Offset(0);
+         }
       };
    } // namespace memory
 } // namespace pc
