@@ -291,7 +291,6 @@ namespace pc
                   // Update Bytes to read
                   // With total number of bytes read in this iteration
                   bytesToRead += recvResult.NoOfBytes;
-                  continue;
                }
 #endif
                ++deadline;
