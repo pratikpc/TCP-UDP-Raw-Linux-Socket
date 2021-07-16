@@ -17,11 +17,11 @@
 #endif
 
 #ifndef DEADLINE_MAX_COUNT_DEFAULT
-#   ifdef PC_PROTOCOL
-#      define DEADLINE_MAX_COUNT_DEFAULT 1000
+#   ifdef PC_PROFILE
+#      define DEADLINE_MAX_COUNT_DEFAULT 10000
 // When not testing deadline should be sufficiently low
 #   else
-#      define DEADLINE_MAX_COUNT_DEFAULT 10000
+#      define DEADLINE_MAX_COUNT_DEFAULT 25
 #   endif
 #endif
 
