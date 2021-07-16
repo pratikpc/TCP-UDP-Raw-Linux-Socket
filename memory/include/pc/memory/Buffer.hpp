@@ -26,7 +26,7 @@ namespace pc
 
          void Offset(std::size_t newOffset)
          {
-            assert(offset < sizeV);
+            assert(newOffset <= sizeV);
             offset = newOffset;
          }
          void OffsetBy(std::size_t by)
