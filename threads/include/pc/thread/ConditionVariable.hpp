@@ -24,6 +24,11 @@ namespace pc
          {
             return pthread_cond_wait(&condition, &mutex.mutex) == 0;
          }
+         template <typename Mutex>
+         bool Wait(Mutex& mutex, timespec const& duration)
+         {
+            return pthread_cond_timedwait(&condition, &mutex.mutex, &duration) == 0;
+         }
          bool Signal()
          {
             return pthread_cond_signal(&condition) == 0;
