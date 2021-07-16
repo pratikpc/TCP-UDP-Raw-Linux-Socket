@@ -347,6 +347,7 @@ namespace pc
             averageReadCountPerIt += readCountThisIt;
 #   endif
 #endif
+            if (!tempReadList.empty())
             {
                LockGuard guard(readMutex);
                packetsToRead.splice(packetsToRead.end(), tempReadList);
