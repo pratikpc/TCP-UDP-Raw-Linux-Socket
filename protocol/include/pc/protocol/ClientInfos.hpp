@@ -6,13 +6,9 @@
 #include <tr1/unordered_map>
 #include <vector>
 
-#ifndef PC_USE_SPINLOCKS
-#   include <pc/thread/Mutex.hpp>
-#   include <pc/thread/MutexGuard.hpp>
-#else
-#   include <pc/thread/spin/SpinGuard.hpp>
-#   include <pc/thread/spin/SpinLock.hpp>
-#endif
+#include <pc/thread/RWLock.hpp>
+#include <pc/thread/RWReadGuard.hpp>
+#include <pc/thread/RWWriteGuard.hpp>
 
 namespace pc
 {
@@ -29,13 +25,7 @@ namespace pc
          ClientInfoMap clientInfos;
          bool          updateIssued;
 
-#ifndef PC_USE_SPINLOCKS
-         mutable pc::threads::Mutex      lock;
-         typedef pc::threads::MutexGuard LockGuard;
-#else
-         mutable pc::threads::SpinLock  lock;
-         typedef pc::threads::SpinGuard LockGuard;
-#endif
+         mutable pc::threads::RWLock lock;
 
        public:
          PollVec PollsIn;
@@ -45,7 +35,7 @@ namespace pc
                     Config::balancerT* balancer,
                     std::size_t const  balancerIndex)
          {
-            LockGuard guard(lock);
+            threads::RWWriteGuard guard(lock);
             for (typename UniqueSockets::iterator it = socketsToRemove.begin();
                  it != socketsToRemove.end();)
             {
@@ -70,7 +60,7 @@ namespace pc
                      ClientResponseCallback& callback,
                      std::size_t const DeadlineMaxCount = DEADLINE_MAX_COUNT_DEFAULT)
          {
-            LockGuard guard(lock);
+            threads::RWWriteGuard guard(lock);
             updateIssued = true;
             clientInfos.insert(
                 std::make_pair(socket, ClientInfo(socket, callback, DeadlineMaxCount)));
@@ -101,7 +91,7 @@ namespace pc
          }
          void Update()
          {
-            LockGuard guard(lock);
+            threads::RWReadGuard guard(lock);
             if (updateIssued)
             {
                PollsIn.clear();
@@ -120,21 +110,21 @@ namespace pc
 
          void Execute()
          {
-            LockGuard guard(lock);
+            threads::RWReadGuard guard(lock);
             for (iterator it = clientInfos.begin(); it != clientInfos.end(); ++it)
                it->second.executeCallbacks();
          }
 
          void Write(std::time_t timeout)
          {
-            LockGuard guard(lock);
+            threads::RWReadGuard guard(lock);
             for (iterator it = clientInfos.begin(); it != clientInfos.end(); ++it)
                it->second.WritePackets(timeout);
          }
 
          std::size_t size() const
          {
-            LockGuard guard(lock);
+            threads::RWReadGuard guard(lock);
             return clientInfos.size();
          }
          template <typename Buffer, typename UniqueSockets>
@@ -142,7 +132,7 @@ namespace pc
                          UniqueSockets& socketsToTerminate,
                          Buffer&        buffer)
          {
-            LockGuard guard(lock);
+            threads::RWReadGuard guard(lock);
 
             PollVec::const_iterator pollIt = PollsIn.begin();
             for (ClientInfos::iterator clientIt = clientInfos.begin();
