@@ -151,20 +151,12 @@ namespace pc
                packetIt->readTimeDiff             = readPacketTimeDiff;
                packetIt->intraProcessingTimeStart = readPacketIntraProcessingTimeStart;
 #endif
-               // We only write if send
-               if (packetIt->command == Commands::Send)
-                  ++packetIt;
-               // If not send, remove this packet
-               else
-                  packetIt = tempList.erase(packetIt);
             }
             // If nothing available to write
             // Return
             // Remember that tempList now will contain
             // All output of callbacks
             // And hence it is now the write array
-            if (tempList.empty())
-               return;
             {
                // Add to write vector
                LockGuard guard(writeMutex);
