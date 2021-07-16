@@ -134,7 +134,8 @@ namespace pc
             // To reduce copies
             // Then we will copy these values to the write List
             for (PacketList::iterator packetIt = tempList.begin();
-                 packetIt != tempList.end(); ++packetIt)
+                 packetIt != tempList.end();
+                 ++packetIt)
             {
                // At the start, packetIt will have the item to read
 #ifdef PC_PROFILE
@@ -283,6 +284,10 @@ namespace pc
                   // Update Bytes to read
                   // With total number of bytes read in this iteration
                   bytesToRead += recvResult.NoOfBytes;
+
+#   ifdef PC_PROFILE
+                  averageReadTime += recvResult.duration;
+#   endif
                }
 #endif
                ++deadline;
@@ -307,6 +312,9 @@ namespace pc
                   result.terminate = true;
                   return result;
                }
+#   ifdef PC_PROFILE
+               averageReadTime += recvResult.duration;
+#   endif
 #endif
                assert(packetSize < buffer.sizeIgnoreOffset());
                if (packetSize >= buffer.sizeIgnoreOffset())
@@ -341,6 +349,9 @@ namespace pc
                   bytesToRead += recvResult.NoOfBytes;
                   // Set buffer offset to start
                   buffer.Offset(0);
+#   ifdef PC_PROFILE
+                  averageReadTime += recvResult.duration;
+#   endif
                }
 #endif
 
@@ -358,7 +369,6 @@ namespace pc
                bytesToRead -= packetSize;
 #endif
 #ifdef PC_PROFILE
-               averageReadTime += packet.readTimeDiff;
                averageBufferCopyTime += packet.bufferCopyTimeDiff;
 #endif
                if (packet.command == Commands::Blank)
@@ -408,6 +418,7 @@ namespace pc
 
          void WritePackets(std::time_t timeout)
          {
+            std::string writeMarshalled;
 #ifdef PC_PROFILE
             {
 #endif
@@ -418,11 +429,8 @@ namespace pc
                     writePacketIt != packetsToWrite.end();
                     ++writePacketIt)
                {
-                  network::Result const result = writePacketIt->Write(socket, timeout);
-                  if (result.SocketClosed)
-                     return Terminate();
+                  writeMarshalled += writePacketIt->Marshall();
 #ifdef PC_PROFILE
-                  averageWriteTime += writePacketIt->writeTimeDiff;
                   if (writePacketIt->command == Commands::Send)
                   {
                      averageExecuteTime += writePacketIt->executeTimeDiff;
@@ -430,8 +438,7 @@ namespace pc
                      averageAccumulatedTime +=
                          (writePacketIt->intraProcessingTimeDiff +
                           writePacketIt->bufferCopyTimeDiff +
-                          writePacketIt->executeTimeDiff + writePacketIt->writeTimeDiff +
-                          writePacketIt->readTimeDiff);
+                          writePacketIt->executeTimeDiff + writePacketIt->readTimeDiff);
                   }
 #endif
                   timeout = 0;
@@ -439,6 +446,13 @@ namespace pc
                packetsToWrite.clear();
 #ifdef PC_PROFILE
             }
+#endif
+            network::Result const result =
+                network::TCPPoll::write(socket, writeMarshalled, timeout);
+            if (result.SocketClosed)
+               return Terminate();
+#ifdef PC_PROFILE
+            averageWriteTime += result.duration;
 #endif
          }
 
