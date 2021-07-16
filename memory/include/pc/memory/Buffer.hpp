@@ -35,7 +35,7 @@ namespace pc
          }
          void OffsetBack(std::size_t by)
          {
-            assert(offset > by);
+            assert(offset >= by);
             return Offset(offset - by);
          }
          std::size_t Offset() const
