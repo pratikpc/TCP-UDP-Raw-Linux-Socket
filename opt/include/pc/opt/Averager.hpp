@@ -42,7 +42,8 @@ namespace pc
             return os << std::setprecision(4) << "avg=" << value.average
                       << " low=" << value.low << " high=" << value.high << " closesHigh="
                       << (((value.NoOfClosesToHigh * 1.0) / value.count) * 100.0)
-                      << " closeCount=" << value.NoOfClosesToHigh;
+                      << " closeCount=" << value.NoOfClosesToHigh
+                      << " totalC=" << value.count;
          }
          Averager<Numeric>& operator+=(timespec time)
          {
