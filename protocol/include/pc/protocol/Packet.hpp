@@ -121,9 +121,9 @@ namespace pc
 #ifdef PC_PROFILE
             timespec const bufferCopyTimeStart = timer::now();
 #endif
-            assert(bytesToRead >= (PacketSize)command.size());
+            assert((std::size_t)bytesToRead >= command.size());
             std::copy(buffer.begin(), buffer.begin() + command.size(), command.begin());
-            if (bytesToRead > (PacketSize)command.size())
+            if ((std::size_t)bytesToRead > command.size())
             {
                data.resize(bytesToRead - command.size());
                std::copy(buffer.begin() + command.size(),
@@ -154,7 +154,7 @@ namespace pc
             }
             PacketSize const bytesToRead =
                 RawPacket<N>::ExtractPacketSizeFromBuffer(buffer);
-            assert((PacketSize)buffer.size() > bytesToRead);
+            assert(buffer.size() > (std::size_t)bytesToRead);
             recvData =
                 network::TCPPoll::recvFixedBytes(socket, buffer, bytesToRead, timeout);
 #ifdef PC_PROFILE
@@ -168,7 +168,7 @@ namespace pc
                else
                   return RawPacket(Commands::MajorErrors::SocketClosed);
             }
-            assert((PacketSize)recvData.NoOfBytes == bytesToRead);
+            assert(recvData.NoOfBytes == (std::size_t)bytesToRead);
             return RawPacket(buffer,
                              bytesToRead
 #ifdef PC_PROFILE
