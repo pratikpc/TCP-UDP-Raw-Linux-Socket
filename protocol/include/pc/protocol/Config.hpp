@@ -9,7 +9,7 @@
 
 #include <string>
 
-#if defined(PC_PROFILE) && defined(PC_DISABLE_DATABASE_SUPPORT)
+#if defined(PC_PROFILE) || defined(PC_DISABLE_DATABASE_SUPPORT)
 #   ifndef PC_IGNORE
 #      define PC_IGNORE(x) (void)x
 #   endif
