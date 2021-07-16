@@ -134,7 +134,7 @@ namespace pc
             // To reduce copies
             // Then we will copy these values to the write List
             for (PacketList::iterator packetIt = tempList.begin();
-                 packetIt != tempList.end();)
+                 packetIt != tempList.end(); ++packetIt)
             {
                // At the start, packetIt will have the item to read
 #ifdef PC_PROFILE
