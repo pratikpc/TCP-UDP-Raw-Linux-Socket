@@ -52,10 +52,10 @@ namespace pc
 {
    namespace timer
    {
-      timespec now()
+      timespec now(clockid_t clockType = CLOCK_MONOTONIC)
       {
          timespec specTime;
-         clock_gettime(CLOCK_MONOTONIC, &specTime);
+         clock_gettime(clockType, &specTime);
          return specTime;
       }
       std::size_t millis()
