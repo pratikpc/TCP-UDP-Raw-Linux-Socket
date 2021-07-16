@@ -228,24 +228,17 @@ namespace pc
 #ifdef PC_PROFILE
             timespec const readPacketItStart = timer::now();
 #endif
+            network::Result recvResult;
             buffer.Offset(0);
-#ifdef PC_OPTIMIZE_READ_MULTIPLE_SINGLE_SHOT
-            network::Result recvResult =
-                network::TCP::recvAsManyAsPossibleAsync(socket, buffer);
-// For single shot
-// First check if any value available for read
-// And then read Packet Size
-#else
-            if (!network::TCP::containsDataToRead(socket))
-            {
-               Terminate();
-               ClientPollResult result;
-               result.terminate = true;
-               return result;
-            }
-            network::Result recvResult = network::TCP::recvFixedBytes(
-                socket, buffer, NetworkPacket::SizeBytes, MSG_DONTWAIT);
-#endif
+#ifndef PC_OPTIMIZE_READ_MULTIPLE_SINGLE_SHOT
+
+            recvResult = network::TCP::recvFixedBytes(
+                socket,
+                buffer,
+                NetworkPacket::SizeBytes /*Just read the Packet size*/,
+                // Other processing happens in the loop
+                // Loop exists only when we set PC_OPTIMIZE_READ_MULTIPLE_SINGLE_SHOT
+                MSG_DONTWAIT);
             if (recvResult.IsFailure())
             {
                Terminate();
@@ -253,10 +246,11 @@ namespace pc
                result.terminate = true;
                return result;
             }
-            ClientPollResult result;
-            result.read = true;
+#endif
 #ifdef PC_OPTIMIZE_READ_MULTIPLE_SINGLE_SHOT
-            std::size_t bytesToRead = recvResult.NoOfBytes;
+            // No reads performed yet
+            // Perform the reads within the loop
+            std::size_t bytesToRead = 0;
 #   ifdef PC_PROFILE
             std::size_t readCountThisIt = 0;
 #   endif
@@ -264,8 +258,41 @@ namespace pc
             PacketList tempReadList;
             // Only loop when we are interested in multiple values
 #ifdef PC_OPTIMIZE_READ_MULTIPLE_SINGLE_SHOT
-            while (bytesToRead > NetworkPacket::SizeBytes)
+            // Do not check condition just yet
+            do
             {
+#endif
+#ifdef PC_OPTIMIZE_READ_MULTIPLE_SINGLE_SHOT
+               if (bytesToRead < NetworkPacket::SizeBytes)
+               {
+                  // As we can see
+                  // One packet is available
+                  // Because we have only partially read the size
+                  // So let us perform a big read again
+                  // Till we have data
+
+                  // Move buffer ahead
+                  // Read the given bytes
+                  buffer.OffsetBy(bytesToRead);
+                  recvResult = network::TCP::recvAsManyAsPossibleAsync(socket, buffer);
+                  if (recvResult.IsFailure())
+                  {
+                     Terminate();
+                     ClientPollResult result;
+                     result.terminate = true;
+                     return result;
+                  }
+                  // Now that we moved buffer ahead
+                  // Move it back
+                  // So that the data we currently were looking at
+                  // Gets considered as well
+                  buffer.OffsetBack(bytesToRead);
+
+                  // Update Bytes to read
+                  // With total number of bytes read in this iteration
+                  bytesToRead += recvResult.NoOfBytes;
+                  continue;
+               }
 #endif
                ++deadline;
                // We know at least one packet is available
@@ -358,13 +385,6 @@ namespace pc
                   LockGuard guard(writeMutex);
                   packetsToWrite.push_back(NetworkPacket(Commands::Setup::Join));
                }
-               else if (packet.command == Commands::MajorErrors::SocketClosed)
-               {
-                  Terminate();
-                  ClientPollResult result;
-                  result.terminate = true;
-                  return result;
-               }
                else if (packet.command == Commands::Send)
                {
                   terminateOnNextCycle = false;
@@ -375,7 +395,7 @@ namespace pc
 #endif
 
 #ifdef PC_OPTIMIZE_READ_MULTIPLE_SINGLE_SHOT
-            }
+            } while (bytesToRead > 0);
 #endif
 #ifdef PC_OPTIMIZE_READ_MULTIPLE_SINGLE_SHOT
 #   ifdef PC_PROFILE
@@ -390,7 +410,8 @@ namespace pc
                onReadAvailableCond.Signal();
 #endif
             }
-
+            ClientPollResult result;
+            result.read = true;
             return result;
          }
 
