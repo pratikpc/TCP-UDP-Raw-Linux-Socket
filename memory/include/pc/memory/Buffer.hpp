@@ -33,6 +33,11 @@ namespace pc
          {
             return Offset(offset + by);
          }
+         void OffsetBack(std::size_t by)
+         {
+            assert(offset > by);
+            return Offset(offset - by);
+         }
          std::size_t Offset() const
          {
             return offset;
