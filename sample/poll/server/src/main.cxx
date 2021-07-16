@@ -32,15 +32,15 @@ protocol::NetworkPacket pollCallback(protocol::NetworkPacket const& packet,
    return responsePacket;
 }
 
-void* PollAndExecute(void* arg)
+void* PollAndRead(void* arg)
 {
    using namespace pc::memory;
    Protocol&    poll = *((Protocol*)arg);
-   Buffer<char> buffer(106);
+   Buffer<char> buffer(106 * 1);
 #ifdef PC_NETWORK_MOCK
-   pc::protocol::NetworkPacket packet(pc::protocol::Commands::Send,
-                                      repeat("Hi this is PC. Start working", 10));
-   strcpy(buffer.data(), (packet.command + packet.data).c_str());
+   pc::protocol::NetworkPacket packet(pc::protocol::Commands::Send, repeat("JK", 10));
+   std::string const&          packetData = packet.Marshall();
+   std::copy(packetData.begin(), packetData.end(), buffer.begin());
 #endif
    while (true)
    {
@@ -50,11 +50,31 @@ void* PollAndExecute(void* arg)
          continue;
       }
       poll.Poll(buffer);
+#ifndef PC_SEPARATE_POLL_EXEC_WRITE
+      poll.Execute();
+      poll.Write();
+#endif
+   }
+   return NULL;
+}
+
+#ifdef PC_SEPARATE_POLL_EXEC_WRITE
+void* ExecuteAndWrite(void* arg)
+{
+   Protocol& poll = *((Protocol*)arg);
+   while (true)
+   {
+      if (poll.size() == 0)
+      {
+         sleep(poll.timeout);
+         continue;
+      }
       poll.Execute();
       poll.Write();
    }
    return NULL;
 }
+#endif
 
 void* execHealthCheck(void* arg)
 {
@@ -102,6 +122,9 @@ int main()
 #ifdef PC_OPTIMIZE_READ_MULTIPLE_SINGLE_SHOT
    std::cout << "Optimize reads by reading multiple elements" << std::endl;
 #endif
+#ifdef PC_SEPARATE_POLL_EXEC_WRITE
+   std::cout << "Separate poll, exec and write" << std::endl;
+#endif
    ProtocolVec protocols(/*pc::threads::ProcessorCount()*/ 1);
 
    pc::balancer::priority balancer(protocols.size());
@@ -130,9 +153,14 @@ int main()
       it->config        = &config;
       it->balancerIndex = (it - protocols.begin());
       it->timeout       = 10;
-      pc::threads::Thread thread(&PollAndExecute, &(*it));
-      thread.StickToCore(2);
-      thread.detach();
+      pc::threads::Thread thread1(&PollAndRead, &(*it));
+      thread1.StickToCore(2);
+      thread1.detach();
+#ifdef PC_SEPARATE_POLL_EXEC_WRITE
+      pc::threads::Thread thread2(&ExecuteAndWrite, &(*it));
+      thread2.detach();
+      thread2.StickToCore(3);
+#endif
    }
    pc::threads::Thread healthCheckThread(&execHealthCheck, &protocols);
    healthCheckThread.StickToCore(1);

@@ -16,12 +16,18 @@
 #   include <pc/opt/Averager.hpp>
 #endif
 
-#ifndef PC_USE_SPINLOCKS
+// Poll Exec Write separated approach uses condition variables for signalling
+// Which rely on mutexes and not spinlocks
+#if !defined(PC_USE_SPINLOCKS) || defined(PC_SEPARATE_POLL_EXEC_WRITE)
 #   include <pc/thread/Mutex.hpp>
 #   include <pc/thread/MutexGuard.hpp>
 #else
 #   include <pc/thread/spin/SpinGuard.hpp>
 #   include <pc/thread/spin/SpinLock.hpp>
+#endif
+
+#ifdef PC_SEPARATE_POLL_EXEC_WRITE
+#   include <pc/thread/ConditionVariable.hpp>
 #endif
 
 namespace pc
@@ -47,7 +53,11 @@ namespace pc
          AtomicBool              terminateOnNextCycle;
          AtomicBool              terminateNow;
          PacketList              packetsToRead;
-#ifndef PC_USE_SPINLOCKS
+         PacketList              packetsToWrite;
+
+// Poll Exec Write separated approach uses condition variables for signalling
+// Which rely on mutexes and not spinlocks
+#if !defined(PC_USE_SPINLOCKS) || defined(PC_SEPARATE_POLL_EXEC_WRITE)
          mutable threads::Mutex      readMutex;
          mutable threads::Mutex      writeMutex;
          typedef threads::MutexGuard LockGuard;
@@ -56,7 +66,10 @@ namespace pc
          mutable threads::SpinLock  writeMutex;
          typedef threads::SpinGuard LockGuard;
 #endif
-         PacketList packetsToWrite;
+
+#ifdef PC_SEPARATE_POLL_EXEC_WRITE
+         threads::ConditionVariable onReadAvailableCond;
+#endif
 
 #ifdef PC_PROFILE
          Averager averageIntraProcessingTime;
@@ -67,6 +80,9 @@ namespace pc
          Averager averageAccumulatedTime;
          Averager averageSingleReadIterTime;
 
+#   ifdef PC_SEPARATE_POLL_EXEC_WRITE
+         Averager averageCondWaitDuration;
+#   endif
 #   ifdef PC_OPTIMIZE_READ_MULTIPLE_SINGLE_SHOT
          Averager averageReadCountPerIt;
 #   endif
@@ -94,10 +110,23 @@ namespace pc
             {
                // Add to a temporary vector for writes
                LockGuard guard(readMutex);
+#ifdef PC_SEPARATE_POLL_EXEC_WRITE
+#   ifdef PC_PROFILE
+               timespec const startPollExecWrite = timer::now();
+#   endif
+               timespec waitDuration = timer::now(CLOCK_REALTIME);
+               waitDuration.tv_nsec += 0;
+               waitDuration.tv_sec += 5;
+               onReadAvailableCond.Wait(readMutex, waitDuration);
+#   ifdef PC_PROFILE
+               averageCondWaitDuration += (timer::now() - startPollExecWrite);
+#   endif
+#endif
                if (packetsToRead.empty())
                   return;
                tempList.splice(tempList.end(), packetsToRead);
             }
+
             // What we will do here
             // We will iterate over the read list
             // Then we will assign the value to write
@@ -184,6 +213,10 @@ namespace pc
                // Average Read count per iteration
                std::cout << "Average reco prit= " << averageReadCountPerIt << std::endl;
 #   endif
+#   ifdef PC_SEPARATE_POLL_EXEC_WRITE
+               std::cout << "Average cond wait= " << averageCondWaitDuration << std::endl;
+#   endif
+
                std::cout << "=================" << std::endl;
 #endif
             }
@@ -199,6 +232,9 @@ namespace pc
 #ifdef PC_OPTIMIZE_READ_MULTIPLE_SINGLE_SHOT
             network::Result recvResult =
                 network::TCP::recvAsManyAsPossibleAsync(socket, buffer);
+// For single shot
+// First check if any value available for read
+// And then read Packet Size
 #else
             if (!network::TCP::containsDataToRead(socket))
             {
@@ -221,13 +257,12 @@ namespace pc
             result.read = true;
 #ifdef PC_OPTIMIZE_READ_MULTIPLE_SINGLE_SHOT
             std::size_t bytesToRead = recvResult.NoOfBytes;
-#endif
-#ifdef PC_OPTIMIZE_READ_MULTIPLE_SINGLE_SHOT
 #   ifdef PC_PROFILE
             std::size_t readCountThisIt = 0;
 #   endif
 #endif
             PacketList tempReadList;
+            // Only loop when we are interested in multiple values
 #ifdef PC_OPTIMIZE_READ_MULTIPLE_SINGLE_SHOT
             while (bytesToRead > NetworkPacket::SizeBytes)
             {
@@ -236,6 +271,8 @@ namespace pc
                // We know at least one packet is available
                std::size_t packetSize =
                    NetworkPacket::ExtractPacketSizeFromBuffer(buffer);
+// For single shot, the previous was the first read
+// For multi shot, the first read occured before
 #ifdef PC_OPTIMIZE_READ_MULTIPLE_SINGLE_SHOT
                bytesToRead -= NetworkPacket::SizeBytes;
                // Move buffer ahead
@@ -302,9 +339,9 @@ namespace pc
 #ifdef PC_OPTIMIZE_READ_MULTIPLE_SINGLE_SHOT
                bytesToRead -= packetSize;
 #endif
-
 #ifdef PC_PROFILE
                averageReadTime += packet.readTimeDiff;
+               averageBufferCopyTime += packet.bufferCopyTimeDiff;
 #endif
                if (packet.command == Commands::Blank)
                {
@@ -328,7 +365,6 @@ namespace pc
                   result.terminate = true;
                   return result;
                }
-
                else if (packet.command == Commands::Send)
                {
                   terminateOnNextCycle = false;
@@ -336,7 +372,6 @@ namespace pc
                }
 #ifdef PC_PROFILE
                averageSingleReadIterTime += (timer::now() - readPacketItStart);
-               averageBufferCopyTime += packet.bufferCopyTimeDiff;
 #endif
 
 #ifdef PC_OPTIMIZE_READ_MULTIPLE_SINGLE_SHOT
@@ -351,6 +386,9 @@ namespace pc
             {
                LockGuard guard(readMutex);
                packetsToRead.splice(packetsToRead.end(), tempReadList);
+#ifdef PC_SEPARATE_POLL_EXEC_WRITE
+               onReadAvailableCond.Signal();
+#endif
             }
 
             return result;
