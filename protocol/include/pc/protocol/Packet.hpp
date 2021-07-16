@@ -154,7 +154,7 @@ namespace pc
             }
             PacketSize const bytesToRead =
                 RawPacket<N>::ExtractPacketSizeFromBuffer(buffer);
-            assert(buffer.size() > bytesToRead);
+            assert((PacketSize)buffer.size() > bytesToRead);
             recvData =
                 network::TCPPoll::recvFixedBytes(socket, buffer, bytesToRead, timeout);
 #ifdef PC_PROFILE
@@ -168,7 +168,7 @@ namespace pc
                else
                   return RawPacket(Commands::MajorErrors::SocketClosed);
             }
-            assert(recvData.NoOfBytes == bytesToRead);
+            assert((PacketSize)recvData.NoOfBytes == bytesToRead);
             return RawPacket(buffer,
                              bytesToRead
 #ifdef PC_PROFILE
