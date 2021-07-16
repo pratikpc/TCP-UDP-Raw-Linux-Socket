@@ -7,42 +7,40 @@ namespace pc
    namespace memory
    {
       template <typename T>
-      class unique_arr
+      class unique_ptr
       {
        public:
-         std::size_t size;
-         T*          data;
+         T* data;
 
-         unique_arr(std::size_t size) : size(size), data(new T[size]) {}
-         unique_arr() : size(0), data(NULL) {}
-         unique_arr(unique_arr& other) : size(other.size), data(other.data)
+         unique_ptr() : data(new T) {}
+         unique_ptr(unique_ptr& other) : data(other.data)
          {
             other.data = NULL;
          }
-         unique_arr& operator=(unique_arr& other)
+         T& operator*()
          {
-            data       = other.data;
-            size       = other.size;
-            other.data = NULL;
+            return *data;
          }
-         T* get() const
+         T const& operator*() const
+         {
+            return *data;
+         }
+         T const* operator->() const
          {
             return data;
          }
-         T& operator[](std::size_t i)
+         T* operator->()
          {
-            return get()[i];
+            return data;
          }
          operator bool() const
          {
             return (data != NULL);
          }
-         ~unique_arr()
+         ~unique_ptr()
          {
-            if (data != NULL)
-            {
-               delete[] data;
-            }
+            if (*this)
+               delete data;
          }
       };
    } // namespace memory
