@@ -7,7 +7,6 @@
 #include <unistd.h>
 
 #include <pc/network/TCP.hpp>
-#include <pc/network/TCPPoll.hpp>
 
 #include <pc/protocol/LearnProtocol.hpp>
 #include <pc/protocol/Packet.hpp>
