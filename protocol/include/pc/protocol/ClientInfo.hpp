@@ -13,7 +13,7 @@
 #endif
 
 #ifdef PC_PROFILE
-#   include <pc/opt/Averager.hpp>
+#   include <pc/profiler/Averager.hpp>
 #endif
 
 // Poll Exec Write separated approach uses condition variables for signalling
@@ -38,7 +38,7 @@ namespace pc
       {
          typedef std::list<NetworkPacket> PacketList;
 #ifdef PC_PROFILE
-         typedef pc::opt::Averager<double> Averager;
+         typedef profiler::Averager<double> Averager;
 #endif
          typedef pc::threads::Atomic<bool> AtomicBool;
 

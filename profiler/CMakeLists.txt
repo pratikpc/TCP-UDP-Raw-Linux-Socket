@@ -1,6 +1,6 @@
 # Build
 cmake_minimum_required(VERSION 3.12)
-project(opt VERSION 1.0.0 LANGUAGES CXX)
+project(profiler VERSION 1.0.0 LANGUAGES CXX)
 
 add_library(${PROJECT_NAME} INTERFACE)
 add_library(pc::${PROJECT_NAME} ALIAS ${PROJECT_NAME})

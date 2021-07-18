@@ -16,10 +16,11 @@ $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
 
 target_link_libraries(${PROJECT_NAME}
 INTERFACE
-pc::threads
 pc::deadliner
 pc::loadbalancer
-pc::network
-pc::pqpp
 pc::lexical_cast
+pc::network
+pc::profiler
+pc::pqpp
+pc::threads
 )

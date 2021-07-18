@@ -9,7 +9,7 @@
 
 namespace pc
 {
-   namespace opt
+   namespace profiler
    {
       template <typename Numeric = double>
       struct Averager
