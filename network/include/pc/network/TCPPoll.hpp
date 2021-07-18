@@ -1,7 +1,5 @@
 #pragma once
 
-#include <pc/dataQueue.hpp>
-
 #include <poll.h>
 
 #include <pc/network/TCP.hpp>
@@ -31,18 +29,19 @@ namespace pc
 #endif
             return rv;
          }
-         int poll(std::vector<pollfd>& polls, std::size_t timeout)
+         template <typename Polls>
+         int pollMul(Polls& polls, std::size_t timeout)
          {
             return TCPPoll::poll(polls.data(), polls.size(), timeout);
          }
-         int poll(pollfd& poll, std::size_t timeout)
-         {
-            return TCPPoll::poll(&poll, 1, timeout);
-         }
          template <std::size_t size>
-         int poll(pollfd (&data)[size], std::size_t timeout)
+         int pollMul(pollfd (&data)[size], std::size_t timeout)
          {
             return TCPPoll::poll(data, size, timeout);
+         }
+         int pollSingle(pollfd& poll, std::size_t timeout)
+         {
+            return TCPPoll::poll(&poll, 1, timeout);
          }
 
          template <typename Buffer>
@@ -53,7 +52,7 @@ namespace pc
          {
             if (timeout != 0)
             {
-               int const ret = TCPPoll::poll(poll, timeout);
+               int const ret = TCPPoll::pollSingle(poll, timeout);
                if (ret <= 0 || !(poll.revents & POLLIN))
                {
                   Result recvData;
@@ -82,7 +81,7 @@ namespace pc
          {
             if (timeout != 0)
             {
-               int const ret = TCPPoll::poll(poll, timeout);
+               int const ret = TCPPoll::pollSingle(poll, timeout);
                if (ret <= 0 || !(poll.revents & POLLIN))
                {
                   Result recvData;
@@ -111,7 +110,7 @@ namespace pc
             if (timeout != 0)
             {
                poll.events   = POLLOUT;
-               int const ret = TCPPoll::poll(poll, timeout);
+               int const ret = TCPPoll::pollSingle(poll, timeout);
                if (ret <= 0 || !(poll.revents & POLLOUT))
                {
                   Result result;

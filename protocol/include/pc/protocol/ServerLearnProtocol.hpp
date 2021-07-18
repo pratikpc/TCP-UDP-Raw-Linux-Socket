@@ -82,7 +82,7 @@ namespace pc
          {
             clientInfos.Update();
             std::vector<pollfd>& polls = clientInfos.PollsIn;
-            if (network::TCPPoll::poll(polls, timeout) == 0)
+            if (network::TCPPoll::pollMul(polls, timeout) == 0)
                // Timeout
                return;
             UniqueSockets socketsToTerminate;
