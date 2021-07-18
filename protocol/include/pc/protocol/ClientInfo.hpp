@@ -13,7 +13,7 @@
 #endif
 
 #ifdef PC_PROFILE
-#   include <pc/profiler/Averager.hpp>
+#   include <pc/profiler/Analyzer.hpp>
 #endif
 
 // Poll Exec Write separated approach uses condition variables for signalling
@@ -38,7 +38,7 @@ namespace pc
       {
          typedef std::list<NetworkPacket> PacketList;
 #ifdef PC_PROFILE
-         typedef profiler::Averager<double> Averager;
+         typedef profiler::Analyzer<double> Analyzer;
 #endif
          typedef pc::threads::Atomic<bool> AtomicBool;
 
@@ -72,19 +72,19 @@ namespace pc
 #endif
 
 #ifdef PC_PROFILE
-         Averager averageIntraProcessingTime;
-         Averager averageReadTime;
-         Averager averageWriteTime;
-         Averager averageExecuteTime;
-         Averager averageBufferCopyTime;
-         Averager averageAccumulatedTime;
-         Averager averageSingleReadIterTime;
+         Analyzer averageIntraProcessingTime;
+         Analyzer averageReadTime;
+         Analyzer averageWriteTime;
+         Analyzer averageExecuteTime;
+         Analyzer averageBufferCopyTime;
+         Analyzer averageAccumulatedTime;
+         Analyzer averageSingleReadIterTime;
 
 #   ifdef PC_SEPARATE_POLL_EXEC_WRITE
-         Averager averageCondWaitDuration;
+         Analyzer averageCondWaitDuration;
 #   endif
 #   ifdef PC_OPTIMIZE_READ_MULTIPLE_SINGLE_SHOT
-         Averager averageReadCountPerIt;
+         Analyzer averageReadCountPerIt;
 #   endif
 #endif
 
