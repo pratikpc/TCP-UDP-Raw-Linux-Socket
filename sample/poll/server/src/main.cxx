@@ -24,12 +24,11 @@ std::string repeat(std::string value, std::size_t times)
    return stream.str();
 }
 
-protocol::NetworkPacket pollCallback(protocol::NetworkPacket const& packet,
-                                     protocol::ClientInfo const&    clientInfo)
+void pollCallback(protocol::NetworkPacket& packet, protocol::ClientInfo const& clientInfo)
 {
    std::string const response = packet.data + " was received from " + clientInfo.clientId;
-   protocol::NetworkSendPacket responsePacket(response);
-   return responsePacket;
+
+   packet.data = response;
 }
 
 void* PollAndRead(void* arg)

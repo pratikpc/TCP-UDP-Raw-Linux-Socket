@@ -146,7 +146,7 @@ namespace pc
 #endif
                // Item to write added to packetIt itself
                // So the read array will now have the items to write
-               *packetIt = callback(*packetIt, *this);
+               callback(*packetIt, *this);
 #ifdef PC_PROFILE
                packetIt->executeTimeDiff          = timer::now() - executeStart;
                packetIt->readTimeDiff             = readPacketTimeDiff;
