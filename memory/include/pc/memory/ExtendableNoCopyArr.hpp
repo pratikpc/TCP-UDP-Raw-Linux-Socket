@@ -60,9 +60,13 @@ namespace pc
          {
             return arr[index];
          }
-         T* begin() const
+         const T* begin() const
          {
             return arr;
+         }
+         const T* end() const
+         {
+            return arr + sizeV;
          }
       };
    } // namespace memory
