@@ -14,7 +14,7 @@ namespace pc
          std::size_t sizeV;
 
        public:
-         ExtendableNoCopyArr(std::size_t size) : arr(new T[size]), sizeV(size), offset(0)
+         ExtendableNoCopyArr(std::size_t size = 2) : arr(new T[size]), sizeV(size)
          {
             assert(size > 0);
          }
