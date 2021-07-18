@@ -1,8 +1,7 @@
 #pragma once
 
-#include <poll.h>
-
 #include <pc/network/TCP.hpp>
+#include <pc/poll/Poll.hpp>
 
 namespace pc
 {
@@ -10,40 +9,6 @@ namespace pc
    {
       namespace TCPPoll
       {
-
-         int poll(pollfd* polls, std::size_t size, std::size_t timeout)
-         {
-            if (size == 0)
-            {
-               sleep(timeout);
-               return 0; // Timeout
-            }
-#ifndef PC_NETWORK_MOCK
-            int const rv = ::poll(polls, size, timeout * 1000);
-            if (rv == -1)
-               throw std::runtime_error("Poll failed");
-#else
-            int const rv = size;
-            for (std::size_t i = 0; i < size; ++i)
-               polls[i].revents = polls[i].events;
-#endif
-            return rv;
-         }
-         template <typename Polls>
-         int pollMul(Polls& polls, std::size_t timeout)
-         {
-            return TCPPoll::poll(polls.data(), polls.size(), timeout);
-         }
-         template <std::size_t size>
-         int pollMul(pollfd (&data)[size], std::size_t timeout)
-         {
-            return TCPPoll::poll(data, size, timeout);
-         }
-         int pollSingle(pollfd& poll, std::size_t timeout)
-         {
-            return TCPPoll::poll(&poll, 1, timeout);
-         }
-
          template <typename Buffer>
          Result recvFixedBytes(::pollfd&   poll,
                                Buffer&     buffer,
@@ -52,7 +17,7 @@ namespace pc
          {
             if (timeout != 0)
             {
-               int const ret = TCPPoll::pollSingle(poll, timeout);
+               int const ret = poll::single(poll, timeout);
                if (ret <= 0 || !(poll.revents & POLLIN))
                {
                   Result recvData;
@@ -81,7 +46,7 @@ namespace pc
          {
             if (timeout != 0)
             {
-               int const ret = TCPPoll::pollSingle(poll, timeout);
+               int const ret = poll::single(poll, timeout);
                if (ret <= 0 || !(poll.revents & POLLIN))
                {
                   Result recvData;
@@ -110,7 +75,7 @@ namespace pc
             if (timeout != 0)
             {
                poll.events   = POLLOUT;
-               int const ret = TCPPoll::pollSingle(poll, timeout);
+               int const ret = poll::single(poll, timeout);
                if (ret <= 0 || !(poll.revents & POLLOUT))
                {
                   Result result;

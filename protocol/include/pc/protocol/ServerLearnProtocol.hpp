@@ -7,7 +7,7 @@
 #include <unistd.h>
 
 #include <pc/deadliner/MostRecentTimestamps.hpp>
-#include <pc/network/TCPPoll.hpp>
+#include <pc/poll/Poll.hpp>
 #include <pc/protocol/ClientInfos.hpp>
 #include <pc/protocol/ClientPollResult.hpp>
 #include <pc/protocol/Config.hpp>
@@ -82,7 +82,7 @@ namespace pc
          {
             clientInfos.Update();
             std::vector<pollfd>& polls = clientInfos.PollsIn;
-            if (network::TCPPoll::pollMul(polls, timeout) == 0)
+            if (poll::multiple(polls, timeout) == 0)
                // Timeout
                return;
             UniqueSockets socketsToTerminate;
