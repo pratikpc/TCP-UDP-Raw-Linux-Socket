@@ -42,15 +42,6 @@ namespace pc
             LockGuard guard(lock);
             return lowestSizeIndex;
          }
-         priority& operator++()
-         {
-            {
-               LockGuard guard(lock);
-               ++sizes[lowestSizeIndex];
-               lowestSizeIndex = MinIdx(lowestSizeIndex);
-            }
-            return *this;
-         }
          void incPriority(std::size_t index, std::size_t by = 1)
          {
             LockGuard guard(lock);
