@@ -36,7 +36,6 @@ namespace pc
    {
       class ClientInfo
       {
-         typedef std::list<NetworkPacket> PacketList;
 #ifdef PC_PROFILE
          typedef profiler::Analyzer<double> Analyzer;
 #endif
