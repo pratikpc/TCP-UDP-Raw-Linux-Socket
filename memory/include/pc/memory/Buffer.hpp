@@ -20,8 +20,7 @@ namespace pc
          }
          ~Buffer()
          {
-            if (arr != NULL)
-               delete[] arr;
+            delete[] arr;
          }
 
          void Offset(std::size_t newOffset)
