@@ -32,7 +32,7 @@ namespace pc
 
          template <typename UniqueSockets>
          void close(UniqueSockets&     socketsToRemove,
-                    Config::balancerT* balancer,
+                    Config::balancerT& balancer,
                     std::size_t const  balancerIndex)
          {
             threads::RWWriteGuard guard(lock);
@@ -44,7 +44,7 @@ namespace pc
                // Check if the socket exists first of all
                if (infoIt != clientInfos.end())
                {
-                  balancer->decPriority(balancerIndex, infoIt->second.DeadlineMaxCount());
+                  balancer.decPriority(balancerIndex, infoIt->second.DeadlineMaxCount());
                   clientInfos.erase(socket);
                   ::close(socket);
                   ++it;

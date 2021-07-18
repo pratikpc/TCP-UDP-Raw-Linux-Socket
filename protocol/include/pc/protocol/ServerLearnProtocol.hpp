@@ -48,8 +48,7 @@ namespace pc
                   ClientResponseCallback& callback,
                   std::size_t const       DeadlineMaxCount = DEADLINE_MAX_COUNT_DEFAULT)
          {
-            clientInfos.insert(socket, callback, DeadlineMaxCount);
-            config->balancer->incPriority(balancerIndex, DeadlineMaxCount);
+            config->balancer.incPriority(balancerIndex, DeadlineMaxCount);
             mostRecentTimestamps.updateSingle(socket);
          }
 
