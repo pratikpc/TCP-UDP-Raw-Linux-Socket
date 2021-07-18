@@ -26,13 +26,13 @@ namespace pc
          void ExtendTo(std::size_t newSize)
          {
             // Only extend
-            if (newSize <= size)
+            if (newSize <= sizeV)
                return;
-            size = newSize;
+            sizeV = newSize;
             // Upon extend just delete the old memory
             // Data is not of value here
             delete[] arr;
-            arr = new T[size];
+            arr = new T[sizeV];
          }
          void ExtendBy(std::ptrdiff_t by)
          {
