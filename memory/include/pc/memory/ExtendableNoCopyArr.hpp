@@ -10,7 +10,7 @@ namespace pc
       class ExtendableNoCopyArr
       {
        protected:
-         T*          arr;
+         T mutable*  arr;
          std::size_t sizeV;
 
        public:
@@ -18,9 +18,15 @@ namespace pc
          {
             assert(size > 0);
          }
+         ExtendableNoCopyArr(ExtendableNoCopyArr const& other) :
+             arr(other.arr), sizeV(other.sizeV)
+         {
+            other.arr = NULL;
+         }
          ~ExtendableNoCopyArr()
          {
             delete[] arr;
+            arr = NULL;
          }
 
          void ExtendTo(std::size_t newSize)
@@ -31,7 +37,8 @@ namespace pc
             sizeV = newSize;
             // Upon extend just delete the old memory
             // Data is not of value here
-            delete[] arr;
+            if (arr != NULL)
+               delete[] arr;
             arr = new T[sizeV];
          }
          void ExtendBy(std::ptrdiff_t by)
