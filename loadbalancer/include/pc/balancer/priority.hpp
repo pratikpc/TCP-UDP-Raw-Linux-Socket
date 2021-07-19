@@ -17,7 +17,10 @@ namespace pc
    {
       class priority
       {
-         std::vector<std::size_t> sizes;
+         typedef std::vector<std::size_t> SizeVec;
+         typedef SizeVec::const_iterator  const_iterator;
+
+         SizeVec sizes;
 #ifndef PC_USE_SPINLOCKS
          mutable pc::threads::Mutex      lock;
          typedef pc::threads::MutexGuard LockGuard;
@@ -31,8 +34,8 @@ namespace pc
          friend std::ostream& operator<<(std::ostream& os, priority& queue)
          {
             LockGuard guard(queue.lock);
-            for (std::size_t i = 0; i < queue.sizes.size(); ++i)
-               os << queue.sizes[i] << " : ";
+            for (const_iterator i = queue.sizes.begin(); i != queue.sizes.end(); ++i)
+               os << *i << " : ";
             return os;
          }
          priority(std::size_t maxSize) : sizes(maxSize), lowestSizeIndex(0) {}
@@ -71,7 +74,6 @@ namespace pc
          priority& MaxCount(std::size_t MaxCount)
          {
             LockGuard guard(lock);
-
             sizes.resize(MaxCount);
             return *this;
          }
