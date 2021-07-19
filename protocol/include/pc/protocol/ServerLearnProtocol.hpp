@@ -24,22 +24,6 @@ namespace pc
          ClientInfos          clientInfos;
          MostRecentTimestamps mostRecentTimestamps;
 
-         template <typename UniqueSockets>
-         void closeSocketConnections(UniqueSockets& socketsToRemove)
-         {
-            if (socketsToRemove.empty())
-               return;
-            // Remove all socket based connections
-            // From polls
-            clientInfos.close(socketsToRemove, config.balancer, balancerIndex);
-            // Close all sockets
-            // Remove them from timestamp
-            // Call callback
-            mostRecentTimestamps.remove(socketsToRemove);
-            // Notify user when a client goes down
-            config.downCallback(balancerIndex, socketsToRemove.size());
-         }
-
        public:
          std::size_t balancerIndex;
          Config&     config;
@@ -95,18 +79,29 @@ namespace pc
             return clientInfos.Execute(callback);
          }
          template <typename UniqueSockets, typename Buffer>
-         void Poll(Buffer& buffer)
+         void PollRead(Buffer& buffer, UniqueSockets& socketsToTerminate)
          {
             clientInfos.Update();
-            UniqueSockets socketsToTerminate;
             UniqueSockets socketsWeReadAt;
-
             clientInfos.OnReadPoll(socketsWeReadAt, socketsToTerminate, buffer, timeout);
             // Upon success
             // Update timestamps
             mostRecentTimestamps.updateFor(socketsWeReadAt);
-            // Upon termination
-            closeSocketConnections(socketsToTerminate);
+         }
+         template <typename UniqueSockets>
+         void CloseSocketConnections(UniqueSockets& socketsToRemove)
+         {
+            if (socketsToRemove.empty())
+               return;
+            // Remove all socket based connections
+            // From polls
+            clientInfos.close(socketsToRemove, config.balancer, balancerIndex);
+            // Close all sockets
+            // Remove them from timestamp
+            // Call callback
+            mostRecentTimestamps.remove(socketsToRemove);
+            // Notify user when a client goes down
+            config.downCallback(balancerIndex, socketsToRemove.size());
          }
          void Write()
          {

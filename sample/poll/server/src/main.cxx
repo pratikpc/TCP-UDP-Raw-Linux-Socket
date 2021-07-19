@@ -3,6 +3,8 @@
 #include <iostream>
 #include <sstream>
 
+#include <tr1/unordered_set>
+
 #include <pc/memory/Buffer.hpp>
 #include <pc/network/TCP.hpp>
 #include <pc/network/ip.hpp>
@@ -43,6 +45,7 @@ void* PollAndRead(void* arg)
    std::string const& packetData = packet.Marshall();
    std::copy(packetData.begin(), packetData.end(), buffer.begin());
 #endif
+   UniqueSockets socketsToTerminate;
    while (true)
    {
       if (poll.size() == 0)
@@ -50,7 +53,11 @@ void* PollAndRead(void* arg)
          sleep(poll.timeout);
          continue;
       }
-      poll.Poll<UniqueSockets>(buffer);
+      socketsToTerminate.clear();
+      poll.PollRead(buffer, socketsToTerminate);
+      // Upon termination
+      poll.CloseSocketConnections(socketsToTerminate);
+
 #ifndef PC_SEPARATE_POLL_EXEC_WRITE
       poll.Execute(pollCallback);
       poll.Write();
@@ -151,7 +158,7 @@ int main()
    {
       it->balancerIndex = (it - protocols.begin());
       pc::threads::Thread thread1(&PollAndRead, &(*it));
-      thread1.StickToCore(2);
+      // thread1.StickToCore(2);
       thread1.detach();
 #ifdef PC_SEPARATE_POLL_EXEC_WRITE
       pc::threads::Thread thread2(&ExecuteAndWrite, &(*it));
