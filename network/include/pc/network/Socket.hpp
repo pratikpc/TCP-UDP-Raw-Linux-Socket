@@ -32,11 +32,16 @@ namespace pc
                throw std::runtime_error("Unable to set flag");
          }
 
+         static int close(int const socket)
+         {
+            return ::shutdown(socket, SHUT_RDWR);
+         }
+
          ~Socket()
          {
             // Do not close if socket in invalid state
             if (!invalid())
-               ::close(socket);
+               Socket::close(socket);
          }
       };
    } // namespace network
