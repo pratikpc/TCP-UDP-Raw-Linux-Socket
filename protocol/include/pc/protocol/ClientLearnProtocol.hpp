@@ -27,7 +27,10 @@ namespace pc
        public:
          std::string const clientId;
 
-         ClientLearnProtocol(network::TCP& server, std::string const& clientId) :
+         ClientLearnProtocol(network::TCP&      server,
+                             std::string const& clientId,
+                             std::time_t        timeout) :
+             LearnProtocol(timeout),
              server(server), clientId(clientId)
          {
             assert(!this->server.invalid());
@@ -37,12 +40,12 @@ namespace pc
          {
             // If deadline crossed, sleep
             if (deadline)
-               return NetworkPacket(Commands::DeadlineCrossed);
+               return NetworkPacket(server.socket, Commands::DeadlineCrossed);
             NetworkPacket packet = NetworkPacket::Read(server, buffer, timeout);
             ++deadline;
             if (packet.command == Commands::HeartBeat)
             {
-               NetworkPacket heartBeatReply(Commands::Blank);
+               NetworkPacket heartBeatReply(server.socket, Commands::Blank);
                Write(heartBeatReply);
                return Read(buffer);
             }
@@ -63,7 +66,7 @@ namespace pc
          template <typename Buffer>
          network::Result SetupConnection(Buffer& buffer)
          {
-            NetworkPacket const ackAck(Commands::Setup::Ack);
+            NetworkPacket const ackAck(server.socket, Commands::Setup::Ack);
 
             network::Result result = Write(ackAck);
             if (result.IsFailure())
@@ -74,7 +77,8 @@ namespace pc
                result.SocketClosed = true;
                return result;
             }
-            NetworkPacket const clientIdSend(Commands::Setup::ClientID, clientId);
+            NetworkPacket const clientIdSend(
+                server.socket, Commands::Setup::ClientID, clientId);
             result = clientIdSend.Write(server, timeout);
             if (result.IsFailure())
                return result;

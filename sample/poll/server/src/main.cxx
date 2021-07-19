@@ -27,8 +27,7 @@ std::string repeat(std::string value, std::size_t times)
 void pollCallback(protocol::NetworkPacket& packet, protocol::ClientInfo const& clientInfo)
 {
    std::string const response = packet.data + " was received from " + clientInfo.clientId;
-
-   packet.data = response;
+   packet.data                = response;
 }
 
 void* PollAndRead(void* arg)
@@ -37,8 +36,9 @@ void* PollAndRead(void* arg)
    Protocol&    poll = *((Protocol*)arg);
    Buffer<char> buffer(106 * 1);
 #ifdef PC_NETWORK_MOCK
-   pc::protocol::NetworkPacket packet(pc::protocol::Commands::Send, repeat("JK", 10));
-   std::string const&          packetData = packet.Marshall();
+   pc::protocol::NetworkPacket packet(
+       1 /*Socket unused*/, pc::protocol::Commands::Send, repeat("JK", 10));
+   std::string const& packetData = packet.Marshall();
    std::copy(packetData.begin(), packetData.end(), buffer.begin());
 #endif
    while (true)
@@ -50,7 +50,7 @@ void* PollAndRead(void* arg)
       }
       poll.Poll(buffer);
 #ifndef PC_SEPARATE_POLL_EXEC_WRITE
-      poll.Execute();
+      poll.Execute(pollCallback);
       poll.Write();
 #endif
    }
@@ -68,7 +68,7 @@ void* ExecuteAndWrite(void* arg)
          sleep(poll.timeout);
          continue;
       }
-      poll.Execute();
+      poll.Execute(pollCallback);
       poll.Write();
    }
    return NULL;
@@ -124,12 +124,10 @@ int main()
 #ifdef PC_SEPARATE_POLL_EXEC_WRITE
    std::cout << "Separate poll, exec and write" << std::endl;
 #endif
-   ProtocolVec protocols(/*pc::threads::ProcessorCount()*/ 1);
-
-   pc::balancer::priority balancer(protocols.size());
-
-   protocol::Config config(
+   pc::balancer::priority balancer(/*pc::threads::ProcessorCount()*/ 1);
+   protocol::Config       config(
        "postgresql://postgres@localhost:5432/", balancer, &downCallback);
+   ProtocolVec protocols(balancer.MaxCount(), config);
 
 #ifndef PC_DISABLE_DATABASE_SUPPORT
    {
@@ -149,9 +147,7 @@ int main()
 
    for (ProtocolVec::iterator it = protocols.begin(); it != protocols.end(); ++it)
    {
-      it->config        = &config;
       it->balancerIndex = (it - protocols.begin());
-      it->timeout       = 10;
       pc::threads::Thread thread1(&PollAndRead, &(*it));
       thread1.StickToCore(2);
       thread1.detach();
@@ -172,7 +168,7 @@ int main()
       // child.keepAlive();
       child.speedUp();
       std::size_t currentBalance = *balancer;
-      protocols[currentBalance].Add(child.socket, pollCallback);
+      protocols[currentBalance].Add(child.socket);
       std::cout << "Connected to " << child.socket << " socket on " << currentBalance
                 << " thread : Balancer" << balancer << std::endl;
       child.invalidate();

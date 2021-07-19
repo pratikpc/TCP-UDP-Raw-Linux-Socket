@@ -31,24 +31,29 @@ namespace pc
                return;
             // Remove all socket based connections
             // From polls
-            clientInfos.close(socketsToRemove, config->balancer, balancerIndex);
+            clientInfos.close(socketsToRemove, config.balancer, balancerIndex);
             // Close all sockets
             // Remove them from timestamp
             // Call callback
             mostRecentTimestamps.remove(socketsToRemove);
             // Notify user when a client goes down
-            config->downCallback(balancerIndex, socketsToRemove.size());
+            config.downCallback(balancerIndex, socketsToRemove.size());
          }
 
        public:
          std::size_t balancerIndex;
-         Config*     config;
+         Config&     config;
 
-         void Add(int const               socket,
-                  ClientResponseCallback& callback,
-                  std::size_t const       DeadlineMaxCount = DEADLINE_MAX_COUNT_DEFAULT)
+         ServerLearnProtocol(Config& config, std::time_t const timeout = 10) :
+             LearnProtocol(timeout), config(config)
          {
-            config->balancer.incPriority(balancerIndex, DeadlineMaxCount);
+         }
+
+         void Add(int const         socket,
+                  std::size_t const DeadlineMaxCount = DEADLINE_MAX_COUNT_DEFAULT)
+         {
+            clientInfos.insert(socket, DeadlineMaxCount);
+            config.balancer.incPriority(balancerIndex, DeadlineMaxCount);
             mostRecentTimestamps.updateSingle(socket);
          }
 
@@ -66,28 +71,24 @@ namespace pc
                  ++it)
                // Just close the socket
                // They will error out later
-               ::shutdown(*it, SHUT_RDWR);
+               network::Socket::close(*it);
          }
          std::size_t size() const
          {
             return clientInfos.size();
          }
-         void Execute()
+         void Execute(ClientResponseCallback& callback)
          {
-            return clientInfos.Execute();
+            return clientInfos.Execute(callback);
          }
          template <typename Buffer>
          void Poll(Buffer& buffer)
          {
             clientInfos.Update();
-            std::vector<pollfd>& polls = clientInfos.PollsIn;
-            if (poll::multiple(polls, timeout) == 0)
-               // Timeout
-               return;
             UniqueSockets socketsToTerminate;
             UniqueSockets socketsWeReadAt;
 
-            clientInfos.OnReadPoll(socketsWeReadAt, socketsToTerminate, buffer);
+            clientInfos.OnReadPoll(socketsWeReadAt, socketsToTerminate, buffer, timeout);
             // Upon success
             // Update timestamps
             mostRecentTimestamps.updateFor(socketsWeReadAt);
@@ -96,7 +97,7 @@ namespace pc
          }
          void Write()
          {
-            return clientInfos.Write(timeout);
+            return clientInfos.Write();
          }
       };
    } // namespace protocol

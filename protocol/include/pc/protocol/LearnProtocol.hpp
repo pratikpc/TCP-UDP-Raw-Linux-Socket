@@ -5,10 +5,10 @@ namespace pc
 {
    namespace protocol
    {
-      class LearnProtocol
+      struct LearnProtocol
       {
-       public:
          std::time_t timeout;
+         LearnProtocol(std::time_t timeout) : timeout(timeout) {}
       };
    } // namespace protocol
 } // namespace pc

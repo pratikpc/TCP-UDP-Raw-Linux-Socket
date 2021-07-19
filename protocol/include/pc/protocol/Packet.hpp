@@ -44,6 +44,7 @@ namespace pc
          typedef typename numeric::Integral<N>::type PacketSize;
 
        public:
+         int socket;
          // Command always of size 4
          std::string command;
          std::string data;
@@ -66,16 +67,20 @@ namespace pc
 
        public:
          template <typename Buffer>
-         RawPacket(Buffer const&    buffer,
+         RawPacket(int const        socket,
+                   Buffer const&    buffer,
                    PacketSize const bytesToRead
 #ifdef PC_PROFILE
                    ,
                    timespec const& readTimeDiff
 #endif
-                   )
+                   ) :
+             socket(socket)
 #ifdef PC_PROFILE
-             :
-             readTimeDiff(readTimeDiff)
+             ,
+             readTimeDiff(readTimeDiff), intraProcessingTimeStart(),
+             intraProcessingTimeDiff(), writeTimeDiff(), executeTimeDiff(),
+             bufferCopyTimeDiff()
 #endif
          {
             command.resize(4);
@@ -84,7 +89,10 @@ namespace pc
             intraProcessingTimeStart = timer::now();
 #endif
          }
-         RawPacket(std::string const& command, std::string const& data = "") :
+         RawPacket(int const          socket,
+                   std::string const& command,
+                   std::string const& data = "") :
+             socket(socket),
              command(command), data(data)
 #ifdef PC_PROFILE
              ,
@@ -147,10 +155,10 @@ namespace pc
             if (recvData.IsFailure())
             {
                if (recvData.PollFailure)
-                  return RawPacket(Commands::Empty);
+                  return RawPacket(socket, Commands::Empty);
                // Anything other than Poll Failure
                else
-                  return RawPacket(Commands::MajorErrors::SocketClosed);
+                  return RawPacket(socket, Commands::MajorErrors::SocketClosed);
             }
             PacketSize const bytesToRead =
                 RawPacket<N>::ExtractPacketSizeFromBuffer(buffer);
@@ -163,13 +171,14 @@ namespace pc
             if (recvData.IsFailure())
             {
                if (recvData.PollFailure)
-                  return RawPacket(Commands::Empty);
+                  return RawPacket(socket, Commands::Empty);
                // Anything other than Poll Failure
                else
-                  return RawPacket(Commands::MajorErrors::SocketClosed);
+                  return RawPacket(socket, Commands::MajorErrors::SocketClosed);
             }
             assert(recvData.NoOfBytes == (std::size_t)bytesToRead);
-            return RawPacket(buffer,
+            return RawPacket(socket,
+                             buffer,
                              bytesToRead
 #ifdef PC_PROFILE
                              ,
@@ -210,11 +219,23 @@ namespace pc
 #endif
             return result;
          }
+         network::Result Write() const
+         {
+            network::Result const result =
+                network::TCP::sendRaw(this->socket, Marshall());
+#ifdef PC_PROFILE
+            writeTimeDiff = result.duration;
+#endif
+            return result;
+         }
       };
       template <std::size_t N>
       struct RawSendPacket : RawPacket<N>
       {
-         RawSendPacket(std::string data) : RawPacket<N>(Commands::Send, data) {}
+         RawSendPacket(int const socket, std::string data) :
+             RawPacket<N>(socket, Commands::Send, data)
+         {
+         }
       };
    } // namespace protocol
 } // namespace pc

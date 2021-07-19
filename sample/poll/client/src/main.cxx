@@ -37,14 +37,13 @@ void* func(void* clientIndexPtr)
 
    try
    {
-      pc::protocol::ClientLearnProtocol protocol(server, clientId);
-      protocol.timeout = 10;
-      pc::memory::Buffer<char> buffer(UINT16_MAX);
+      pc::protocol::ClientLearnProtocol protocol(server, clientId, 10);
+      pc::memory::Buffer<char>          buffer(UINT16_MAX);
 
       pc::network::Result result = protocol.SetupConnection(buffer);
       // if (result.IsFailure())
       //    throw std::runtime_error("Setup failed");
-      pc::protocol::NetworkSendPacket packet(repeat("H", 100));
+      pc::protocol::NetworkSendPacket packet(server.socket, repeat("H", 100));
       for (std::size_t i = 0; true; i++)
       {
          // std::cout << "Message sending " << i << " at " << protocol.clientId << std::endl;
@@ -58,7 +57,10 @@ void* func(void* clientIndexPtr)
       {
          pc::protocol::NetworkPacket responsePacket = protocol.Read(buffer);
          if (responsePacket.command == pc::protocol::Commands::MajorErrors::SocketClosed)
+         {
+            std::cout << "Iteration " << i << " over at " << clientId << std::endl;
             break;
+         }
          else if (responsePacket.command == pc::protocol::Commands::Send)
          {
             std::cout << "Iter " << i << " Server says: " << responsePacket.data.size()
@@ -75,6 +77,7 @@ void* func(void* clientIndexPtr)
          }
          // usleep(4 * 1000 * 1000 / 25);
       }
+      return NULL;
    }
    catch (std::exception const& ex)
    {

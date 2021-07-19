@@ -43,8 +43,7 @@ namespace pc
          template <typename Events>
          int Wait(Events& events, int timeoutS) const
          {
-            int const res =
-                epoll_wait(fd, events.data(), events.size(), timeoutS * 1000);
+            int const res = epoll_wait(fd, events.data(), events.size(), timeoutS * 1000);
             return res;
          }
       };
