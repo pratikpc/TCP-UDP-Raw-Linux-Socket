@@ -19,12 +19,12 @@ namespace pc
    {
       class ServerLearnProtocol : public LearnProtocol
       {
-         typedef deadliner::MostRecentTimestamps         MostRecentTimestamps;
-         typedef std::tr1::unordered_set<int /*socket*/> UniqueSockets;
+         typedef deadliner::MostRecentTimestamps MostRecentTimestamps;
 
          ClientInfos          clientInfos;
          MostRecentTimestamps mostRecentTimestamps;
 
+         template <typename UniqueSockets>
          void closeSocketConnections(UniqueSockets& socketsToRemove)
          {
             if (socketsToRemove.empty())
@@ -57,21 +57,34 @@ namespace pc
             mostRecentTimestamps.updateSingle(socket);
          }
 
-         void execHealthCheck()
+         template <typename UniqueSockets>
+         static void CloseSockets(UniqueSockets const& socketsSelected)
          {
-            if (mostRecentTimestamps.size() == 0)
-               return;
-            UniqueSockets socketsSelected =
-                mostRecentTimestamps.getSocketsLessThanTimestamp<UniqueSockets>(timeout);
-            if (socketsSelected.empty())
-               return;
-            clientInfos.FilterSocketsToTerminate(socketsSelected);
-            for (UniqueSockets::const_iterator it = socketsSelected.begin();
+            for (typename UniqueSockets::const_iterator it = socketsSelected.begin();
                  it != socketsSelected.end();
                  ++it)
                // Just close the socket
                // They will error out later
                network::Socket::close(*it);
+         }
+         template <typename UniqueSockets>
+         void ExecHealthCheck(UniqueSockets& socketsSelected)
+         {
+            if (mostRecentTimestamps.size() == 0)
+               return;
+            UniqueSockets socketsSelectedLocal;
+            // Use local UniqueSockets variable
+            // Because FilterSocketsToTerminate performs checks on every socket
+            // In the list
+            {
+               mostRecentTimestamps.getSocketsLessThanTimestamp(socketsSelectedLocal,
+                                                                timeout);
+               if (socketsSelectedLocal.empty())
+                  return;
+               clientInfos.FilterSocketsToTerminate(socketsSelectedLocal);
+            }
+            socketsSelected.insert(socketsSelectedLocal.begin(),
+                                   socketsSelectedLocal.end());
          }
          std::size_t size() const
          {
@@ -81,7 +94,7 @@ namespace pc
          {
             return clientInfos.Execute(callback);
          }
-         template <typename Buffer>
+         template <typename UniqueSockets, typename Buffer>
          void Poll(Buffer& buffer)
          {
             clientInfos.Update();

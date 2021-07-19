@@ -16,6 +16,8 @@ namespace protocol = pc::protocol;
 typedef protocol::ServerLearnProtocol Protocol;
 typedef std::vector<Protocol>         ProtocolVec;
 
+typedef std::tr1::unordered_set<int /*socket*/> UniqueSockets;
+
 std::string repeat(std::string value, std::size_t times)
 {
    std::ostringstream stream;
@@ -48,7 +50,7 @@ void* PollAndRead(void* arg)
          sleep(poll.timeout);
          continue;
       }
-      poll.Poll(buffer);
+      poll.Poll<UniqueSockets>(buffer);
 #ifndef PC_SEPARATE_POLL_EXEC_WRITE
       poll.Execute(pollCallback);
       poll.Write();
