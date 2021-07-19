@@ -126,7 +126,7 @@ int main()
 #endif
    pc::balancer::priority balancer(/*pc::threads::ProcessorCount()*/ 1);
    protocol::Config       config(
-       "postgresql://postgres@localhost:5432/", balancer, &downCallback);
+       "postgresql://postgres@localhost:5432/", balancer, downCallback);
    ProtocolVec protocols(balancer.MaxCount(), config);
 
 #ifndef PC_DISABLE_DATABASE_SUPPORT

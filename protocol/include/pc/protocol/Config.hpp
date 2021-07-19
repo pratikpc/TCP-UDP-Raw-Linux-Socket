@@ -30,11 +30,11 @@ namespace pc
          DBConnection connection;
 #endif
          balancerT&    balancer;
-         DownCallback* downCallback;
+         DownCallback& downCallback;
 
          Config(std::string   connectionString,
                 balancerT&    balancer,
-                DownCallback* downCallback) :
+                DownCallback& downCallback) :
 #ifndef PC_DISABLE_DATABASE_SUPPORT
              connection(connectionString),
 #endif
