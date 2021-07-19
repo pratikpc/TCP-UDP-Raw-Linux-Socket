@@ -73,21 +73,19 @@ namespace pc
             timestamps.insert(socket, time);
          }
          template <typename Sockets>
-         Sockets getSocketsLessThanTimestamp(std::time_t const timeout)
+         void getSocketsLessThanTimestamp(Sockets& sockets, std::time_t const timeout) const
          {
-            Sockets           sockets;
             std::time_t const now = timer::seconds();
 
             LockGuard guard(mostRecentTimestampsLock);
             for (const_iterator it = begin(); it != end(); ++it)
             {
-               int socket = it->first;
+               int const socket = it->first;
                // Input is sorted by ascending order
                if ((now - it->second /*Time then*/) < timeout)
                   break;
                sockets.insert(socket);
             }
-            return sockets;
          }
          void Reset(int socket)
          {

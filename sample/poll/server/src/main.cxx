@@ -86,12 +86,16 @@ void* ExecuteAndWrite(void* arg)
 
 void* execHealthCheck(void* arg)
 {
+   UniqueSockets socketsToClose;
+
    ProtocolVec& protocols = *((ProtocolVec*)(arg));
    while (true)
    {
       sleep(10);
+      socketsToClose.clear();
       for (ProtocolVec::iterator it = protocols.begin(); it != protocols.end(); ++it)
-         it->execHealthCheck();
+         it->ExecHealthCheck(socketsToClose);
+      Protocol::CloseSockets(socketsToClose);
    }
 }
 
