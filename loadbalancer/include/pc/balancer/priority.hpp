@@ -77,6 +77,7 @@ namespace pc
          }
          std::size_t MaxCount() const
          {
+            LockGuard guard(lock);
             return sizes.size();
          }
 
