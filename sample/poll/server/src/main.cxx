@@ -41,6 +41,21 @@ ProtocolVec            protocols;
 void downCallback(std::size_t const idx, std::size_t count)
 {
    std::cout << count << " client went down at " << idx << " balancer" << std::endl;
+   for (std::size_t i = 0; i < count; ++i)
+   {
+      std::size_t const       minIdx = balancer.NextIndex();
+      if (maxIdx == minIdx)
+         break;
+      if (protocols[maxIdx].empty())
+         break;
+      protocol::ClientInfo clientInfo =
+          protocols[maxIdx].RemoveOldestClientAndReturn(balancer);
+      if (clientInfo.socket == -1)
+         continue;
+      protocols[minIdx].Add(balancer, clientInfo);
+      std::cout << "Switched " << clientInfo.socket << " socket to " << minIdx
+                << " thread from " << maxIdx << ": Balancer" << balancer << std::endl;
+   }
 }
 
 void* PollAndRead(void* arg)
