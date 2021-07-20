@@ -28,7 +28,8 @@ namespace pc
          mutable pc::threads::SpinLock  lock;
          typedef pc::threads::SpinGuard LockGuard;
 #endif
-         std::size_t lowestSizeIndex;
+         std::size_t minIdx;
+         std::size_t maxIdx;
 
        public:
          friend std::ostream& operator<<(std::ostream& os, priority& queue)
@@ -38,7 +39,7 @@ namespace pc
                os << *i << " : ";
             return os;
          }
-         priority(std::size_t maxSize) : sizes(maxSize), lowestSizeIndex(0) {}
+         priority(std::size_t maxSize) : sizes(maxSize), minIdx(0), maxIdx(0) {}
 
          std::size_t operator*() const
          {
@@ -47,13 +48,18 @@ namespace pc
          std::size_t NextIndex() const
          {
             LockGuard guard(lock);
-            return lowestSizeIndex;
+            return minIdx;
+         }
+         std::size_t MaxIndex() const
+         {
+            LockGuard guard(lock);
+            return maxIdx;
          }
          void incPriority(std::size_t index, std::size_t by = 1)
          {
             LockGuard guard(lock);
             sizes[index] += by;
-            lowestSizeIndex = MinIdx(lowestSizeIndex);
+            SetMinMaxIdx();
          }
          void decPriority(std::size_t index, std::size_t by = 1)
          {
@@ -61,14 +67,14 @@ namespace pc
             if (sizes[index] >= by)
             {
                sizes[index] -= by;
-               lowestSizeIndex = MinIdx(lowestSizeIndex);
+               SetMinMaxIdx();
             }
          }
          void setPriority(std::size_t index, std::size_t value)
          {
             LockGuard guard(lock);
-            sizes[index]    = value;
-            lowestSizeIndex = MinIdx(lowestSizeIndex);
+            sizes[index] = value;
+            SetMinMaxIdx();
          }
          std::size_t operator[](std::size_t index) const
          {
@@ -87,18 +93,17 @@ namespace pc
             return sizes.size();
          }
 
-         std::size_t MinIdx(int minIdx) const
+         void SetMinMaxIdx()
          {
             for (std::size_t i = 0; i < sizes.size(); ++i)
             {
                // Early return
                // As we know min value
-               if (sizes[i] == 0)
-                  return i;
-               if (sizes[i] < sizes[minIdx])
+               if (sizes[i] == 0 || sizes[i] < sizes[minIdx])
                   minIdx = i;
+               if (sizes[i] > sizes[maxIdx])
+                  maxIdx = i;
             }
-            return minIdx;
          }
       };
    } // namespace balancer
