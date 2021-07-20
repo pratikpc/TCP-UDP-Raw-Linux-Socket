@@ -89,7 +89,7 @@ namespace pc
                if (infoIt != clientInfos.end())
                {
                   balancer.decPriority(balancerIndex, infoIt->second.DeadlineMaxCount());
-                  clientInfos.erase(socket);
+                  clientInfos.erase(infoIt);
                   ::close(socket);
                   ++it;
                }
