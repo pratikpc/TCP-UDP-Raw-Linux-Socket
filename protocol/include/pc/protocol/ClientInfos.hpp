@@ -512,12 +512,11 @@ namespace pc
                          int const      timeoutS)
          {
             PacketList readList;
+            int const  countPolls = ePollIn.Wait(pollInEvents, timeoutS);
+            if (countPolls < 1)
+               return;
             {
                threads::RWReadGuard guard(lock);
-
-               int const countPolls = ePollIn.Wait(pollInEvents, timeoutS);
-               if (countPolls < 1)
-                  return;
                for (std::size_t i = 0;
                     (i < (std::size_t)(countPolls)) && i < pollInEvents.size();
                     ++i)
