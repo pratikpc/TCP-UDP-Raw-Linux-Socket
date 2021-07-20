@@ -35,12 +35,13 @@ void pollCallback(protocol::NetworkPacket& packet, protocol::ClientInfo const& c
    packet.data                = response;
 }
 
+pc::balancer::priority balancer(pc::threads::ProcessorCount());
+ProtocolVec            protocols;
+
 void downCallback(std::size_t const idx, std::size_t count)
 {
    std::cout << count << " client went down at " << idx << " balancer" << std::endl;
 }
-
-pc::balancer::priority balancer(/*pc::threads::ProcessorCount()*/ 1);
 
 void* PollAndRead(void* arg)
 {
@@ -141,7 +142,6 @@ int main()
    std::cout << "Separate poll, exec and write" << std::endl;
 #endif
 
-   ProtocolVec      protocols(balancer.MaxCount());
    protocol::Config config("postgresql://postgres@localhost:5432/", balancer);
 
 #ifndef PC_DISABLE_DATABASE_SUPPORT
@@ -160,6 +160,9 @@ int main()
    }
 #endif
 
+   protocols.reserve((balancer.MaxCount()));
+   for (std::size_t i = 0; i < balancer.MaxCount(); ++i)
+      protocols.push_back(Protocol());
    for (ProtocolVec::iterator it = protocols.begin(); it != protocols.end(); ++it)
    {
       it->balancerIndex = (it - protocols.begin());
