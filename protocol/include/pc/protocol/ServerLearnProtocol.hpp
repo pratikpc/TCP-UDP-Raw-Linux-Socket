@@ -26,14 +26,11 @@ namespace pc
 
        public:
          std::size_t balancerIndex;
-         Config&     config;
 
-         ServerLearnProtocol(Config& config, std::time_t const timeout = 10) :
-             LearnProtocol(timeout), config(config)
-         {
-         }
+         ServerLearnProtocol(std::time_t const timeout = 10) : LearnProtocol(timeout) {}
 
-         void Add(int const         socket,
+         void Add(Config&           config,
+                  int const         socket,
                   std::size_t const DeadlineMaxCount = DEADLINE_MAX_COUNT_DEFAULT)
          {
             clientInfos.insert(socket, DeadlineMaxCount);
@@ -89,7 +86,7 @@ namespace pc
             mostRecentTimestamps.updateFor(socketsWeReadAt);
          }
          template <typename UniqueSockets>
-         void CloseSocketConnections(UniqueSockets& socketsToRemove)
+         void CloseSocketConnections(Config& config, UniqueSockets& socketsToRemove)
          {
             if (socketsToRemove.empty())
                return;

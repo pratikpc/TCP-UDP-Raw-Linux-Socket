@@ -34,6 +34,14 @@ void pollCallback(protocol::NetworkPacket& packet, protocol::ClientInfo const& c
    packet.data                = response;
 }
 
+void downCallback(std::size_t const idx, std::size_t count)
+{
+   std::cout << count << " client went down at " << idx << " balancer" << std::endl;
+}
+
+pc::balancer::priority balancer(/*pc::threads::ProcessorCount()*/ 1);
+   protocol::Config       config(
+       "postgresql://postgres@localhost:5432/", balancer, downCallback);
 void* PollAndRead(void* arg)
 {
    using namespace pc::memory;
@@ -56,7 +64,7 @@ void* PollAndRead(void* arg)
       socketsToTerminate.clear();
       poll.PollRead(buffer, socketsToTerminate);
       // Upon termination
-      poll.CloseSocketConnections(socketsToTerminate);
+      poll.CloseSocketConnections(config, socketsToTerminate);
 
 #ifndef PC_SEPARATE_POLL_EXEC_WRITE
       poll.Execute(pollCallback);
@@ -99,11 +107,6 @@ void* execHealthCheck(void* arg)
    }
 }
 
-void downCallback(std::size_t const idx, std::size_t count)
-{
-   std::cout << count << " client went down at " << idx << " balancer" << std::endl;
-}
-
 int main()
 {
    pc::network::IP ip(SOCK_STREAM);
@@ -137,10 +140,8 @@ int main()
 #ifdef PC_SEPARATE_POLL_EXEC_WRITE
    std::cout << "Separate poll, exec and write" << std::endl;
 #endif
-   pc::balancer::priority balancer(/*pc::threads::ProcessorCount()*/ 1);
-   protocol::Config       config(
-       "postgresql://postgres@localhost:5432/", balancer, downCallback);
-   ProtocolVec protocols(balancer.MaxCount(), config);
+   
+   ProtocolVec protocols(balancer.MaxCount());
 
 #ifndef PC_DISABLE_DATABASE_SUPPORT
    {
@@ -181,7 +182,7 @@ int main()
       // child.keepAlive();
       child.speedUp();
       std::size_t currentBalance = *balancer;
-      protocols[currentBalance].Add(child.socket);
+      protocols[currentBalance].Add(config, child.socket);
       std::cout << "Connected to " << child.socket << " socket on " << currentBalance
                 << " thread : Balancer" << balancer << std::endl;
       child.invalidate();
