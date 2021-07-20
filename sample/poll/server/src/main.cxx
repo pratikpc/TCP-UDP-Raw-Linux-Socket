@@ -181,7 +181,7 @@ int main()
          continue;
       // child.keepAlive();
       child.speedUp();
-      std::size_t currentBalance = *balancer;
+      std::size_t currentBalance = balancer.NextIndex();
       protocols[currentBalance].Add(config, child.socket);
       std::cout << "Connected to " << child.socket << " socket on " << currentBalance
                 << " thread : Balancer" << balancer << std::endl;

@@ -42,6 +42,10 @@ namespace pc
 
          std::size_t operator*() const
          {
+            return NextIndex();
+         }
+         std::size_t NextIndex() const
+         {
             LockGuard guard(lock);
             return lowestSizeIndex;
          }
