@@ -41,8 +41,11 @@ ProtocolVec            protocols;
 void downCallback(std::size_t const idx, std::size_t count)
 {
    std::cout << count << " client went down at " << idx << " balancer" << std::endl;
+   static pc::threads::Mutex mutex;
    for (std::size_t i = 0; i < count; ++i)
    {
+      pc::threads::MutexGuard guard(mutex);
+      std::size_t const       maxIdx = balancer.MaxIndex();
       std::size_t const       minIdx = balancer.NextIndex();
       if (maxIdx == minIdx)
          break;
