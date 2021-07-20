@@ -98,6 +98,8 @@ namespace pc
             // Remove all socket based connections
             // From polls
             clientInfos.close(socketsToRemove, balancer, balancerIndex);
+            if (socketsToRemove.empty())
+               return;
             // Close all sockets
             // Remove them from timestamp
             // Call callback
