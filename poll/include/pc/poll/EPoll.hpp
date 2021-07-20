@@ -40,6 +40,15 @@ namespace pc
             event.events  = events;
             return Add(event);
          }
+         bool Remove(int const socket) const
+         {
+            int const result = ::epoll_ctl(fd, EPOLL_CTL_DEL, socket, NULL);
+            if (result != -1)
+               return true;
+            if (errno == ENOENT)
+               return true;
+            return false;
+         }
          template <typename Events>
          int Wait(Events& events, int timeoutS) const
          {
