@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cassert>
 #include <pc/thread/RWLock.hpp>
 #include <pthread.h>
 
@@ -16,6 +17,7 @@ namespace pc
          RWReadGuard(RWLock& rwLock) :
              rwLock(rwLock.rwLock), locked(pthread_rwlock_rdlock(&rwLock.rwLock) == 0)
          {
+            assert(locked);
          }
          ~RWReadGuard()
          {

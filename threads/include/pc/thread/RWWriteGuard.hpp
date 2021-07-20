@@ -1,8 +1,8 @@
 #pragma once
 
+#include <cassert>
 #include <pc/thread/RWLock.hpp>
 #include <pthread.h>
-
 namespace pc
 {
    namespace threads
@@ -16,6 +16,7 @@ namespace pc
          RWWriteGuard(RWLock& rwLock) :
              rwLock(rwLock.rwLock), locked(pthread_rwlock_wrlock(&rwLock.rwLock) == 0)
          {
+            assert(locked);
          }
          ~RWWriteGuard()
          {
