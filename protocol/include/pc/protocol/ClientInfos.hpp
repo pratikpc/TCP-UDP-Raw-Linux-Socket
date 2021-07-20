@@ -251,6 +251,11 @@ namespace pc
             updateIssued = false;
          }
 
+         bool empty() const
+         {
+            threads::RWReadGuard guard(lock);
+            return clientInfos.empty();
+         }
          void Write()
          {
             threads::RWReadGuard guard(lock);

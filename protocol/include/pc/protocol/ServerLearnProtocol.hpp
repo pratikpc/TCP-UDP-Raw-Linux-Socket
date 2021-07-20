@@ -37,7 +37,10 @@ namespace pc
             balancer.incPriority(balancerIndex, DeadlineMaxCount);
             mostRecentTimestamps.updateSingle(socket);
          }
-
+         bool empty() const
+         {
+            return clientInfos.empty();
+         }
          template <typename UniqueSockets>
          static void CloseSockets(UniqueSockets const& socketsSelected)
          {
