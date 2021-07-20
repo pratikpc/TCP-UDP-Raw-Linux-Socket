@@ -41,6 +41,7 @@ ProtocolVec            protocols;
 void downCallback(std::size_t const idx, std::size_t count)
 {
    std::cout << count << " client went down at " << idx << " balancer" << std::endl;
+#ifdef PC_SWITCH_CLIENTS_BETWEEN_THREADS_BALANCE
    static pc::threads::Mutex mutex;
    for (std::size_t i = 0; i < count; ++i)
    {
@@ -59,6 +60,7 @@ void downCallback(std::size_t const idx, std::size_t count)
       std::cout << "Switched " << clientInfo.socket << " socket to " << minIdx
                 << " thread from " << maxIdx << ": Balancer" << balancer << std::endl;
    }
+#endif
 }
 
 void* PollAndRead(void* arg)
