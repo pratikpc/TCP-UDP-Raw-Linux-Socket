@@ -33,9 +33,8 @@ namespace pc
       {
          typedef pc::threads::Atomic<bool> AtomicBool;
 
-         int const socket;
-
        public:
+         int const               socket;
          std::string             clientId;
          pc::deadliner::Deadline deadline;
          AtomicBool              terminateOnNextCycle;
