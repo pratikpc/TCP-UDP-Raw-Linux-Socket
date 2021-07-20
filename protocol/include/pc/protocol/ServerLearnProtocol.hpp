@@ -10,7 +10,6 @@
 #include <pc/poll/Poll.hpp>
 #include <pc/protocol/ClientInfos.hpp>
 #include <pc/protocol/ClientPollResult.hpp>
-#include <pc/protocol/Config.hpp>
 #include <pc/protocol/LearnProtocol.hpp>
 
 namespace pc
@@ -29,12 +28,13 @@ namespace pc
 
          ServerLearnProtocol(std::time_t const timeout = 10) : LearnProtocol(timeout) {}
 
-         void Add(Config&           config,
+         template <typename Balancer>
+         void Add(Balancer&         balancer,
                   int const         socket,
                   std::size_t const DeadlineMaxCount = DEADLINE_MAX_COUNT_DEFAULT)
          {
             clientInfos.insert(socket, DeadlineMaxCount);
-            config.balancer.incPriority(balancerIndex, DeadlineMaxCount);
+            balancer.incPriority(balancerIndex, DeadlineMaxCount);
             mostRecentTimestamps.updateSingle(socket);
          }
 
@@ -85,20 +85,22 @@ namespace pc
             // Update timestamps
             mostRecentTimestamps.updateFor(socketsWeReadAt);
          }
-         template <typename UniqueSockets>
-         void CloseSocketConnections(Config& config, UniqueSockets& socketsToRemove)
+         template <typename UniqueSockets, typename Balancer, typename DownCallback>
+         void CloseSocketConnections(Balancer&      balancer,
+                                     UniqueSockets& socketsToRemove,
+                                     DownCallback&  downCallback)
          {
             if (socketsToRemove.empty())
                return;
             // Remove all socket based connections
             // From polls
-            clientInfos.close(socketsToRemove, config.balancer, balancerIndex);
+            clientInfos.close(socketsToRemove, balancer, balancerIndex);
             // Close all sockets
             // Remove them from timestamp
             // Call callback
             mostRecentTimestamps.remove(socketsToRemove);
             // Notify user when a client goes down
-            config.downCallback(balancerIndex, socketsToRemove.size());
+            downCallback(balancerIndex, socketsToRemove.size());
          }
          void Write()
          {

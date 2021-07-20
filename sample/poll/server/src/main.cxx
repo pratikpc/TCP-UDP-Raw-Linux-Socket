@@ -8,6 +8,7 @@
 #include <pc/memory/Buffer.hpp>
 #include <pc/network/TCP.hpp>
 #include <pc/network/ip.hpp>
+#include <pc/protocol/Config.hpp>
 #include <pc/protocol/ServerLearnProtocol.hpp>
 
 #include <pc/thread/Thread.hpp>
@@ -40,8 +41,7 @@ void downCallback(std::size_t const idx, std::size_t count)
 }
 
 pc::balancer::priority balancer(/*pc::threads::ProcessorCount()*/ 1);
-   protocol::Config       config(
-       "postgresql://postgres@localhost:5432/", balancer, downCallback);
+
 void* PollAndRead(void* arg)
 {
    using namespace pc::memory;
@@ -64,7 +64,7 @@ void* PollAndRead(void* arg)
       socketsToTerminate.clear();
       poll.PollRead(buffer, socketsToTerminate);
       // Upon termination
-      poll.CloseSocketConnections(config, socketsToTerminate);
+      poll.CloseSocketConnections(balancer, socketsToTerminate, downCallback);
 
 #ifndef PC_SEPARATE_POLL_EXEC_WRITE
       poll.Execute(pollCallback);
@@ -140,8 +140,9 @@ int main()
 #ifdef PC_SEPARATE_POLL_EXEC_WRITE
    std::cout << "Separate poll, exec and write" << std::endl;
 #endif
-   
-   ProtocolVec protocols(balancer.MaxCount());
+
+   ProtocolVec      protocols(balancer.MaxCount());
+   protocol::Config config("postgresql://postgres@localhost:5432/", balancer);
 
 #ifndef PC_DISABLE_DATABASE_SUPPORT
    {
@@ -182,7 +183,7 @@ int main()
       // child.keepAlive();
       child.speedUp();
       std::size_t currentBalance = balancer.NextIndex();
-      protocols[currentBalance].Add(config, child.socket);
+      protocols[currentBalance].Add(balancer, child.socket);
       std::cout << "Connected to " << child.socket << " socket on " << currentBalance
                 << " thread : Balancer" << balancer << std::endl;
       child.invalidate();

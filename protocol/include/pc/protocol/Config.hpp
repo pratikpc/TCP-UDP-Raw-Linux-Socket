@@ -21,7 +21,6 @@ namespace pc
    {
       struct Config
       {
-         typedef void(DownCallback)(std::size_t const, std::size_t const);
          typedef balancer::priority balancerT;
 
 #ifndef PC_DISABLE_DATABASE_SUPPORT
@@ -29,16 +28,13 @@ namespace pc
 
          DBConnection connection;
 #endif
-         balancerT&    balancer;
-         DownCallback& downCallback;
+         balancerT& balancer;
 
-         Config(std::string   connectionString,
-                balancerT&    balancer,
-                DownCallback& downCallback) :
+         Config(std::string connectionString, balancerT& balancer) :
 #ifndef PC_DISABLE_DATABASE_SUPPORT
              connection(connectionString),
 #endif
-             balancer(balancer), downCallback(downCallback)
+             balancer(balancer)
          {
 #ifdef PC_DISABLE_DATABASE_SUPPORT
             PC_IGNORE(connectionString);

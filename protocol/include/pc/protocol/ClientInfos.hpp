@@ -4,7 +4,6 @@
 #include <pc/poll/EPoll.hpp>
 #include <pc/protocol/ClientInfo.hpp>
 #include <pc/protocol/ClientPollResult.hpp>
-#include <pc/protocol/Config.hpp>
 #include <tr1/unordered_map>
 #include <vector>
 
@@ -75,10 +74,10 @@ namespace pc
 
        public:
          ClientInfos() : updateIssued(false), ePollIn(), pollInEvents(5) {}
-         template <typename UniqueSockets>
-         void close(UniqueSockets&     socketsToRemove,
-                    Config::balancerT& balancer,
-                    std::size_t const  balancerIndex)
+         template <typename UniqueSockets, typename Balancer>
+         void close(UniqueSockets&    socketsToRemove,
+                    Balancer&         balancer,
+                    std::size_t const balancerIndex)
          {
             threads::RWWriteGuard guard(lock);
             for (typename UniqueSockets::iterator it = socketsToRemove.begin();
