@@ -33,9 +33,14 @@ namespace pc
                   int const         socket,
                   std::size_t const DeadlineMaxCount = DEADLINE_MAX_COUNT_DEFAULT)
          {
-            clientInfos.insert(socket, DeadlineMaxCount);
-            balancer.incPriority(balancerIndex, DeadlineMaxCount);
-            mostRecentTimestamps.updateSingle(socket);
+            return Add(balancer, ClientInfo(socket, DeadlineMaxCount));
+         }
+         template <typename Balancer>
+         void Add(Balancer& balancer, ClientInfo const& clientInfo)
+         {
+            clientInfos.insert(clientInfo);
+            balancer.incPriority(balancerIndex, clientInfo.DeadlineMaxCount());
+            mostRecentTimestamps.updateSingle(clientInfo.socket);
          }
          bool empty() const
          {

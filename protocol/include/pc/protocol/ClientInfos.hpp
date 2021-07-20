@@ -117,14 +117,18 @@ namespace pc
             std::cout << "=================" << std::endl;
 #endif
          }
+         void insert(ClientInfo const& clientInfo)
+         {
+            threads::RWWriteGuard guard(lock);
+            int const             socket = clientInfo.socket;
+            clientInfos.insert(std::make_pair(socket, clientInfo));
+            ePollIn.Add(socket, EPOLLIN | EPOLLRDHUP);
+            updateIssued = true;
+         }
          void insert(int const         socket,
                      std::size_t const DeadlineMaxCount = DEADLINE_MAX_COUNT_DEFAULT)
          {
-            threads::RWWriteGuard guard(lock);
-            clientInfos.insert(
-                std::make_pair(socket, ClientInfo(socket, DeadlineMaxCount)));
-            ePollIn.Add(socket, EPOLLIN | EPOLLRDHUP);
-            updateIssued = true;
+            return insert(ClientInfo(socket, DeadlineMaxCount));
          }
          template <typename UniqueSockets>
          void FilterSocketsToTerminate(UniqueSockets& socketsSelected)
