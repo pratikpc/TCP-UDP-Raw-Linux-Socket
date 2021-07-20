@@ -271,8 +271,7 @@ namespace pc
 
          void Write()
          {
-            threads::RWReadGuard guard(lock);
-            PacketList           tempWriteList;
+            PacketList tempWriteList;
             {
                LockGuard guard(writeMutex);
                if (packetsToWrite.empty())
