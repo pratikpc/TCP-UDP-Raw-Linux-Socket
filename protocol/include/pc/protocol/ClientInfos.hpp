@@ -204,15 +204,11 @@ namespace pc
             // Within this list itself as an optimization
             // To reduce copies
             // Then we will copy these values to the write List
-            ClientInfoMap::const_iterator it = clientInfos.begin();
-            if (it == clientInfos.end())
-               return;
             for (PacketList::iterator packetIt = tempList.begin();
                  packetIt != tempList.end();
                  ++packetIt)
             {
-               if (it->first /*socket*/ != packetIt->socket)
-                  it = clientInfos.find(packetIt->socket);
+               ClientInfoMap::const_iterator it = clientInfos.find(packetIt->socket);
                if (it == clientInfos.end())
                   continue;
 
