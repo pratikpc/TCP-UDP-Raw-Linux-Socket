@@ -261,9 +261,10 @@ namespace pc
          {
             threads::RWWriteGuard guard(lock);
 
-            iterator   oldestCient = clientInfos.begin();
-            ClientInfo clientInfo  = oldestCient->second;
-
+            iterator oldestCient = clientInfos.begin();
+            if (oldestCient == clientInfos.end())
+               return ClientInfo(-1);
+            ClientInfo const clientInfo = oldestCient->second;
             clientInfos.erase(oldestCient);
             return clientInfo;
          }
