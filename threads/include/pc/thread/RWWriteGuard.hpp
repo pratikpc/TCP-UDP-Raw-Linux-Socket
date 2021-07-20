@@ -9,16 +9,18 @@ namespace pc
    {
       class RWWriteGuard
       {
-         pthread_rwlock_t& mutex;
+         pthread_rwlock_t& rwLock;
+         bool const        locked;
 
        public:
-         RWWriteGuard(RWLock& p_mutex) : mutex(p_mutex.rwLock)
+         RWWriteGuard(RWLock& rwLock) :
+             rwLock(rwLock.rwLock), locked(pthread_rwlock_wrlock(&rwLock.rwLock) == 0)
          {
-            pthread_rwlock_rdlock(&mutex);
          }
          ~RWWriteGuard()
          {
-            pthread_rwlock_unlock(&mutex);
+            if (locked)
+               pthread_rwlock_unlock(&rwLock);
          }
       };
    } // namespace threads
