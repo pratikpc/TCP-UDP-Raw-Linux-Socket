@@ -247,7 +247,7 @@ namespace pc
                   return;
             }
             threads::RWWriteGuard guard(lock);
-            pollInEvents.ExtendTo(size());
+            pollInEvents.ExtendTo(clientInfos.size());
             updateIssued = false;
          }
 
