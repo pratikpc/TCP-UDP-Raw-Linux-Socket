@@ -107,8 +107,6 @@ namespace pc
                                      UniqueSockets& socketsToRemove,
                                      DownCallback&  downCallback)
          {
-            if (socketsToRemove.empty())
-               return;
             // Remove all socket based connections
             // From polls
             clientInfos.close(socketsToRemove, balancer, balancerIndex);

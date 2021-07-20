@@ -83,7 +83,8 @@ void* PollAndRead(void* arg)
       socketsToTerminate.clear();
       poll.PollRead(buffer, socketsToTerminate);
       // Upon termination
-      poll.CloseSocketConnections(balancer, socketsToTerminate, downCallback);
+      if (!socketsToTerminate.empty())
+         poll.CloseSocketConnections(balancer, socketsToTerminate, downCallback);
 
 #ifndef PC_SEPARATE_POLL_EXEC_WRITE
       poll.Execute(pollCallback);
