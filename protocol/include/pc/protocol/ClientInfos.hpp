@@ -142,8 +142,8 @@ namespace pc
                int const socket       = *it;
                bool      terminateNow = false;
                {
-                  threads::RWWriteGuard guard(lock);
-                  iterator              clientIt = clientInfos.find(socket);
+                  threads::RWReadGuard guard(lock);
+                  iterator             clientIt = clientInfos.find(socket);
                   if (clientIt != clientInfos.end())
                      terminateNow = clientIt->second.TerminateThisCycleOrNext();
                   else
