@@ -73,7 +73,8 @@ namespace pc
             timestamps.insert(socket, time);
          }
          template <typename Sockets>
-         void getSocketsLessThanTimestamp(Sockets& sockets, std::time_t const timeout) const
+         void getSocketsLessThanTimestamp(Sockets&          sockets,
+                                          std::time_t const timeout) const
          {
             std::time_t const now = timer::seconds();
 
@@ -92,7 +93,7 @@ namespace pc
             return updateSingle(socket, 0);
          }
          template <typename Sockets>
-         MostRecentTimestamps& remove(Sockets const& sockets)
+         void remove(Sockets const& sockets)
          {
             LockGuard guard(mostRecentTimestampsLock);
             for (typename Sockets::const_iterator it = sockets.begin();
@@ -100,7 +101,12 @@ namespace pc
                  ++it)
                // Remove socket
                timestamps.remove(*it);
-            return *this;
+         }
+         void removeSingle(int const socket)
+         {
+            LockGuard guard(mostRecentTimestampsLock);
+            // Remove socket
+            timestamps.remove(socket);
          }
       };
    } // namespace deadliner
