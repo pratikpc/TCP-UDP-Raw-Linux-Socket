@@ -74,6 +74,15 @@ namespace pc
          {
             return clientInfos.size();
          }
+         template <typename Balancer>
+         ClientInfo RemoveOldestClientAndReturn(Balancer& balancer)
+         {
+            ClientInfo clientInfo = clientInfos.RemoveOldestClientAndReturn();
+            balancer.decPriority(balancerIndex, clientInfo.DeadlineMaxCount());
+            mostRecentTimestamps.removeSingle(clientInfo.socket);
+            return clientInfo;
+         }
+
          void Execute(ClientResponseCallback& callback)
          {
             return clientInfos.Execute(callback);

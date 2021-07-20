@@ -256,6 +256,18 @@ namespace pc
             threads::RWReadGuard guard(lock);
             return clientInfos.empty();
          }
+
+         ClientInfo RemoveOldestClientAndReturn()
+         {
+            threads::RWWriteGuard guard(lock);
+
+            iterator   oldestCient = clientInfos.begin();
+            ClientInfo clientInfo  = oldestCient->second;
+
+            clientInfos.erase(oldestCient);
+            return clientInfo;
+         }
+
          void Write()
          {
             threads::RWReadGuard guard(lock);
