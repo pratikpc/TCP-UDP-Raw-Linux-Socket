@@ -43,10 +43,10 @@ void* func(void* clientIndexPtr)
       pc::network::Result result = protocol.SetupConnection(buffer);
       // if (result.IsFailure())
       //    throw std::runtime_error("Setup failed");
-      pc::protocol::NetworkSendPacket packet(server.socket, repeat("H", 100));
+      pc::protocol::NetworkSendPacket packet(server.socket, "G" + repeat("H", 98) + "I");
       for (std::size_t i = 0; true; i++)
       {
-         // std::cout << "Message sending " << i << " at " << protocol.clientId << std::endl;
+         std::cout << "Message sending " << i << " at " << protocol.clientId << std::endl;
          result = protocol.Write(packet);
          if (result.IsFailure())
             break;
@@ -59,7 +59,7 @@ void* func(void* clientIndexPtr)
          if (responsePacket.command == pc::protocol::Commands::MajorErrors::SocketClosed)
          {
             std::cout << "Iteration " << i << " over at " << clientId << std::endl;
-            break;
+            return NULL;
          }
          else if (responsePacket.command == pc::protocol::Commands::Send)
          {
@@ -77,7 +77,6 @@ void* func(void* clientIndexPtr)
          }
          // usleep(4 * 1000 * 1000 / 25);
       }
-      return NULL;
    }
    catch (std::exception const& ex)
    {
@@ -90,7 +89,7 @@ void* func(void* clientIndexPtr)
 #include <pc/thread/Thread.hpp>
 int main()
 {
-   std::vector<int> count(1);
+   std::vector<int> count(10);
 
    std::vector<pc::threads::Thread> threads;
    for (std::size_t i = 0; i < count.size(); ++i)
