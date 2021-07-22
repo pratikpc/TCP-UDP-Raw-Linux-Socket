@@ -60,9 +60,13 @@ namespace pc
 
          operator std::string() const
          {
-            char ipstr[INET6_ADDRSTRLEN];
-            inet_ntop(ip->ai_family, address(), ipstr, INET6_ADDRSTRLEN);
-            return std::string(ipstr);
+            if (ip != NULL)
+            {
+               char ipstr[INET6_ADDRSTRLEN];
+               inet_ntop(ip->ai_family, address(), ipstr, INET6_ADDRSTRLEN);
+               return std::string(ipstr);
+            }
+            return "";
          }
 
          ~IP()
@@ -74,7 +78,9 @@ namespace pc
 
          int socket() const
          {
-            int socket = ::socket(ip->ai_family, ip->ai_socktype, ip->ai_protocol);
+            int socket = -1; /*Invalid socket*/
+            if (ip != NULL)
+               socket = ::socket(ip->ai_family, ip->ai_socktype, ip->ai_protocol);
             if (socket == -1)
                throw std::invalid_argument("Incorrect socket");
 
