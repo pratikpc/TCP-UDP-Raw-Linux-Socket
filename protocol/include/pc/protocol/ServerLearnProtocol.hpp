@@ -87,6 +87,10 @@ namespace pc
             mostRecentTimestamps.removeSingle(clientInfo.socket);
             return clientInfo;
          }
+         int OldestSocket() const
+         {
+            return clientInfos.OldestSocket();
+         }
 
          void Execute(ClientResponseCallback& callback)
          {

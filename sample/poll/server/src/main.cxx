@@ -42,6 +42,7 @@ void downCallback(std::size_t const idx, std::size_t count)
 {
    std::cout << count << " client went down at " << idx << " balancer" << std::endl;
 #ifdef PC_SWITCH_CLIENTS_BETWEEN_THREADS_BALANCE
+   int /*Socket*/            prevSocket = -1; /*Socket cannot be -1*/
    static pc::threads::Mutex mutex;
    for (std::size_t i = 0; i < count; ++i)
    {
@@ -52,10 +53,13 @@ void downCallback(std::size_t const idx, std::size_t count)
          break;
       if (protocols[maxIdx].empty())
          break;
+      // If we are operating on the same socket
+      if (protocols[maxIdx].OldestSocket() == prevSocket)
+         break;
+
       protocol::ClientInfo clientInfo =
           protocols[maxIdx].RemoveOldestClientAndReturn(balancer);
-      if (clientInfo.socket == -1)
-         continue;
+      prevSocket = clientInfo.socket;
       protocols[minIdx].Add(balancer, clientInfo);
       std::cout << "Switched " << clientInfo.socket << " socket to " << minIdx
                 << " thread from " << maxIdx << ": Balancer" << balancer << std::endl;

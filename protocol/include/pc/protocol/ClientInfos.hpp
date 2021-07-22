@@ -270,6 +270,12 @@ namespace pc
             clientInfos.erase(oldestCient);
             return clientInfo;
          }
+         int OldestSocket() const
+         {
+            threads::RWReadGuard guard(lock);
+            const_iterator       oldestCient = clientInfos.begin();
+            return oldestCient->first /*socket*/;
+         }
 
          void Write()
          {
