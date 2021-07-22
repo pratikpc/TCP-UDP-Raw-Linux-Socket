@@ -99,6 +99,8 @@ namespace pc
                   it = socketsToRemove.erase(it);
             }
 #ifdef PC_PROFILE
+            if (socketsToRemove.empty())
+               return;
             std::cout << "Average exec time= " << averageExecuteTime << std::endl;
             std::cout << "Average rdit time= " << averageSingleReadIterTime << std::endl;
             std::cout << "Average intr time= " << averageIntraProcessingTime << std::endl;
